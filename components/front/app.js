@@ -1,0 +1,5 @@
+import {render} from 'react-dom';
+import {GetRouter} from './index'
+
+render(GetRouter(), document.getElementById('body'));
+delete global.__ReactInitState__;

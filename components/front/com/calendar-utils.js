@@ -1,0 +1,103 @@
+"use strict";
+
+import React, {Component} from 'react';
+// import _ from 'lodash'
+// import { render } from 'react-dom';
+import {Link} from 'react-router';
+import Agenda from '../lib/agenda'
+
+
+export class Vertical extends Component {
+  render() {
+    return <div className="agenda-vertical">{this.props.children}</div>
+  }
+}
+
+export class Row extends Component {
+  render() {
+    return <div className={this.props.className||"agenda-row"}>{this.props.children}</div>
+  }
+}
+
+export class Cell extends Component {
+  _handleClick(e) {
+    e.preventDefault()
+    if (this.props.toggleSelection)
+      this.props.toggleSelection()
+  }
+  _handleOver(e) {
+    e.preventDefault()
+    if (this.props.moveSelection)
+      this.props.moveSelection()
+  }
+  render() {
+    return (
+      <div className={this.props.className}
+           onClick={this._handleClick.bind(this)}
+           onMouseOver={this._handleOver.bind(this)}>
+        <div className="col-content">{this.props.value}</div>
+      </div>
+    )
+  }
+}
+
+export class Navigation extends Component {
+  render() {
+    let store = this.props.store
+      , {previous, next, today, current} = this.props.agenda.getLink()
+
+    let prevLink = `/${this.props.view}/${previous.y}/${previous.m}`
+      , nextLink = `/${this.props.view}/${next.y}/${next.m}`
+      , todayLink = `/${this.props.view}/${today.y}/${today.m}`
+      , monthLink = `/month/${current.y}/${current.m}`
+      , weekLink = `/week/${current.y}/${current.m}/2`
+    if (this.props.view === 'week') {
+      prevLink += `/${previous.d}`
+      nextLink += `/${next.d}`
+      todayLink += `/${today.d}`
+    }
+    return (
+      <div>
+        <Row className="agenda-navigation-view">
+          <Link to={monthLink}>Month</Link>
+          <Link to={weekLink}>Week</Link>
+        </Row>
+        <Row className="agenda-navigation">
+          <Link to={prevLink}>Previous</Link>
+          <Link to={todayLink}>Today</Link>
+          <Link to={nextLink}>Next</Link>
+        </Row>
+      </div>
+    )
+  }
+}
+
+export class Header extends Component {
+  render() {
+    let days = ["D", "L", "M", "M", "J", "V", "S"]
+      , view = this.props.view
+    return (
+      <Row>
+        {days.map((day, i) => <Cell value={day} className="col-label" key={`${day}-${i}`} />)}
+        {view === 'week' && this.props.store.map((date, i) => {
+          let props = {
+            value: `${date[0].date.getDate()}/${date[0].date.getMonth()+1}`,
+            className: "col-label",
+            key: `${date}-${i}`
+          }
+          return <Cell {...props} />
+        })}
+      </Row>
+    )
+  }
+}
+
+export class Info extends Component {
+  render() {
+    return (
+      <Row>
+        <div>{this.props.month} {this.props.year}</div>
+      </Row>
+    )
+  }
+}

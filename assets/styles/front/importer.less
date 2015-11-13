@@ -1,0 +1,143 @@
+body { padding-top: 70px; font-family: Arial }
+
+@agendaCell: calc(100% / 7);
+
+.agenda-row {
+  position: relative;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-align-content: flex-end;
+  align-content: flex-end;
+  background: #CCC;
+
+  .col, .col-label, .col-day {
+    box-sizing: border-box;
+    width: @agendaCell;
+    .col-content {
+      margin: 1px;
+      background: #FFF;
+      height: 120px;
+    }
+  }
+  .col-day {
+    height: 40px;
+  }
+  .col-active {
+    .col-content {
+      background: #FFC156;
+    }
+  }
+  .col-label {
+    .col-content {
+      height: 20px;
+      line-height: 20px;
+      text-align: center;
+      margin: 1px;
+      background: #DDD;
+    }
+  }
+  .event {
+    position: absolute;
+    top: 0;
+    width: @agendaCell;
+    background: #FF0000;
+    color: #FFF;
+    font: 0.7em arial;
+    z-index: 5;
+  }
+}
+
+
+.agenda-vertical {
+  position: relative;
+  width: @agendaCell;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-flex-flow: column wrap;
+  flex-flow: column wrap;
+  -webkit-align-content: center;
+  align-content: center;
+  background: #CCC;
+
+  .col, .col-label, .col-day {
+    box-sizing: border-box;
+    width: 100%;
+    .col-content {
+      margin: 1px;
+      background: #FFF;
+      height: 80px;
+    }
+  }
+  .col-day {
+    height: 39px;
+    marign-bottom: 1px;
+  }
+  .col-day-active {
+    .col-content {
+      background: #FFC156;
+    }
+  }
+  .col-label {
+    .col-content {
+      height: 20px;
+      line-height: 20px;
+      text-align: center;
+      margin: 1px;
+      background: #DDD;
+    }
+  }
+  .event {
+    position: absolute;
+    top: 0;
+    width: @agendaCell;
+    background: #FF0000;
+    color: #FFF;
+    font: 0.7em arial;
+    z-index: 5;
+  }
+}
+.agenda-navigation {
+  position: relative;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-align-content: flex-end;
+  align-content: flex-end;
+  background: #CCC;
+  a {
+    width: calc(100% / 3);
+    text-align: center;
+    color: #FFF;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+}
+.agenda-navigation-view {
+  height: 30px;
+  position: relative;
+  a {
+    display: block;
+    float: right;
+    padding: 3px 5px;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+}
+
+
