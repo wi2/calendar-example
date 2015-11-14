@@ -18,6 +18,7 @@ export default class extends Component {
       end: -1
     }
   }
+
   componentWillReceiveProps(props) {
     this.agenda.changeDate(props.year, props.month, props.day)
     this.setState({
@@ -49,10 +50,12 @@ export default class extends Component {
       })
     }
   }
+
   moveSelection(val) {
     if (this.state.start !== -1)
       this.setState({end: val})
   }
+
   render() {
     let view = this.state.view
       , events = this.state.events
@@ -73,9 +76,17 @@ export default class extends Component {
         <Info year={info.y} month={info.m} />
         <Header view={this.props.view} store={store} />
         {view === 'week'
-          && <Row>{store.map((week, j) => <Week {...props} week={week} agenda={this.agenda} key={`row-${j}`} />)}</Row>}
+          && <Row>
+              {store.map((week, j) =>
+                <Week {...props}
+                      week={week}
+                      agenda={this.agenda} key={`row-${j}`} />)}
+             </Row>}
         {view === 'month'
-          && store.map((week, j) => <Month {...props} week={week} agenda={this.agenda} key={`row-${j}`} />)}
+          && store.map((week, j) =>
+            <Month  {...props}
+                    week={week}
+                    agenda={this.agenda} key={`row-${j}`} />)}
       </div>
     )
   }

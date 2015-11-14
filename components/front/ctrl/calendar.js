@@ -9,16 +9,16 @@ export default class extends Component {
     super(props)
     this.loadEvents()
     if (global.io)
-      io.socket.on('event', (msg => this.loadEvents()));
+      io.socket.on('event', msg => this.loadEvents());
   }
   componentWillReceiveProps(props) {
     this.loadEvents()
   }
   loadEvents() {
     if (global.io)
-      io.socket.get('/event', (res => {
+      io.socket.get('/event', res => {
         this.setState({events: res})
-      }));
+      });
   }
   onSelectDate(selection) {
     console.log(selection)

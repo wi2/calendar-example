@@ -27,6 +27,7 @@ export default class {
       }
     })
   }
+
   matrix() {
     let {y,m,d} = this.date
     var {rows, cols} = this.getRange(6,7)
@@ -105,6 +106,7 @@ export default class {
       date: new Date(this.date.y, this.date.m, this.date.d)
     }
   }
+
   getToday(withDay) {
     let today = new Date()
     if (withDay)
@@ -112,11 +114,30 @@ export default class {
     else
       return this.linkHelper(today.getFullYear(), today.getMonth());
   }
+
   getInfo() {
     let info = new Date(this.date.y, this.date.m)
     return this.linkHelper(info.getFullYear(), info.getMonth())
   }
-  getLink() {
+
+  getLink(view) {
+    let {previous, next, today, current} = this.getLinkHelper()
+
+    let prevLink = `/${view}/${previous.y}/${previous.m}`
+      , nextLink = `/${view}/${next.y}/${next.m}`
+      , todayLink = `/${view}/${today.y}/${today.m}`
+      , monthLink = `/month/${current.y}/${current.m}`
+      , weekLink = `/week/${current.y}/${current.m}/2`
+
+    if (view === 'week') {
+      prevLink += `/${previous.d}`
+      nextLink += `/${next.d}`
+      todayLink += `/${today.d}`
+    }
+    return {prevLink, nextLink, todayLink, monthLink, weekLink}
+  }
+
+  getLinkHelper() {
     let y = this.date.y
       , m = this.date.m * 1
       , d = this.date.d
@@ -170,15 +191,18 @@ export default class {
       return this.compareWithHour(date1, date2);
     return this.compareDate(date1, date2)
   }
+
   compareWithHour(date1, date2) {
     return date1.getHours() === date2.getHours()
         && this.compareDate(date1, date2)
   }
+
   compareDate(date1, date2) {
     return date1.getDate() === date2.getDate()
         && date1.getMonth() === date2.getMonth()
         && date1.getFullYear() === date2.getFullYear()
   }
+
   linkHelper(y, m, d, reverse) {
     let mo = m*1
     if (mo >= -1) {

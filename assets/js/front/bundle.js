@@ -31,9 +31,6 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
-// import _ from 'lodash'
-// import { render } from 'react-dom';
-
 var _reactRouter = require('react-router');
 
 var _libAgenda = require('../lib/agenda');
@@ -147,23 +144,14 @@ var Navigation = (function (_Component4) {
     value: function render() {
       var store = this.props.store;
 
-      var _props$agenda$getLink = this.props.agenda.getLink();
+      var _props$agenda$getLink = this.props.agenda.getLink(this.props.view);
 
-      var previous = _props$agenda$getLink.previous;
-      var next = _props$agenda$getLink.next;
-      var today = _props$agenda$getLink.today;
-      var current = _props$agenda$getLink.current;
+      var prevLink = _props$agenda$getLink.prevLink;
+      var nextLink = _props$agenda$getLink.nextLink;
+      var todayLink = _props$agenda$getLink.todayLink;
+      var monthLink = _props$agenda$getLink.monthLink;
+      var weekLink = _props$agenda$getLink.weekLink;
 
-      var prevLink = '/' + this.props.view + '/' + previous.y + '/' + previous.m,
-          nextLink = '/' + this.props.view + '/' + next.y + '/' + next.m,
-          todayLink = '/' + this.props.view + '/' + today.y + '/' + today.m,
-          monthLink = '/month/' + current.y + '/' + current.m,
-          weekLink = '/week/' + current.y + '/' + current.m + '/2';
-      if (this.props.view === 'week') {
-        prevLink += '/' + previous.d;
-        nextLink += '/' + next.d;
-        todayLink += '/' + today.d;
-      }
       return _react2['default'].createElement(
         'div',
         null,
@@ -572,11 +560,15 @@ var _default = (function (_Component) {
           _calendarUtils.Row,
           null,
           store.map(function (week, j) {
-            return _react2['default'].createElement(_calendarView.Week, _extends({}, props, { week: week, agenda: _this.agenda, key: 'row-' + j }));
+            return _react2['default'].createElement(_calendarView.Week, _extends({}, props, {
+              week: week,
+              agenda: _this.agenda, key: 'row-' + j }));
           })
         ),
         view === 'month' && store.map(function (week, j) {
-          return _react2['default'].createElement(_calendarView.Month, _extends({}, props, { week: week, agenda: _this.agenda, key: 'row-' + j }));
+          return _react2['default'].createElement(_calendarView.Month, _extends({}, props, {
+            week: week,
+            agenda: _this.agenda, key: 'row-' + j }));
         })
       );
     }
@@ -1020,7 +1012,30 @@ var _default = (function () {
     }
   }, {
     key: "getLink",
-    value: function getLink() {
+    value: function getLink(view) {
+      var _getLinkHelper = this.getLinkHelper();
+
+      var previous = _getLinkHelper.previous;
+      var next = _getLinkHelper.next;
+      var today = _getLinkHelper.today;
+      var current = _getLinkHelper.current;
+
+      var prevLink = "/" + view + "/" + previous.y + "/" + previous.m,
+          nextLink = "/" + view + "/" + next.y + "/" + next.m,
+          todayLink = "/" + view + "/" + today.y + "/" + today.m,
+          monthLink = "/month/" + current.y + "/" + current.m,
+          weekLink = "/week/" + current.y + "/" + current.m + "/2";
+
+      if (view === 'week') {
+        prevLink += "/" + previous.d;
+        nextLink += "/" + next.d;
+        todayLink += "/" + today.d;
+      }
+      return { prevLink: prevLink, nextLink: nextLink, todayLink: todayLink, monthLink: monthLink, weekLink: weekLink };
+    }
+  }, {
+    key: "getLinkHelper",
+    value: function getLinkHelper() {
       var y = this.date.y,
           m = this.date.m * 1,
           d = this.date.d;

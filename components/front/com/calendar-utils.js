@@ -1,8 +1,6 @@
 "use strict";
 
 import React, {Component} from 'react';
-// import _ from 'lodash'
-// import { render } from 'react-dom';
 import {Link} from 'react-router';
 import Agenda from '../lib/agenda'
 
@@ -44,18 +42,8 @@ export class Cell extends Component {
 export class Navigation extends Component {
   render() {
     let store = this.props.store
-      , {previous, next, today, current} = this.props.agenda.getLink()
+      , {prevLink, nextLink, todayLink, monthLink, weekLink} = this.props.agenda.getLink(this.props.view)
 
-    let prevLink = `/${this.props.view}/${previous.y}/${previous.m}`
-      , nextLink = `/${this.props.view}/${next.y}/${next.m}`
-      , todayLink = `/${this.props.view}/${today.y}/${today.m}`
-      , monthLink = `/month/${current.y}/${current.m}`
-      , weekLink = `/week/${current.y}/${current.m}/2`
-    if (this.props.view === 'week') {
-      prevLink += `/${previous.d}`
-      nextLink += `/${next.d}`
-      todayLink += `/${today.d}`
-    }
     return (
       <div>
         <Row className="agenda-navigation-view">
