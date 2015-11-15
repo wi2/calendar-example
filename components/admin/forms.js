@@ -3,33 +3,40 @@
 import React from 'react'
 import {Container, Row, Field} from 'newforms-bootstrap'
 
-export const comment = (
+export const room = (
   <Container autoColumns="md">
-    <h1>special Commentaire</h1>
+    <h1>Room</h1>
     <hr />
     <p className="text-right">
       <button className="btn btn-default">Save</button>
     </p>
     <Row>
       <Field name="name" md="8"/>
-      <Field name="post"/>
+      <Field name="color"/>
     </Row>
     <Row>
-      <Field name="message"/>
+      <Field name="description"/>
     </Row>
   </Container>
 );
 
-export const post = (
+export const event = (
   <Container autoColumns="md">
-    <h1>special Article</h1>
+    <h1>Event</h1>
     <hr />
     <p className="text-right">
       <button className="btn btn-default">Save</button>
     </p>
     <Row>
-      <Field name="title" md="4"/>
+      <Field name="title" md="8"/>
+      <Field name="room"/>
+    </Row>
+    <Row>
       <Field name="content"/>
+    </Row>
+    <Row>
+      <Field name="start" md="6" />
+      <Field name="end" />
     </Row>
   </Container>
 );

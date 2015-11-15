@@ -1202,13 +1202,13 @@ var _react2 = _interopRequireDefault(_react);
 
 var _newformsBootstrap = require('newforms-bootstrap');
 
-var comment = _react2['default'].createElement(
+var room = _react2['default'].createElement(
   _newformsBootstrap.Container,
   { autoColumns: 'md' },
   _react2['default'].createElement(
     'h1',
     null,
-    'special Commentaire'
+    'Room'
   ),
   _react2['default'].createElement('hr', null),
   _react2['default'].createElement(
@@ -1224,23 +1224,23 @@ var comment = _react2['default'].createElement(
     _newformsBootstrap.Row,
     null,
     _react2['default'].createElement(_newformsBootstrap.Field, { name: 'name', md: '8' }),
-    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'post' })
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'color' })
   ),
   _react2['default'].createElement(
     _newformsBootstrap.Row,
     null,
-    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'message' })
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'description' })
   )
 );
 
-exports.comment = comment;
-var post = _react2['default'].createElement(
+exports.room = room;
+var event = _react2['default'].createElement(
   _newformsBootstrap.Container,
   { autoColumns: 'md' },
   _react2['default'].createElement(
     'h1',
     null,
-    'special Article'
+    'Event'
   ),
   _react2['default'].createElement('hr', null),
   _react2['default'].createElement(
@@ -1255,12 +1255,23 @@ var post = _react2['default'].createElement(
   _react2['default'].createElement(
     _newformsBootstrap.Row,
     null,
-    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'title', md: '4' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'title', md: '8' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
     _react2['default'].createElement(_newformsBootstrap.Field, { name: 'content' })
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
   )
 );
 
-exports.post = post;
+exports.event = event;
 var image = _react2['default'].createElement(
   _newformsBootstrap.Container,
   { autoColumns: 'md' },

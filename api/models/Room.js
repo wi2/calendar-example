@@ -19,7 +19,8 @@ module.exports = {
     },
     color: {
       type: 'string',
-      defaultsTo: 'grey',
+      required: true,
+      defaultsTo: '#AAA',
       hexColor: true
     }
   }
