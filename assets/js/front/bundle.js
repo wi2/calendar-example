@@ -513,7 +513,8 @@ var _default = (function (_Component) {
         store: this.agenda.matrix(),
         info: this.agenda.getInfo(),
         start: -1,
-        end: -1
+        end: -1,
+        startInit: -1
       });
       this.props.onChange(props);
     }
@@ -521,18 +522,17 @@ var _default = (function (_Component) {
     key: 'toggleSelection',
     value: function toggleSelection(val) {
       if (this.state.start !== -1) {
-        var selection = {
-          start: this.state.start,
-          end: val
-        };
+        var selection = this.getSmartSelection(val);
         this.setState({
           selection: selection,
           start: -1,
-          end: -1
+          end: -1,
+          startInit: -1
         });
         this.props.onSelect(selection);
       } else {
         this.setState({
+          startInit: val,
           start: val,
           end: val
         });
@@ -541,7 +541,16 @@ var _default = (function (_Component) {
   }, {
     key: 'moveSelection',
     value: function moveSelection(val) {
-      if (this.state.start !== -1) this.setState({ end: val });
+      if (this.state.start !== -1) this.setState(this.getSmartSelection(val));
+    }
+  }, {
+    key: 'getSmartSelection',
+    value: function getSmartSelection(b) {
+      var a = this.state.startInit;
+      return {
+        start: a.date <= b.date ? a : b,
+        end: a.date >= b.date ? a : b
+      };
     }
   }, {
     key: 'render',

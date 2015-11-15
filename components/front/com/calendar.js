@@ -30,25 +30,25 @@ export default class extends Component {
       store: this.agenda.matrix(),
       info: this.agenda.getInfo(),
       start: -1,
-      end: -1
+      end: -1,
+      startInit: -1
     })
     this.props.onChange(props)
   }
 
   toggleSelection(val) {
     if (this.state.start !== -1) {
-      let selection = {
-        start: this.state.start,
-        end: val
-      }
+      let selection = this.getSmartSelection(val)
       this.setState({
         selection: selection,
         start: -1,
-        end: -1
+        end: -1,
+        startInit: -1
       })
       this.props.onSelect(selection)
     } else {
       this.setState({
+        startInit: val,
         start: val,
         end: val
       })
@@ -57,7 +57,15 @@ export default class extends Component {
 
   moveSelection(val) {
     if (this.state.start !== -1)
-      this.setState({end: val})
+      this.setState(this.getSmartSelection(val))
+  }
+
+  getSmartSelection(b) {
+    let a = this.state.startInit
+    return {
+      start: a.date <= b.date ? a : b,
+      end: a.date >= b.date ? a : b
+    }
   }
 
   render() {
@@ -77,7 +85,7 @@ export default class extends Component {
       <div className="agenda">
         <Navigation store={store} agenda={this.agenda} view={view} />
         <Info info={this.state.info} />
-        <Header view={this.props.view} store={store} />
+        <Header view={view} store={store} />
         {view === 'week'
           && <Row>
               {store.map((week, j) =>
