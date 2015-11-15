@@ -2,6 +2,7 @@
 
 import React, {Component} from 'react';
 import Calendar from '../com/calendar'
+import Modal from '../com/modal'
 
 
 export default class extends Component {
@@ -41,12 +42,13 @@ export default class extends Component {
     return (
       <div className="app">
         <h1>Calendar</h1>
+        {false && <Modal />}
         <Calendar events={this.props.events||[]}
-              onSelect={this.onSelect}
-              onChange={this.onChange}
-              onLoad={this.onLoad}
-              {...this.state}
-              {...this.props.params} />
+                  onSelect={this.onSelect}
+                  onChange={this.onChange}
+                  onLoad={this.onLoad}
+                  {...this.state}
+                  {...this.props.params} />
       </div>
     );
   }

@@ -1,4 +1,1598 @@
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+var hasOwn = Object.prototype.hasOwnProperty
+var toString = Object.prototype.toString
+
+function type(obj) {
+  return toString.call(obj).slice(8, -1).toLowerCase()
+}
+
+function inherits(childConstructor, parentConstructor) {
+  var F = function() {}
+  F.prototype = parentConstructor.prototype
+  childConstructor.prototype = new F()
+  childConstructor.prototype.constructor = childConstructor
+  return childConstructor
+}
+
+function extend(dest, src) {
+  for (var prop in src) {
+    if (hasOwn.call(src, prop)) {
+      dest[prop] = src[prop]
+    }
+  }
+  return dest
+}
+
+/**
+ * Mixes in properties from one object to another. If the source object is a
+ * Function, its prototype is mixed in instead.
+ */
+function mixin(dest, src) {
+  if (type(src) == 'function') {
+    extend(dest, src.prototype)
+  }
+  else {
+    extend(dest, src)
+  }
+}
+
+/**
+ * Applies mixins specified as a __mixins__ property on the given properties
+ * object, returning an object containing the mixed in properties.
+ */
+function applyMixins(properties) {
+  var mixins = properties.__mixins__
+  if (type(mixins) != 'array') {
+    mixins = [mixins]
+  }
+  var mixedProperties = {}
+  for (var i = 0, l = mixins.length; i < l; i++) {
+    mixin(mixedProperties, mixins[i])
+  }
+  delete properties.__mixins__
+  return extend(mixedProperties, properties)
+}
+
+/**
+ * Inherits another constructor's prototype and sets its prototype and
+ * constructor properties in one fell swoop.
+ *
+ * If a child constructor is not provided via prototypeProps.constructor,
+ * a new constructor will be created.
+ */
+function inheritFrom(parentConstructor, childConstructor, prototypeProps, constructorProps) {
+  // Create a child constructor if one wasn't given
+  if (childConstructor == null) {
+    childConstructor = function() {
+      parentConstructor.apply(this, arguments)
+    }
+  }
+
+  // Make sure the new prototype has the correct constructor set up
+  prototypeProps.constructor = childConstructor
+
+  // Base constructors should only have the properties they're defined with
+  if (parentConstructor !== Concur) {
+    // Inherit the parent's prototype
+    inherits(childConstructor, parentConstructor)
+    childConstructor.__super__ = parentConstructor.prototype
+  }
+
+  // Add prototype properties - this is why we took a copy of the child
+  // constructor reference in extend() - if a .constructor had been passed as a
+  // __mixins__ and overitten prototypeProps.constructor, these properties would
+  // be getting set on the mixed-in constructor's prototype.
+  extend(childConstructor.prototype, prototypeProps)
+
+  // Add constructor properties
+  extend(childConstructor, constructorProps)
+
+  return childConstructor
+}
+
+/**
+ * Namespace and dummy constructor for initial extension.
+ */
+var Concur = module.exports = function() {}
+
+/**
+ * Details of a constructor's inheritance chain - Concur just facilitates sugar
+ * so we don't include it in the initial chain. Arguably, Object.prototype could
+ * go here, but it's just not that interesting.
+ */
+Concur.__mro__ = []
+
+/**
+ * Creates or uses a child constructor to inherit from the the call
+ * context, which is expected to be a constructor.
+ */
+Concur.extend = function(prototypeProps, constructorProps) {
+  // Ensure we have prop objects to work with
+  prototypeProps = prototypeProps || {}
+  constructorProps = constructorProps || {}
+
+  // If the constructor being inherited from has a __meta__ function somewhere
+  // in its prototype chain, call it to customise prototype and constructor
+  // properties before they're used to set up the new constructor's prototype.
+  if (typeof this.prototype.__meta__ != 'undefined') {
+    this.prototype.__meta__(prototypeProps, constructorProps)
+  }
+
+  // Any child constructor passed in should take precedence - grab a reference
+  // to it befoer we apply any mixins.
+  var childConstructor = (hasOwn.call(prototypeProps, 'constructor')
+                          ? prototypeProps.constructor
+                          : null)
+
+  // If any mixins are specified, mix them into the property objects
+  if (hasOwn.call(prototypeProps, '__mixins__')) {
+    prototypeProps = applyMixins(prototypeProps)
+  }
+  if (hasOwn.call(constructorProps, '__mixins__')) {
+    constructorProps = applyMixins(constructorProps)
+  }
+
+  // Set up the new child constructor and its prototype
+  childConstructor = inheritFrom(this,
+                                 childConstructor,
+                                 prototypeProps,
+                                 constructorProps)
+
+  // Pass on the extend function for extension in turn
+  childConstructor.extend = this.extend
+
+  // Expose the inheritance chain for programmatic access
+  childConstructor.__mro__ = [childConstructor].concat(this.__mro__)
+
+  return childConstructor
+}
+
+},{}],2:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @providesModule EventListener
+ * @typechecks
+ */
+
+'use strict';
+
+var emptyFunction = require('./emptyFunction');
+
+/**
+ * Upstream version of event listener. Does not take into account specific
+ * nature of platform.
+ */
+var EventListener = {
+  /**
+   * Listen to DOM events during the bubble phase.
+   *
+   * @param {DOMEventTarget} target DOM element to register listener on.
+   * @param {string} eventType Event type, e.g. 'click' or 'mouseover'.
+   * @param {function} callback Callback function.
+   * @return {object} Object with a `remove` method.
+   */
+  listen: function (target, eventType, callback) {
+    if (target.addEventListener) {
+      target.addEventListener(eventType, callback, false);
+      return {
+        remove: function () {
+          target.removeEventListener(eventType, callback, false);
+        }
+      };
+    } else if (target.attachEvent) {
+      target.attachEvent('on' + eventType, callback);
+      return {
+        remove: function () {
+          target.detachEvent('on' + eventType, callback);
+        }
+      };
+    }
+  },
+
+  /**
+   * Listen to DOM events during the capture phase.
+   *
+   * @param {DOMEventTarget} target DOM element to register listener on.
+   * @param {string} eventType Event type, e.g. 'click' or 'mouseover'.
+   * @param {function} callback Callback function.
+   * @return {object} Object with a `remove` method.
+   */
+  capture: function (target, eventType, callback) {
+    if (target.addEventListener) {
+      target.addEventListener(eventType, callback, true);
+      return {
+        remove: function () {
+          target.removeEventListener(eventType, callback, true);
+        }
+      };
+    } else {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Attempted to listen to events during the capture phase on a ' + 'browser that does not support the capture phase. Your application ' + 'will not receive some events.');
+      }
+      return {
+        remove: emptyFunction
+      };
+    }
+  },
+
+  registerDefault: function () {}
+};
+
+module.exports = EventListener;
+}).call(this,require('_process'))
+},{"./emptyFunction":9,"_process":292}],3:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule ExecutionEnvironment
+ */
+
+'use strict';
+
+var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+
+/**
+ * Simple, lightweight module assisting with the detection and context of
+ * Worker. Helps avoid circular dependencies and allows code to reason about
+ * whether or not they are in a Worker, even if they never include the main
+ * `ReactWorker` dependency.
+ */
+var ExecutionEnvironment = {
+
+  canUseDOM: canUseDOM,
+
+  canUseWorkers: typeof Worker !== 'undefined',
+
+  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
+
+  canUseViewport: canUseDOM && !!window.screen,
+
+  isInWorker: !canUseDOM // For now, this is true - might change in the future.
+
+};
+
+module.exports = ExecutionEnvironment;
+},{}],4:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule camelize
+ * @typechecks
+ */
+
+"use strict";
+
+var _hyphenPattern = /-(.)/g;
+
+/**
+ * Camelcases a hyphenated string, for example:
+ *
+ *   > camelize('background-color')
+ *   < "backgroundColor"
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function camelize(string) {
+  return string.replace(_hyphenPattern, function (_, character) {
+    return character.toUpperCase();
+  });
+}
+
+module.exports = camelize;
+},{}],5:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule camelizeStyleName
+ * @typechecks
+ */
+
+'use strict';
+
+var camelize = require('./camelize');
+
+var msPattern = /^-ms-/;
+
+/**
+ * Camelcases a hyphenated CSS property name, for example:
+ *
+ *   > camelizeStyleName('background-color')
+ *   < "backgroundColor"
+ *   > camelizeStyleName('-moz-transition')
+ *   < "MozTransition"
+ *   > camelizeStyleName('-ms-transition')
+ *   < "msTransition"
+ *
+ * As Andi Smith suggests
+ * (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
+ * is converted to lowercase `ms`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function camelizeStyleName(string) {
+  return camelize(string.replace(msPattern, 'ms-'));
+}
+
+module.exports = camelizeStyleName;
+},{"./camelize":4}],6:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule containsNode
+ * @typechecks
+ */
+
+'use strict';
+
+var isTextNode = require('./isTextNode');
+
+/*eslint-disable no-bitwise */
+
+/**
+ * Checks if a given DOM node contains or is another DOM node.
+ *
+ * @param {?DOMNode} outerNode Outer DOM node.
+ * @param {?DOMNode} innerNode Inner DOM node.
+ * @return {boolean} True if `outerNode` contains or is `innerNode`.
+ */
+function containsNode(_x, _x2) {
+  var _again = true;
+
+  _function: while (_again) {
+    var outerNode = _x,
+        innerNode = _x2;
+    _again = false;
+
+    if (!outerNode || !innerNode) {
+      return false;
+    } else if (outerNode === innerNode) {
+      return true;
+    } else if (isTextNode(outerNode)) {
+      return false;
+    } else if (isTextNode(innerNode)) {
+      _x = outerNode;
+      _x2 = innerNode.parentNode;
+      _again = true;
+      continue _function;
+    } else if (outerNode.contains) {
+      return outerNode.contains(innerNode);
+    } else if (outerNode.compareDocumentPosition) {
+      return !!(outerNode.compareDocumentPosition(innerNode) & 16);
+    } else {
+      return false;
+    }
+  }
+}
+
+module.exports = containsNode;
+},{"./isTextNode":19}],7:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule createArrayFromMixed
+ * @typechecks
+ */
+
+'use strict';
+
+var toArray = require('./toArray');
+
+/**
+ * Perform a heuristic test to determine if an object is "array-like".
+ *
+ *   A monk asked Joshu, a Zen master, "Has a dog Buddha nature?"
+ *   Joshu replied: "Mu."
+ *
+ * This function determines if its argument has "array nature": it returns
+ * true if the argument is an actual array, an `arguments' object, or an
+ * HTMLCollection (e.g. node.childNodes or node.getElementsByTagName()).
+ *
+ * It will return false for other array-like objects like Filelist.
+ *
+ * @param {*} obj
+ * @return {boolean}
+ */
+function hasArrayNature(obj) {
+  return(
+    // not null/false
+    !!obj && (
+    // arrays are objects, NodeLists are functions in Safari
+    typeof obj == 'object' || typeof obj == 'function') &&
+    // quacks like an array
+    'length' in obj &&
+    // not window
+    !('setInterval' in obj) &&
+    // no DOM node should be considered an array-like
+    // a 'select' element has 'length' and 'item' properties on IE8
+    typeof obj.nodeType != 'number' && (
+    // a real array
+    Array.isArray(obj) ||
+    // arguments
+    'callee' in obj ||
+    // HTMLCollection/NodeList
+    'item' in obj)
+  );
+}
+
+/**
+ * Ensure that the argument is an array by wrapping it in an array if it is not.
+ * Creates a copy of the argument if it is already an array.
+ *
+ * This is mostly useful idiomatically:
+ *
+ *   var createArrayFromMixed = require('createArrayFromMixed');
+ *
+ *   function takesOneOrMoreThings(things) {
+ *     things = createArrayFromMixed(things);
+ *     ...
+ *   }
+ *
+ * This allows you to treat `things' as an array, but accept scalars in the API.
+ *
+ * If you need to convert an array-like object, like `arguments`, into an array
+ * use toArray instead.
+ *
+ * @param {*} obj
+ * @return {array}
+ */
+function createArrayFromMixed(obj) {
+  if (!hasArrayNature(obj)) {
+    return [obj];
+  } else if (Array.isArray(obj)) {
+    return obj.slice();
+  } else {
+    return toArray(obj);
+  }
+}
+
+module.exports = createArrayFromMixed;
+},{"./toArray":27}],8:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule createNodesFromMarkup
+ * @typechecks
+ */
+
+/*eslint-disable fb-www/unsafe-html*/
+
+'use strict';
+
+var ExecutionEnvironment = require('./ExecutionEnvironment');
+
+var createArrayFromMixed = require('./createArrayFromMixed');
+var getMarkupWrap = require('./getMarkupWrap');
+var invariant = require('./invariant');
+
+/**
+ * Dummy container used to render all markup.
+ */
+var dummyNode = ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
+
+/**
+ * Pattern used by `getNodeName`.
+ */
+var nodeNamePattern = /^\s*<(\w+)/;
+
+/**
+ * Extracts the `nodeName` of the first element in a string of markup.
+ *
+ * @param {string} markup String of markup.
+ * @return {?string} Node name of the supplied markup.
+ */
+function getNodeName(markup) {
+  var nodeNameMatch = markup.match(nodeNamePattern);
+  return nodeNameMatch && nodeNameMatch[1].toLowerCase();
+}
+
+/**
+ * Creates an array containing the nodes rendered from the supplied markup. The
+ * optionally supplied `handleScript` function will be invoked once for each
+ * <script> element that is rendered. If no `handleScript` function is supplied,
+ * an exception is thrown if any <script> elements are rendered.
+ *
+ * @param {string} markup A string of valid HTML markup.
+ * @param {?function} handleScript Invoked once for each rendered <script>.
+ * @return {array<DOMElement|DOMTextNode>} An array of rendered nodes.
+ */
+function createNodesFromMarkup(markup, handleScript) {
+  var node = dummyNode;
+  !!!dummyNode ? process.env.NODE_ENV !== 'production' ? invariant(false, 'createNodesFromMarkup dummy not initialized') : invariant(false) : undefined;
+  var nodeName = getNodeName(markup);
+
+  var wrap = nodeName && getMarkupWrap(nodeName);
+  if (wrap) {
+    node.innerHTML = wrap[1] + markup + wrap[2];
+
+    var wrapDepth = wrap[0];
+    while (wrapDepth--) {
+      node = node.lastChild;
+    }
+  } else {
+    node.innerHTML = markup;
+  }
+
+  var scripts = node.getElementsByTagName('script');
+  if (scripts.length) {
+    !handleScript ? process.env.NODE_ENV !== 'production' ? invariant(false, 'createNodesFromMarkup(...): Unexpected <script> element rendered.') : invariant(false) : undefined;
+    createArrayFromMixed(scripts).forEach(handleScript);
+  }
+
+  var nodes = createArrayFromMixed(node.childNodes);
+  while (node.lastChild) {
+    node.removeChild(node.lastChild);
+  }
+  return nodes;
+}
+
+module.exports = createNodesFromMarkup;
+}).call(this,require('_process'))
+},{"./ExecutionEnvironment":3,"./createArrayFromMixed":7,"./getMarkupWrap":13,"./invariant":17,"_process":292}],9:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule emptyFunction
+ */
+
+"use strict";
+
+function makeEmptyFunction(arg) {
+  return function () {
+    return arg;
+  };
+}
+
+/**
+ * This function accepts and discards inputs; it has no side effects. This is
+ * primarily useful idiomatically for overridable function endpoints which
+ * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
+ */
+function emptyFunction() {}
+
+emptyFunction.thatReturns = makeEmptyFunction;
+emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
+emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
+emptyFunction.thatReturnsNull = makeEmptyFunction(null);
+emptyFunction.thatReturnsThis = function () {
+  return this;
+};
+emptyFunction.thatReturnsArgument = function (arg) {
+  return arg;
+};
+
+module.exports = emptyFunction;
+},{}],10:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule emptyObject
+ */
+
+'use strict';
+
+var emptyObject = {};
+
+if (process.env.NODE_ENV !== 'production') {
+  Object.freeze(emptyObject);
+}
+
+module.exports = emptyObject;
+}).call(this,require('_process'))
+},{"_process":292}],11:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule focusNode
+ */
+
+'use strict';
+
+/**
+ * @param {DOMElement} node input/textarea to focus
+ */
+function focusNode(node) {
+  // IE8 can throw "Can't move focus to the control because it is invisible,
+  // not enabled, or of a type that does not accept the focus." for all kinds of
+  // reasons that are too expensive and fragile to test.
+  try {
+    node.focus();
+  } catch (e) {}
+}
+
+module.exports = focusNode;
+},{}],12:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule getActiveElement
+ * @typechecks
+ */
+
+/**
+ * Same as document.activeElement but wraps in a try-catch block. In IE it is
+ * not safe to call document.activeElement if there is nothing focused.
+ *
+ * The activeElement will be null only if the document or document body is not yet defined.
+ */
+'use strict';
+
+function getActiveElement() /*?DOMElement*/{
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  try {
+    return document.activeElement || document.body;
+  } catch (e) {
+    return document.body;
+  }
+}
+
+module.exports = getActiveElement;
+},{}],13:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule getMarkupWrap
+ */
+
+/*eslint-disable fb-www/unsafe-html */
+
+'use strict';
+
+var ExecutionEnvironment = require('./ExecutionEnvironment');
+
+var invariant = require('./invariant');
+
+/**
+ * Dummy container used to detect which wraps are necessary.
+ */
+var dummyNode = ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
+
+/**
+ * Some browsers cannot use `innerHTML` to render certain elements standalone,
+ * so we wrap them, render the wrapped nodes, then extract the desired node.
+ *
+ * In IE8, certain elements cannot render alone, so wrap all elements ('*').
+ */
+
+var shouldWrap = {};
+
+var selectWrap = [1, '<select multiple="true">', '</select>'];
+var tableWrap = [1, '<table>', '</table>'];
+var trWrap = [3, '<table><tbody><tr>', '</tr></tbody></table>'];
+
+var svgWrap = [1, '<svg xmlns="http://www.w3.org/2000/svg">', '</svg>'];
+
+var markupWrap = {
+  '*': [1, '?<div>', '</div>'],
+
+  'area': [1, '<map>', '</map>'],
+  'col': [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
+  'legend': [1, '<fieldset>', '</fieldset>'],
+  'param': [1, '<object>', '</object>'],
+  'tr': [2, '<table><tbody>', '</tbody></table>'],
+
+  'optgroup': selectWrap,
+  'option': selectWrap,
+
+  'caption': tableWrap,
+  'colgroup': tableWrap,
+  'tbody': tableWrap,
+  'tfoot': tableWrap,
+  'thead': tableWrap,
+
+  'td': trWrap,
+  'th': trWrap
+};
+
+// Initialize the SVG elements since we know they'll always need to be wrapped
+// consistently. If they are created inside a <div> they will be initialized in
+// the wrong namespace (and will not display).
+var svgElements = ['circle', 'clipPath', 'defs', 'ellipse', 'g', 'image', 'line', 'linearGradient', 'mask', 'path', 'pattern', 'polygon', 'polyline', 'radialGradient', 'rect', 'stop', 'text', 'tspan'];
+svgElements.forEach(function (nodeName) {
+  markupWrap[nodeName] = svgWrap;
+  shouldWrap[nodeName] = true;
+});
+
+/**
+ * Gets the markup wrap configuration for the supplied `nodeName`.
+ *
+ * NOTE: This lazily detects which wraps are necessary for the current browser.
+ *
+ * @param {string} nodeName Lowercase `nodeName`.
+ * @return {?array} Markup wrap configuration, if applicable.
+ */
+function getMarkupWrap(nodeName) {
+  !!!dummyNode ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Markup wrapping node not initialized') : invariant(false) : undefined;
+  if (!markupWrap.hasOwnProperty(nodeName)) {
+    nodeName = '*';
+  }
+  if (!shouldWrap.hasOwnProperty(nodeName)) {
+    if (nodeName === '*') {
+      dummyNode.innerHTML = '<link />';
+    } else {
+      dummyNode.innerHTML = '<' + nodeName + '></' + nodeName + '>';
+    }
+    shouldWrap[nodeName] = !dummyNode.firstChild;
+  }
+  return shouldWrap[nodeName] ? markupWrap[nodeName] : null;
+}
+
+module.exports = getMarkupWrap;
+}).call(this,require('_process'))
+},{"./ExecutionEnvironment":3,"./invariant":17,"_process":292}],14:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule getUnboundedScrollPosition
+ * @typechecks
+ */
+
+'use strict';
+
+/**
+ * Gets the scroll position of the supplied element or window.
+ *
+ * The return values are unbounded, unlike `getScrollPosition`. This means they
+ * may be negative or exceed the element boundaries (which is possible using
+ * inertial scrolling).
+ *
+ * @param {DOMWindow|DOMElement} scrollable
+ * @return {object} Map with `x` and `y` keys.
+ */
+function getUnboundedScrollPosition(scrollable) {
+  if (scrollable === window) {
+    return {
+      x: window.pageXOffset || document.documentElement.scrollLeft,
+      y: window.pageYOffset || document.documentElement.scrollTop
+    };
+  }
+  return {
+    x: scrollable.scrollLeft,
+    y: scrollable.scrollTop
+  };
+}
+
+module.exports = getUnboundedScrollPosition;
+},{}],15:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule hyphenate
+ * @typechecks
+ */
+
+'use strict';
+
+var _uppercasePattern = /([A-Z])/g;
+
+/**
+ * Hyphenates a camelcased string, for example:
+ *
+ *   > hyphenate('backgroundColor')
+ *   < "background-color"
+ *
+ * For CSS style names, use `hyphenateStyleName` instead which works properly
+ * with all vendor prefixes, including `ms`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function hyphenate(string) {
+  return string.replace(_uppercasePattern, '-$1').toLowerCase();
+}
+
+module.exports = hyphenate;
+},{}],16:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule hyphenateStyleName
+ * @typechecks
+ */
+
+'use strict';
+
+var hyphenate = require('./hyphenate');
+
+var msPattern = /^ms-/;
+
+/**
+ * Hyphenates a camelcased CSS property name, for example:
+ *
+ *   > hyphenateStyleName('backgroundColor')
+ *   < "background-color"
+ *   > hyphenateStyleName('MozTransition')
+ *   < "-moz-transition"
+ *   > hyphenateStyleName('msTransition')
+ *   < "-ms-transition"
+ *
+ * As Modernizr suggests (http://modernizr.com/docs/#prefixed), an `ms` prefix
+ * is converted to `-ms-`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function hyphenateStyleName(string) {
+  return hyphenate(string).replace(msPattern, '-ms-');
+}
+
+module.exports = hyphenateStyleName;
+},{"./hyphenate":15}],17:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule invariant
+ */
+
+'use strict';
+
+/**
+ * Use invariant() to assert state which your program assumes to be true.
+ *
+ * Provide sprintf-style format (only %s is supported) and arguments
+ * to provide information about what broke and what you were
+ * expecting.
+ *
+ * The invariant message will be stripped in production, but the invariant
+ * will remain to ensure logic does not differ in production.
+ */
+
+var invariant = function (condition, format, a, b, c, d, e, f) {
+  if (process.env.NODE_ENV !== 'production') {
+    if (format === undefined) {
+      throw new Error('invariant requires an error message argument');
+    }
+  }
+
+  if (!condition) {
+    var error;
+    if (format === undefined) {
+      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
+    } else {
+      var args = [a, b, c, d, e, f];
+      var argIndex = 0;
+      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
+        return args[argIndex++];
+      }));
+    }
+
+    error.framesToPop = 1; // we don't care about invariant's own frame
+    throw error;
+  }
+};
+
+module.exports = invariant;
+}).call(this,require('_process'))
+},{"_process":292}],18:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule isNode
+ * @typechecks
+ */
+
+/**
+ * @param {*} object The object to check.
+ * @return {boolean} Whether or not the object is a DOM node.
+ */
+'use strict';
+
+function isNode(object) {
+  return !!(object && (typeof Node === 'function' ? object instanceof Node : typeof object === 'object' && typeof object.nodeType === 'number' && typeof object.nodeName === 'string'));
+}
+
+module.exports = isNode;
+},{}],19:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule isTextNode
+ * @typechecks
+ */
+
+'use strict';
+
+var isNode = require('./isNode');
+
+/**
+ * @param {*} object The object to check.
+ * @return {boolean} Whether or not the object is a DOM text node.
+ */
+function isTextNode(object) {
+  return isNode(object) && object.nodeType == 3;
+}
+
+module.exports = isTextNode;
+},{"./isNode":18}],20:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule keyMirror
+ * @typechecks static-only
+ */
+
+'use strict';
+
+var invariant = require('./invariant');
+
+/**
+ * Constructs an enumeration with keys equal to their value.
+ *
+ * For example:
+ *
+ *   var COLORS = keyMirror({blue: null, red: null});
+ *   var myColor = COLORS.blue;
+ *   var isColorValid = !!COLORS[myColor];
+ *
+ * The last line could not be performed if the values of the generated enum were
+ * not equal to their keys.
+ *
+ *   Input:  {key1: val1, key2: val2}
+ *   Output: {key1: key1, key2: key2}
+ *
+ * @param {object} obj
+ * @return {object}
+ */
+var keyMirror = function (obj) {
+  var ret = {};
+  var key;
+  !(obj instanceof Object && !Array.isArray(obj)) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'keyMirror(...): Argument must be an object.') : invariant(false) : undefined;
+  for (key in obj) {
+    if (!obj.hasOwnProperty(key)) {
+      continue;
+    }
+    ret[key] = key;
+  }
+  return ret;
+};
+
+module.exports = keyMirror;
+}).call(this,require('_process'))
+},{"./invariant":17,"_process":292}],21:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule keyOf
+ */
+
+/**
+ * Allows extraction of a minified key. Let's the build system minify keys
+ * without losing the ability to dynamically use key strings as values
+ * themselves. Pass in an object with a single key/val pair and it will return
+ * you the string key of that single record. Suppose you want to grab the
+ * value for a key 'className' inside of an object. Key/val minification may
+ * have aliased that key to be 'xa12'. keyOf({className: null}) will return
+ * 'xa12' in that case. Resolve keys you want to use once at startup time, then
+ * reuse those resolutions.
+ */
+"use strict";
+
+var keyOf = function (oneKeyObj) {
+  var key;
+  for (key in oneKeyObj) {
+    if (!oneKeyObj.hasOwnProperty(key)) {
+      continue;
+    }
+    return key;
+  }
+  return null;
+};
+
+module.exports = keyOf;
+},{}],22:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule mapObject
+ */
+
+'use strict';
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+/**
+ * Executes the provided `callback` once for each enumerable own property in the
+ * object and constructs a new object from the results. The `callback` is
+ * invoked with three arguments:
+ *
+ *  - the property value
+ *  - the property name
+ *  - the object being traversed
+ *
+ * Properties that are added after the call to `mapObject` will not be visited
+ * by `callback`. If the values of existing properties are changed, the value
+ * passed to `callback` will be the value at the time `mapObject` visits them.
+ * Properties that are deleted before being visited are not visited.
+ *
+ * @grep function objectMap()
+ * @grep function objMap()
+ *
+ * @param {?object} object
+ * @param {function} callback
+ * @param {*} context
+ * @return {?object}
+ */
+function mapObject(object, callback, context) {
+  if (!object) {
+    return null;
+  }
+  var result = {};
+  for (var name in object) {
+    if (hasOwnProperty.call(object, name)) {
+      result[name] = callback.call(context, object[name], name, object);
+    }
+  }
+  return result;
+}
+
+module.exports = mapObject;
+},{}],23:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule memoizeStringOnly
+ * @typechecks static-only
+ */
+
+'use strict';
+
+/**
+ * Memoizes the return value of a function that accepts one string argument.
+ *
+ * @param {function} callback
+ * @return {function}
+ */
+function memoizeStringOnly(callback) {
+  var cache = {};
+  return function (string) {
+    if (!cache.hasOwnProperty(string)) {
+      cache[string] = callback.call(this, string);
+    }
+    return cache[string];
+  };
+}
+
+module.exports = memoizeStringOnly;
+},{}],24:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule performance
+ * @typechecks
+ */
+
+'use strict';
+
+var ExecutionEnvironment = require('./ExecutionEnvironment');
+
+var performance;
+
+if (ExecutionEnvironment.canUseDOM) {
+  performance = window.performance || window.msPerformance || window.webkitPerformance;
+}
+
+module.exports = performance || {};
+},{"./ExecutionEnvironment":3}],25:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule performanceNow
+ * @typechecks
+ */
+
+'use strict';
+
+var performance = require('./performance');
+var curPerformance = performance;
+
+/**
+ * Detect if we can use `window.performance.now()` and gracefully fallback to
+ * `Date.now()` if it doesn't exist. We need to support Firefox < 15 for now
+ * because of Facebook's testing infrastructure.
+ */
+if (!curPerformance || !curPerformance.now) {
+  curPerformance = Date;
+}
+
+var performanceNow = curPerformance.now.bind(curPerformance);
+
+module.exports = performanceNow;
+},{"./performance":24}],26:[function(require,module,exports){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule shallowEqual
+ * @typechecks
+ * 
+ */
+
+'use strict';
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+/**
+ * Performs equality by iterating through keys on an object and returning false
+ * when any key has values which are not strictly equal between the arguments.
+ * Returns true when the values of all keys are strictly equal.
+ */
+function shallowEqual(objA, objB) {
+  if (objA === objB) {
+    return true;
+  }
+
+  if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
+    return false;
+  }
+
+  var keysA = Object.keys(objA);
+  var keysB = Object.keys(objB);
+
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+
+  // Test for A's keys different from B.
+  var bHasOwnProperty = hasOwnProperty.bind(objB);
+  for (var i = 0; i < keysA.length; i++) {
+    if (!bHasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+module.exports = shallowEqual;
+},{}],27:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2013-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule toArray
+ * @typechecks
+ */
+
+'use strict';
+
+var invariant = require('./invariant');
+
+/**
+ * Convert array-like objects to arrays.
+ *
+ * This API assumes the caller knows the contents of the data type. For less
+ * well defined inputs use createArrayFromMixed.
+ *
+ * @param {object|function|filelist} obj
+ * @return {array}
+ */
+function toArray(obj) {
+  var length = obj.length;
+
+  // Some browse builtin objects can report typeof 'function' (e.g. NodeList in
+  // old versions of Safari).
+  !(!Array.isArray(obj) && (typeof obj === 'object' || typeof obj === 'function')) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Array-like object expected') : invariant(false) : undefined;
+
+  !(typeof length === 'number') ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Object needs a length property') : invariant(false) : undefined;
+
+  !(length === 0 || length - 1 in obj) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Object should have keys for indices') : invariant(false) : undefined;
+
+  // Old IE doesn't give collections access to hasOwnProperty. Assume inputs
+  // without method will throw during the slice call and skip straight to the
+  // fallback.
+  if (obj.hasOwnProperty) {
+    try {
+      return Array.prototype.slice.call(obj);
+    } catch (e) {
+      // IE < 9 does not support Array#slice on collections objects
+    }
+  }
+
+  // Fall back to copying key by key. This assumes all keys have a value,
+  // so will not preserve sparsely populated inputs.
+  var ret = Array(length);
+  for (var ii = 0; ii < length; ii++) {
+    ret[ii] = obj[ii];
+  }
+  return ret;
+}
+
+module.exports = toArray;
+}).call(this,require('_process'))
+},{"./invariant":17,"_process":292}],28:[function(require,module,exports){
+(function (process){
+/**
+ * Copyright 2014-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule warning
+ */
+
+'use strict';
+
+var emptyFunction = require('./emptyFunction');
+
+/**
+ * Similar to invariant but only logs a warning if the condition is not met.
+ * This can be used to log issues in development environments in critical
+ * paths. Removing the logging code for production environments will keep the
+ * same logic and follow the same code paths.
+ */
+
+var warning = emptyFunction;
+
+if (process.env.NODE_ENV !== 'production') {
+  warning = function (condition, format) {
+    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+      args[_key - 2] = arguments[_key];
+    }
+
+    if (format === undefined) {
+      throw new Error('`warning(condition, format, ...args)` requires a warning ' + 'message argument');
+    }
+
+    if (format.indexOf('Failed Composite propType: ') === 0) {
+      return; // Ignore CompositeComponent proptype check.
+    }
+
+    if (!condition) {
+      var argIndex = 0;
+      var message = 'Warning: ' + format.replace(/%s/g, function () {
+        return args[argIndex++];
+      });
+      if (typeof console !== 'undefined') {
+        console.error(message);
+      }
+      try {
+        // --- Welcome to debugging React ---
+        // This error was thrown as a convenience so that you can use this stack
+        // to find the callsite that caused this warning to fire.
+        throw new Error(message);
+      } catch (x) {}
+    }
+  };
+}
+
+module.exports = warning;
+}).call(this,require('_process'))
+},{"./emptyFunction":9,"_process":292}],29:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+var NODE_LIST_CLASSES = {
+  '[object HTMLCollection]': true,
+  '[object NodeList]': true,
+  '[object RadioNodeList]': true
+};
+
+var IGNORED_INPUT_TYPES = {
+  'button': true,
+  'reset': true,
+  'submit': true,
+  'fieldset': true
+};
+
+var CHECKED_INPUT_TYPES = {
+  'checkbox': true,
+  'radio': true
+};
+
+var TRIM_RE = /^\s+|\s+$/g;
+
+var slice = Array.prototype.slice;
+var toString = Object.prototype.toString;
+
+/**
+ * @param {HTMLFormElement} form
+ * @param {Object} options
+ * @return {Object.<string,(string|Array.<string>)>} an object containing
+ *   submittable value(s) held in the form's .elements collection, with
+ *   properties named as per element names or ids.
+ */
+function getFormData(form) {
+  var options = arguments.length <= 1 || arguments[1] === undefined ? { trim: false } : arguments[1];
+
+  if (!form) {
+    throw new Error('A form is required by getFormData, was given form=' + form);
+  }
+
+  var data = {};
+  var elementName = undefined;
+  var elementNames = [];
+  var elementNameLookup = {};
+
+  // Get unique submittable element names for the form
+  for (var i = 0, l = form.elements.length; i < l; i++) {
+    var element = form.elements[i];
+    if (IGNORED_INPUT_TYPES[element.type] || element.disabled) {
+      continue;
+    }
+    elementName = element.name || element.id;
+    if (elementName && !elementNameLookup[elementName]) {
+      elementNames.push(elementName);
+      elementNameLookup[elementName] = true;
+    }
+  }
+
+  // Extract element data name-by-name for consistent handling of special cases
+  // around elements which contain multiple inputs.
+  for (var i = 0, l = elementNames.length; i < l; i++) {
+    elementName = elementNames[i];
+    var value = getNamedFormElementData(form, elementName, options);
+    if (value != null) {
+      data[elementName] = value;
+    }
+  }
+
+  return data;
+}
+
+/**
+ * @param {HTMLFormElement} form
+ * @param {string} elementName
+ * @param {Object} options
+ * @return {(string|Array.<string>)} submittable value(s) in the form for a
+ *   named element from its .elements collection, or null if there was no
+ *   element with that name or the element had no submittable value(s).
+ */
+function getNamedFormElementData(form, elementName) {
+  var options = arguments.length <= 2 || arguments[2] === undefined ? { trim: false } : arguments[2];
+
+  if (!form) {
+    throw new Error('A form is required by getNamedFormElementData, was given form=' + form);
+  }
+  if (!elementName && toString.call(elementName) !== '[object String]') {
+    throw new Error('A form element name is required by getNamedFormElementData, was given elementName=' + elementName);
+  }
+
+  var element = form.elements[elementName];
+  if (!element || element.disabled) {
+    return null;
+  }
+
+  if (!NODE_LIST_CLASSES[toString.call(element)]) {
+    return getFormElementValue(element, options.trim);
+  }
+
+  // Deal with multiple form controls which have the same name
+  var data = [];
+  var allRadios = true;
+  for (var i = 0, l = element.length; i < l; i++) {
+    if (element[i].disabled) {
+      continue;
+    }
+    if (allRadios && element[i].type !== 'radio') {
+      allRadios = false;
+    }
+    var value = getFormElementValue(element[i], options.trim);
+    if (value != null) {
+      data = data.concat(value);
+    }
+  }
+
+  // Special case for an element with multiple same-named inputs which were all
+  // radio buttons: if there was a selected value, only return the value.
+  if (allRadios && data.length === 1) {
+    return data[0];
+  }
+
+  return data.length > 0 ? data : null;
+}
+
+/**
+ * @param {HTMLElement} element a form element.
+ * @param {booleam} trim should values for text entry inputs be trimmed?
+ * @return {(string|Array.<string>|File|Array.<File>)} the element's submittable
+ *   value(s), or null if it had none.
+ */
+function getFormElementValue(element, trim) {
+  var value = null;
+  var type = element.type;
+
+  if (type === 'select-one') {
+    if (element.options.length) {
+      value = element.options[element.selectedIndex].value;
+    }
+    return value;
+  }
+
+  if (type === 'select-multiple') {
+    value = [];
+    for (var i = 0, l = element.options.length; i < l; i++) {
+      if (element.options[i].selected) {
+        value.push(element.options[i].value);
+      }
+    }
+    if (value.length === 0) {
+      value = null;
+    }
+    return value;
+  }
+
+  // If a file input doesn't have a files attribute, fall through to using its
+  // value attribute.
+  if (type === 'file' && 'files' in element) {
+    if (element.multiple) {
+      value = slice.call(element.files);
+      if (value.length === 0) {
+        value = null;
+      }
+    } else {
+      // Should be null if not present, according to the spec
+      value = element.files[0];
+    }
+    return value;
+  }
+
+  if (!CHECKED_INPUT_TYPES[type]) {
+    value = trim ? element.value.replace(TRIM_RE, '') : element.value;
+  } else if (element.checked) {
+    value = element.value;
+  }
+
+  return value;
+}
+
+getFormData.getNamedFormElementData = getNamedFormElementData;
+
+exports['default'] = getFormData;
+module.exports = exports['default'];
+},{}],30:[function(require,module,exports){
 /**
  * Indicates that navigation was caused by a call to history.push.
  */
@@ -30,7 +1624,7 @@ exports['default'] = {
   REPLACE: REPLACE,
   POP: POP
 };
-},{}],2:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
@@ -57,7 +1651,7 @@ function loopAsync(turns, work, callback) {
 
   next();
 }
-},{}],3:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*eslint-disable no-empty */
 'use strict';
 
@@ -106,7 +1700,7 @@ function readState(key) {
 
   return null;
 }
-},{"warning":24}],4:[function(require,module,exports){
+},{"warning":291}],33:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -182,13 +1776,13 @@ function supportsGoWithoutReloadUsingHash() {
   var ua = navigator.userAgent;
   return ua.indexOf('Firefox') === -1;
 }
-},{}],5:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
 exports.canUseDOM = canUseDOM;
-},{}],6:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -229,7 +1823,7 @@ function createDOMHistory(options) {
 
 exports['default'] = createDOMHistory;
 module.exports = exports['default'];
-},{"./DOMUtils":4,"./ExecutionEnvironment":5,"./createHistory":8,"invariant":19}],7:[function(require,module,exports){
+},{"./DOMUtils":33,"./ExecutionEnvironment":34,"./createHistory":37,"invariant":52}],36:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -454,7 +2048,7 @@ function createHashHistory() {
 
 exports['default'] = createHashHistory;
 module.exports = exports['default'];
-},{"./Actions":1,"./DOMStateStorage":3,"./DOMUtils":4,"./ExecutionEnvironment":5,"./createDOMHistory":6,"invariant":19,"warning":24}],8:[function(require,module,exports){
+},{"./Actions":30,"./DOMStateStorage":32,"./DOMUtils":33,"./ExecutionEnvironment":34,"./createDOMHistory":35,"invariant":52,"warning":291}],37:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -702,7 +2296,7 @@ function createHistory() {
 
 exports['default'] = createHistory;
 module.exports = exports['default'];
-},{"./Actions":1,"./AsyncUtils":2,"./createLocation":9,"./deprecate":11,"./runTransitionHook":13,"deep-equal":16}],9:[function(require,module,exports){
+},{"./Actions":30,"./AsyncUtils":31,"./createLocation":38,"./deprecate":40,"./runTransitionHook":42,"deep-equal":45}],38:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -739,7 +2333,7 @@ function createLocation() {
 
 exports['default'] = createLocation;
 module.exports = exports['default'];
-},{"./Actions":1,"./parsePath":12}],10:[function(require,module,exports){
+},{"./Actions":30,"./parsePath":41}],39:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -882,7 +2476,7 @@ function createMemoryHistory() {
 
 exports['default'] = createMemoryHistory;
 module.exports = exports['default'];
-},{"./Actions":1,"./createHistory":8,"invariant":19}],11:[function(require,module,exports){
+},{"./Actions":30,"./createHistory":37,"invariant":52}],40:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -902,7 +2496,7 @@ function deprecate(fn, message) {
 
 exports['default'] = deprecate;
 module.exports = exports['default'];
-},{"warning":24}],12:[function(require,module,exports){
+},{"warning":291}],41:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -951,7 +2545,7 @@ function parsePath(path) {
 
 exports['default'] = parsePath;
 module.exports = exports['default'];
-},{"warning":24}],13:[function(require,module,exports){
+},{"warning":291}],42:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -976,7 +2570,7 @@ function runTransitionHook(hook, location, callback) {
 
 exports['default'] = runTransitionHook;
 module.exports = exports['default'];
-},{"warning":24}],14:[function(require,module,exports){
+},{"warning":291}],43:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -1092,7 +2686,7 @@ function useBasename(createHistory) {
 
 exports['default'] = useBasename;
 module.exports = exports['default'];
-},{"./ExecutionEnvironment":5,"./parsePath":12,"./runTransitionHook":13}],15:[function(require,module,exports){
+},{"./ExecutionEnvironment":34,"./parsePath":41,"./runTransitionHook":42}],44:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -1208,7 +2802,7 @@ function useQueries(createHistory) {
 
 exports['default'] = useQueries;
 module.exports = exports['default'];
-},{"./parsePath":12,"./runTransitionHook":13,"qs":20}],16:[function(require,module,exports){
+},{"./parsePath":41,"./runTransitionHook":42,"qs":48}],45:[function(require,module,exports){
 var pSlice = Array.prototype.slice;
 var objectKeys = require('./lib/keys.js');
 var isArguments = require('./lib/is_arguments.js');
@@ -1304,7 +2898,7 @@ function objEquiv(a, b, opts) {
   return typeof a === typeof b;
 }
 
-},{"./lib/is_arguments.js":17,"./lib/keys.js":18}],17:[function(require,module,exports){
+},{"./lib/is_arguments.js":46,"./lib/keys.js":47}],46:[function(require,module,exports){
 var supportsArgumentsClass = (function(){
   return Object.prototype.toString.call(arguments)
 })() == '[object Arguments]';
@@ -1326,7 +2920,7 @@ function unsupported(object){
     false;
 };
 
-},{}],18:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 exports = module.exports = typeof Object.keys === 'function'
   ? Object.keys : shim;
 
@@ -1337,64 +2931,7 @@ function shim (obj) {
   return keys;
 }
 
-},{}],19:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule invariant
- */
-
-'use strict';
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var invariant = function(condition, format, a, b, c, d, e, f) {
-  if (process.env.NODE_ENV !== 'production') {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  }
-
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error(
-        'Minified exception occurred; use the non-minified dev environment ' +
-        'for the full error message and additional helpful warnings.'
-      );
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error(
-        'Invariant Violation: ' +
-        format.replace(/%s/g, function() { return args[argIndex++]; })
-      );
-    }
-
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-};
-
-module.exports = invariant;
-
-}).call(this,require('_process'))
-},{"_process":205}],20:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 // Load modules
 
 var Stringify = require('./stringify');
@@ -1411,7 +2948,7 @@ module.exports = {
     parse: Parse
 };
 
-},{"./parse":21,"./stringify":22}],21:[function(require,module,exports){
+},{"./parse":49,"./stringify":50}],49:[function(require,module,exports){
 // Load modules
 
 var Utils = require('./utils');
@@ -1599,7 +3136,7 @@ module.exports = function (str, options) {
     return Utils.compact(obj);
 };
 
-},{"./utils":23}],22:[function(require,module,exports){
+},{"./utils":51}],50:[function(require,module,exports){
 // Load modules
 
 var Utils = require('./utils');
@@ -1722,7 +3259,7 @@ module.exports = function (obj, options) {
     return keys.join(delimiter);
 };
 
-},{"./utils":23}],23:[function(require,module,exports){
+},{"./utils":51}],51:[function(require,module,exports){
 // Load modules
 
 
@@ -1914,71 +3451,8472 @@ exports.isBuffer = function (obj) {
               obj.constructor.isBuffer(obj));
 };
 
-},{}],24:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 (function (process){
 /**
- * Copyright 2014-2015, Facebook, Inc.
+ * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * @providesModule invariant
  */
 
 'use strict';
 
 /**
- * Similar to invariant but only logs a warning if the condition is not met.
- * This can be used to log issues in development environments in critical
- * paths. Removing the logging code for production environments will keep the
- * same logic and follow the same code paths.
+ * Use invariant() to assert state which your program assumes to be true.
+ *
+ * Provide sprintf-style format (only %s is supported) and arguments
+ * to provide information about what broke and what you were
+ * expecting.
+ *
+ * The invariant message will be stripped in production, but the invariant
+ * will remain to ensure logic does not differ in production.
  */
 
-var warning = function() {};
-
-if (process.env.NODE_ENV !== 'production') {
-  warning = function(condition, format, args) {
-    var len = arguments.length;
-    args = new Array(len > 2 ? len - 2 : 0);
-    for (var key = 2; key < len; key++) {
-      args[key - 2] = arguments[key];
-    }
+var invariant = function(condition, format, a, b, c, d, e, f) {
+  if (process.env.NODE_ENV !== 'production') {
     if (format === undefined) {
-      throw new Error(
-        '`warning(condition, format, ...args)` requires a warning ' +
-        'message argument'
-      );
+      throw new Error('invariant requires an error message argument');
     }
+  }
 
-    if (format.length < 10 || (/^[s\W]*$/).test(format)) {
-      throw new Error(
-        'The warning format should be able to uniquely identify this ' +
-        'warning. Please, use a more descriptive format than: ' + format
+  if (!condition) {
+    var error;
+    if (format === undefined) {
+      error = new Error(
+        'Minified exception occurred; use the non-minified dev environment ' +
+        'for the full error message and additional helpful warnings.'
       );
-    }
-
-    if (!condition) {
+    } else {
+      var args = [a, b, c, d, e, f];
       var argIndex = 0;
-      var message = 'Warning: ' +
-        format.replace(/%s/g, function() {
-          return args[argIndex++];
-        });
-      if (typeof console !== 'undefined') {
-        console.error(message);
-      }
-      try {
-        // This error was thrown as a convenience so that you can use this stack
-        // to find the callsite that caused this warning to fire.
-        throw new Error(message);
-      } catch(x) {}
+      error = new Error(
+        'Invariant Violation: ' +
+        format.replace(/%s/g, function() { return args[argIndex++]; })
+      );
     }
-  };
-}
 
-module.exports = warning;
+    error.framesToPop = 1; // we don't care about invariant's own frame
+    throw error;
+  }
+};
+
+module.exports = invariant;
 
 }).call(this,require('_process'))
-},{"_process":205}],25:[function(require,module,exports){
+},{"_process":292}],53:[function(require,module,exports){
+'use strict';
+
+var hasOwn = Object.prototype.hasOwnProperty
+var toString = Object.prototype.toString
+var type = function(obj) { return toString.call(obj).slice(8, -1).toLowerCase() }
+
+var primitiveWrapperTypes = {
+  boolean: true
+, number: true
+, string: true
+}
+
+var stringPropsRE = /^(?:\d+|length)$/
+
+/* This file is part of OWL JavaScript Utilities.
+
+OWL JavaScript Utilities is free software: you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public License
+as published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version.
+
+OWL JavaScript Utilities is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with OWL JavaScript Utilities.  If not, see
+<http://www.gnu.org/licenses/>.
+*/
+
+// Re-usable constructor function used by clone()
+function Clone() {}
+
+// Clone objects, skip other types
+function clone(target) {
+  if (typeof target == 'object') {
+    Clone.prototype = target
+    return new Clone()
+  }
+  else {
+    return target
+  }
+}
+
+// Shallow Copy
+function copy(target) {
+  var c, property
+  if (typeof target != 'object') {
+    // Non-objects have value semantics, so target is already a copy
+    return target
+  }
+  else {
+    var value = target.valueOf()
+    if (target == value) {
+      // The object is a standard object wrapper for a native type, say String.
+      // we can make a copy by instantiating a new object around the value.
+      c = new target.constructor(value)
+      var notString = type(target) != 'string'
+
+      // Wrappers can have properties added to them
+      for (property in target) {
+        if (hasOwn.call(target, property) && (notString || !stringPropsRE.test(property))) {
+          c[property] = target[property]
+        }
+      }
+
+      return c
+    }
+    else {
+      // We have a normal object. If possible, we'll clone the original's
+      // prototype (not the original) to get an empty object with the same
+      // prototype chain as the original. If just copy the instance properties.
+      // Otherwise, we have to copy the whole thing, property-by-property.
+      if (target instanceof target.constructor && target.constructor !== Object) {
+        c = clone(target.constructor.prototype)
+
+        // Give the copy all the instance properties of target. It has the same
+        // prototype as target, so inherited properties are already there.
+        for (property in target) {
+          if (hasOwn.call(target, property)) {
+            c[property] = target[property]
+          }
+        }
+      }
+      else {
+        c = {}
+        for (property in target) {
+          c[property] = target[property]
+        }
+      }
+
+      return c
+    }
+  }
+}
+
+// Deep Copy
+var deepCopiers = []
+
+function DeepCopier(config) {
+  for (var key in config) {
+    this[key] = config[key]
+  }
+}
+
+DeepCopier.prototype = {
+  constructor: DeepCopier
+
+  // Determines if this DeepCopier can handle the given object.
+, canCopy: function(source) { return false }
+
+  // Starts the deep copying process by creating the copy object. You can
+  // initialize any properties you want, but you can't call recursively into the
+  // DeepCopyAlgorithm.
+, create: function(source) {}
+
+  // Completes the deep copy of the source object by populating any properties
+  // that need to be recursively deep copied. You can do this by using the
+  // provided deepCopyAlgorithm instance's deepCopy() method. This will handle
+  // cyclic references for objects already deepCopied, including the source
+  // object itself. The "result" passed in is the object returned from create().
+, populate: function(deepCopyAlgorithm, source, result) {}
+}
+
+function DeepCopyAlgorithm() {
+  // copiedObjects keeps track of objects already copied by this deepCopy
+  // operation, so we can correctly handle cyclic references.
+  this.copiedObjects = []
+  var thisPass = this
+  this.recursiveDeepCopy = function(source) {
+    return thisPass.deepCopy(source)
+  }
+  this.depth = 0
+}
+DeepCopyAlgorithm.prototype = {
+  constructor: DeepCopyAlgorithm
+
+, maxDepth: 256
+
+  // Add an object to the cache.  No attempt is made to filter duplicates; we
+  // always check getCachedResult() before calling it.
+, cacheResult: function(source, result) {
+    this.copiedObjects.push([source, result])
+  }
+
+  // Returns the cached copy of a given object, or undefined if it's an object
+  // we haven't seen before.
+, getCachedResult: function(source) {
+    var copiedObjects = this.copiedObjects
+    var length = copiedObjects.length
+    for ( var i=0; i<length; i++ ) {
+      if ( copiedObjects[i][0] === source ) {
+        return copiedObjects[i][1]
+      }
+    }
+    return undefined
+  }
+
+  // deepCopy handles the simple cases itself: non-objects and object's we've
+  // seen before. For complex cases, it first identifies an appropriate
+  // DeepCopier, then calls applyDeepCopier() to delegate the details of copying
+  // the object to that DeepCopier.
+, deepCopy: function(source) {
+    // null is a special case: it's the only value of type 'object' without
+    // properties.
+    if (source === null) { return null }
+
+    // All non-objects use value semantics and don't need explict copying
+    if (typeof source != 'object') { return source }
+
+    var cachedResult = this.getCachedResult(source)
+
+    // We've already seen this object during this deep copy operation so can
+    // immediately return the result. This preserves the cyclic reference
+    // structure and protects us from infinite recursion.
+    if (cachedResult) { return cachedResult }
+
+    // Objects may need special handling depending on their class. There is a
+    // class of handlers call "DeepCopiers" that know how to copy certain
+    // objects. There is also a final, generic deep copier that can handle any
+    // object.
+    for (var i=0; i<deepCopiers.length; i++) {
+      var deepCopier = deepCopiers[i]
+      if (deepCopier.canCopy(source)) {
+        return this.applyDeepCopier(deepCopier, source)
+      }
+    }
+    // The generic copier can handle anything, so we should never reach this
+    // line.
+    throw new Error('no DeepCopier is able to copy ' + source)
+  }
+
+  // Once we've identified which DeepCopier to use, we need to call it in a
+  // very particular order: create, cache, populate.This is the key to detecting
+  // cycles. We also keep track of recursion depth when calling the potentially
+  // recursive populate(): this is a fail-fast to prevent an infinite loop from
+  // consuming all available memory and crashing or slowing down the browser.
+, applyDeepCopier: function(deepCopier, source) {
+    // Start by creating a stub object that represents the copy.
+    var result = deepCopier.create(source)
+
+    // We now know the deep copy of source should always be result, so if we
+    // encounter source again during this deep copy we can immediately use
+    // result instead of descending into it recursively.
+    this.cacheResult(source, result)
+
+    // Only DeepCopier.populate() can recursively deep copy. So, to keep track
+    // of recursion depth, we increment this shared counter before calling it,
+    // and decrement it afterwards.
+    this.depth++
+    if (this.depth > this.maxDepth) {
+      throw new Error("Exceeded max recursion depth in deep copy.")
+    }
+
+    // It's now safe to let the deepCopier recursively deep copy its properties
+    deepCopier.populate(this.recursiveDeepCopy, source, result)
+
+    this.depth--
+
+    return result
+  }
+}
+
+// Entry point for deep copy.
+//   source is the object to be deep copied.
+//   maxDepth is an optional recursion limit. Defaults to 256.
+function deepCopy(source, maxDepth) {
+  var deepCopyAlgorithm = new DeepCopyAlgorithm()
+  if (maxDepth) {
+    deepCopyAlgorithm.maxDepth = maxDepth
+  }
+  return deepCopyAlgorithm.deepCopy(source)
+}
+
+// Publicly expose the DeepCopier class
+deepCopy.DeepCopier = DeepCopier
+
+// Publicly expose the list of deepCopiers
+deepCopy.deepCopiers = deepCopiers
+
+// Make deepCopy() extensible by allowing others to register their own custom
+// DeepCopiers.
+deepCopy.register = function(deepCopier) {
+  if (!(deepCopier instanceof DeepCopier)) {
+    deepCopier = new DeepCopier(deepCopier)
+  }
+  deepCopiers.unshift(deepCopier)
+}
+
+// Generic Object copier
+// The ultimate fallback DeepCopier, which tries to handle the generic case.
+// This should work for base Objects and many user-defined classes.
+deepCopy.register({
+  canCopy: function(source) { return true }
+
+, create: function(source) {
+    if (source instanceof source.constructor) {
+      return clone(source.constructor.prototype)
+    }
+    else {
+      return {}
+    }
+  }
+
+, populate: function(deepCopy, source, result) {
+    for (var key in source) {
+      if (hasOwn.call(source, key)) {
+        result[key] = deepCopy(source[key])
+      }
+    }
+    return result
+  }
+})
+
+// Standard primitive wrapper copier
+deepCopy.register({
+  canCopy: function(source) {
+    return primitiveWrapperTypes[type(source)]
+  }
+
+, create: function(source) {
+    return new source.constructor(source.valueOf())
+  }
+
+, populate: function(deepCopy, source, result) {
+    var notString = type(source) != 'string'
+    for (var key in source) {
+      if (hasOwn.call(source, key) && (notString || !stringPropsRE.test(key))) {
+        result[key] = deepCopy(source[key])
+      }
+    }
+    return result
+  }
+})
+
+// RegExp copier
+deepCopy.register({
+  canCopy: function(source) {
+    return type(source) == 'regexp'
+  }
+
+, create: function(source) {
+    return source
+  }
+
+
+})
+
+// Date copier
+deepCopy.register({
+  canCopy: function(source) {
+    return type(source) == 'date'
+  }
+
+, create: function(source) {
+    return new Date(source)
+  }
+})
+
+// Array copier
+deepCopy.register({
+  canCopy: function(source) {
+    return type(source) == 'array'
+  }
+
+, create: function(source) {
+    return new source.constructor()
+  }
+
+, populate: function(deepCopy, source, result) {
+    for (var i = 0; i < source.length; i++) {
+      result.push(deepCopy(source[i]))
+    }
+    return result
+  }
+})
+
+module.exports = {
+  DeepCopyAlgorithm: DeepCopyAlgorithm
+, copy: copy
+, clone: clone
+, deepCopy: deepCopy
+}
+
+},{}],54:[function(require,module,exports){
+'use strict';
+
+var slice = Array.prototype.slice
+  , formatRegExp = /%[%s]/g
+  , formatObjRegExp = /({{?)(\w+)}/g
+
+/**
+ * Replaces %s placeholders in a string with positional arguments.
+ */
+function format(s) {
+  return formatArr(s, slice.call(arguments, 1))
+}
+
+/**
+ * Replaces %s placeholders in a string with array contents.
+ */
+function formatArr(s, a) {
+  var i = 0
+  return s.replace(formatRegExp, function(m) { return m == '%%' ? '%' : a[i++] })
+}
+
+/**
+ * Replaces {propertyName} placeholders in a string with object properties.
+ */
+function formatObj(s, o) {
+  return s.replace(formatObjRegExp, function(m, b, p) { return b.length == 2 ? m.slice(1) : o[p] })
+}
+
+var units = 'kMGTPEZY'
+  , stripDecimals = /\.00$|0$/
+
+/**
+ * Formats bytes as a file size with the appropriately scaled units.
+ */
+function fileSize(bytes, threshold) {
+  threshold = Math.min(threshold || 768, 1024)
+  var i = -1
+    , unit = 'bytes'
+    , size = bytes
+  while (size > threshold && i < units.length) {
+    size = size / 1024
+    i++
+  }
+  if (i > -1) {
+    unit = units.charAt(i) + 'B'
+  }
+  return size.toFixed(2).replace(stripDecimals, '') + ' ' + unit
+}
+
+module.exports = {
+  format: format
+, formatArr: formatArr
+, formatObj: formatObj
+, fileSize: fileSize
+}
+
+},{}],55:[function(require,module,exports){
+'use strict';
+
+var toString = Object.prototype.toString
+
+// Type checks
+
+function isArray(o) {
+  return toString.call(o) == '[object Array]'
+}
+
+function isBoolean(o) {
+  return toString.call(o) == '[object Boolean]'
+}
+
+function isDate(o) {
+  return toString.call(o) == '[object Date]'
+}
+
+function isError(o) {
+  return toString.call(o) == '[object Error]'
+}
+
+function isFunction(o) {
+  return toString.call(o) == '[object Function]'
+}
+
+function isNumber(o) {
+  return toString.call(o) == '[object Number]'
+}
+
+function isObject(o) {
+  return toString.call(o) == '[object Object]'
+}
+
+function isRegExp(o) {
+  return toString.call(o) == '[object RegExp]'
+}
+
+function isString(o) {
+  return toString.call(o) == '[object String]'
+}
+
+// Content checks
+
+function isEmpty(o) {
+  /* jshint ignore:start */
+  for (var prop in o) {
+    return false
+  }
+  /* jshint ignore:end */
+  return true
+}
+
+module.exports = {
+  Array: isArray
+, Boolean: isBoolean
+, Date: isDate
+, Empty: isEmpty
+, Error: isError
+, Function: isFunction
+, NaN: isNaN
+, Number: isNumber
+, Object: isObject
+, RegExp: isRegExp
+, String: isString
+}
+
+},{}],56:[function(require,module,exports){
+'use strict';
+
+/**
+ * Wraps Object.prototype.hasOwnProperty() so it can be called with an object
+ * and property name.
+ */
+var hasOwn = (function() {
+  var hasOwnProperty = Object.prototype.hasOwnProperty
+  return function(obj, prop) { return hasOwnProperty.call(obj, prop) }
+})()
+
+/**
+ * Returns the type of an object as a lowercase string.
+ */
+var type = (function() {
+  var toString = Object.prototype.toString
+  return function(obj) { return toString.call(obj).slice(8, -1).toLowerCase() }
+})()
+
+/**
+ * Copies own properties from any given objects to a destination object.
+ */
+function extend(dest) {
+  for (var i = 1, l = arguments.length, src; i < l; i++) {
+    src = arguments[i]
+    if (src) {
+      for (var prop in src) {
+        if (hasOwn(src, prop)) {
+          dest[prop] = src[prop]
+        }
+      }
+    }
+  }
+  return dest
+}
+
+/**
+ * Makes a constructor inherit another constructor's prototype without
+ * having to actually use the constructor.
+ */
+function inherits(childConstructor, parentConstructor) {
+  var F = function() {}
+  F.prototype = parentConstructor.prototype
+  childConstructor.prototype = new F()
+  childConstructor.prototype.constructor = childConstructor
+  return childConstructor
+}
+
+/**
+ * Creates an Array of [property, value] pairs from an Object.
+ */
+function items(obj) {
+  var items_ = []
+  for (var prop in obj) {
+    if (hasOwn(obj, prop)) {
+      items_.push([prop, obj[prop]])
+    }
+  }
+  return items_
+}
+
+/**
+ * Creates an Object from an Array of [property, value] pairs.
+ */
+function fromItems(items) {
+  var obj = {}
+  for (var i = 0, l = items.length, item; i < l; i++) {
+    item = items[i]
+    obj[item[0]] = item[1]
+  }
+  return obj
+}
+
+/**
+ * Creates a lookup Object from an Array, coercing each item to a String.
+ */
+function lookup(arr) {
+  var obj = {}
+  for (var i = 0, l = arr.length; i < l; i++) {
+    obj[''+arr[i]] = true
+  }
+  return obj
+}
+
+/**
+ * If the given object has the given property, returns its value, otherwise
+ * returns the given default value.
+ */
+function get(obj, prop, defaultValue) {
+  return (hasOwn(obj, prop) ? obj[prop] : defaultValue)
+}
+
+/**
+ * Deletes and returns an own property from an object, optionally returning a
+ * default value if the object didn't have theproperty.
+ * @throws if given an object which is null (or undefined), or if the property
+ *   doesn't exist and there was no defaultValue given.
+ */
+function pop(obj, prop, defaultValue) {
+  if (obj == null) {
+    throw new Error('pop was given ' + obj)
+  }
+  if (hasOwn(obj, prop)) {
+    var value = obj[prop]
+    delete obj[prop]
+    return value
+  }
+  else if (arguments.length == 2) {
+    throw new Error("pop was given an object which didn't have an own '" +
+                    prop + "' property, without a default value to return")
+  }
+  return defaultValue
+}
+
+/**
+ * If the prop is in the object, return its value. If not, set the prop to
+ * defaultValue and return defaultValue.
+ */
+function setDefault(obj, prop, defaultValue) {
+  if (obj == null) {
+    throw new Error('setDefault was given ' + obj)
+  }
+  defaultValue = defaultValue || null
+  if (hasOwn(obj, prop)) {
+    return obj[prop]
+  }
+  else {
+    obj[prop] = defaultValue
+    return defaultValue
+  }
+}
+
+module.exports = {
+  hasOwn: hasOwn
+, type: type
+, extend: extend
+, inherits: inherits
+, items: items
+, fromItems: fromItems
+, lookup: lookup
+, get: get
+, pop: pop
+, setDefault: setDefault
+}
+
+},{}],57:[function(require,module,exports){
+'use strict';
+
+var is = require('./is')
+
+/**
+ * Pads a number with a leading zero if necessary.
+ */
+function pad(number) {
+  return (number < 10 ? '0' + number : number)
+}
+
+/**
+ * Returns the index of item in list, or -1 if it's not in list.
+ */
+function indexOf(item, list) {
+  for (var i = 0, l = list.length; i < l; i++) {
+    if (item === list[i]) {
+      return i
+    }
+  }
+  return -1
+}
+
+/**
+ * Maps directive codes to regular expression patterns which will capture the
+ * data the directive corresponds to, or in the case of locale-dependent
+ * directives, a function which takes a locale and generates a regular
+ * expression pattern.
+ */
+var parserDirectives = {
+  // Locale's abbreviated month name
+  'b': function(l) { return '(' + l.b.join('|') + ')' }
+  // Locale's full month name
+, 'B': function(l) { return '(' + l.B.join('|') + ')' }
+  // Locale's equivalent of either AM or PM.
+, 'p': function(l) { return '(' + l.AM + '|' + l.PM + ')' }
+, 'd': '(\\d\\d?)' // Day of the month as a decimal number [01,31]
+, 'H': '(\\d\\d?)' // Hour (24-hour clock) as a decimal number [00,23]
+, 'I': '(\\d\\d?)' // Hour (12-hour clock) as a decimal number [01,12]
+, 'm': '(\\d\\d?)' // Month as a decimal number [01,12]
+, 'M': '(\\d\\d?)' // Minute as a decimal number [00,59]
+, 'S': '(\\d\\d?)' // Second as a decimal number [00,59]
+, 'y': '(\\d\\d?)' // Year without century as a decimal number [00,99]
+, 'Y': '(\\d{4})'  // Year with century as a decimal number
+, '%': '%'         // A literal '%' character
+}
+
+/**
+ * Maps directive codes to functions which take the date to be formatted and
+ * locale details (if required), returning an appropriate formatted value.
+ */
+var formatterDirectives = {
+  'a': function(d, l) { return l.a[d.getDay()] }
+, 'A': function(d, l) { return l.A[d.getDay()] }
+, 'b': function(d, l) { return l.b[d.getMonth()] }
+, 'B': function(d, l) { return l.B[d.getMonth()] }
+, 'd': function(d) { return pad(d.getDate(), 2) }
+, 'H': function(d) { return pad(d.getHours(), 2) }
+, 'M': function(d) { return pad(d.getMinutes(), 2) }
+, 'm': function(d) { return pad(d.getMonth() + 1, 2) }
+, 'S': function(d) { return pad(d.getSeconds(), 2) }
+, 'w': function(d) { return d.getDay() }
+, 'Y': function(d) { return d.getFullYear() }
+, '%': function(d) { return '%' }
+}
+
+/** Test for hanging percentage symbols. */
+var strftimeFormatCheck = /[^%]%$/
+
+/**
+ * A partial implementation of strptime which parses time details from a string,
+ * based on a format string.
+ * @param {String} format
+ * @param {Object} locale
+ */
+function TimeParser(format, locale) {
+  this.format = format
+  this.locale = locale
+  var cachedPattern = TimeParser._cache[locale.name + '|' + format]
+  if (cachedPattern !== undefined) {
+    this.re = cachedPattern[0]
+    this.matchOrder = cachedPattern[1]
+  }
+  else {
+    this.compilePattern()
+  }
+}
+
+/**
+ * Caches RegExps and match orders generated per locale/format string combo.
+ */
+TimeParser._cache = {}
+
+TimeParser.prototype.compilePattern = function() {
+  // Normalise whitespace before further processing
+  var format = this.format.split(/(?:\s|\t|\n)+/).join(' ')
+    , pattern = []
+    , matchOrder = []
+    , c
+    , directive
+
+  for (var i = 0, l = format.length; i < l; i++) {
+    c = format.charAt(i)
+    if (c != '%') {
+      if (c === ' ') {
+        pattern.push(' +')
+      }
+      else {
+        pattern.push(c)
+      }
+      continue
+    }
+
+    if (i == l - 1) {
+      throw new Error('strptime format ends with raw %')
+    }
+
+    c = format.charAt(++i)
+    directive = parserDirectives[c]
+    if (directive === undefined) {
+      throw new Error('strptime format contains an unknown directive: %' + c)
+    }
+    else if (is.Function(directive)) {
+      pattern.push(directive(this.locale))
+    }
+    else {
+      pattern.push(directive)
+    }
+
+    if (c != '%') {
+       matchOrder.push(c)
+    }
+  }
+
+  this.re = new RegExp('^' + pattern.join('') + '$')
+  this.matchOrder = matchOrder
+  TimeParser._cache[this.locale.name + '|' + this.format] = [this.re, matchOrder]
+}
+
+/**
+ * Attempts to extract date and time details from the given input.
+ * @param {string} input
+ * @return {Array.<number>}
+ */
+TimeParser.prototype.parse = function(input) {
+  var matches = this.re.exec(input)
+  if (matches === null) {
+    throw new Error('Time data did not match format: data=' + input +
+                    ', format=' + this.format)
+  }
+
+    // Default values for when more accurate values cannot be inferred
+  var time = [1900, 1, 1, 0, 0, 0]
+    // Matched time data, keyed by directive code
+    , data = {}
+
+  for (var i = 1, l = matches.length; i < l; i++) {
+    data[this.matchOrder[i - 1]] = matches[i]
+  }
+
+  // Extract year
+  if (data.hasOwnProperty('Y')) {
+    time[0] = parseInt(data.Y, 10)
+  }
+  else if (data.hasOwnProperty('y')) {
+    var year = parseInt(data.y, 10)
+    if (year < 68) {
+        year = 2000 + year
+    }
+    else if (year < 100) {
+        year = 1900 + year
+    }
+    time[0] = year
+  }
+
+  // Extract month
+  if (data.hasOwnProperty('m')) {
+    var month = parseInt(data.m, 10)
+    if (month < 1 || month > 12) {
+      throw new Error('Month is out of range: ' + month)
+    }
+    time[1] = month
+  }
+  else if (data.hasOwnProperty('B')) {
+    time[1] = indexOf(data.B, this.locale.B) + 1
+  }
+  else if (data.hasOwnProperty('b')) {
+    time[1] = indexOf(data.b, this.locale.b) + 1
+  }
+
+  // Extract day of month
+  if (data.hasOwnProperty('d')) {
+    var day = parseInt(data.d, 10)
+    if (day < 1 || day > 31) {
+      throw new Error('Day is out of range: ' + day)
+    }
+    time[2] = day
+  }
+
+  // Extract hour
+  var hour
+  if (data.hasOwnProperty('H')) {
+    hour = parseInt(data.H, 10)
+    if (hour > 23) {
+      throw new Error('Hour is out of range: ' + hour)
+    }
+    time[3] = hour
+  }
+  else if (data.hasOwnProperty('I')) {
+    hour = parseInt(data.I, 10)
+    if (hour < 1 || hour > 12) {
+      throw new Error('Hour is out of range: ' + hour)
+    }
+
+    // If we don't get any more information, we'll assume this time is
+    // a.m. - 12 a.m. is midnight.
+    if (hour == 12) {
+        hour = 0
+    }
+
+    time[3] = hour
+
+    if (data.hasOwnProperty('p')) {
+      if (data.p == this.locale.PM) {
+        // We've already handled the midnight special case, so it's
+        // safe to bump the time by 12 hours without further checks.
+        time[3] = time[3] + 12
+      }
+    }
+  }
+
+  // Extract minute
+  if (data.hasOwnProperty('M')) {
+    var minute = parseInt(data.M, 10)
+    if (minute > 59) {
+        throw new Error('Minute is out of range: ' + minute)
+    }
+    time[4] = minute
+  }
+
+  // Extract seconds
+  if (data.hasOwnProperty('S')) {
+    var second = parseInt(data.S, 10)
+    if (second > 59) {
+      throw new Error('Second is out of range: ' + second)
+    }
+    time[5] = second
+  }
+
+  // Validate day of month
+  day = time[2], month = time[1], year = time[0]
+  if (((month == 4 || month == 6 || month == 9 || month == 11) &&
+      day > 30) ||
+      (month == 2 && day > ((year % 4 === 0 && year % 100 !== 0 ||
+                             year % 400 === 0) ? 29 : 28))) {
+    throw new Error('Day is out of range: ' + day)
+  }
+
+  return time
+}
+
+var time  = {
+  /** Default locale name. */
+  defaultLocale: 'en'
+
+  /** Locale details. */
+, locales: {
+    en: {
+      name: 'en'
+    , a: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    , A: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+          'Friday', 'Saturday']
+    , AM: 'AM'
+    , b: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+          'Oct', 'Nov', 'Dec']
+    , B: ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+          'August', 'September', 'October', 'November', 'December']
+    , PM: 'PM'
+    }
+  }
+}
+
+/**
+ * Retrieves the locale with the given code.
+ * @param {string} code
+ * @return {Object}
+ */
+var getLocale = time.getLocale = function(code) {
+  if (code) {
+    if (time.locales.hasOwnProperty(code)) {
+      return time.locales[code]
+    }
+    else if (code.length > 2) {
+      // If we appear to have more than a language code, try the
+      // language code on its own.
+      var languageCode = code.substring(0, 2)
+      if (time.locales.hasOwnProperty(languageCode)) {
+        return time.locales[languageCode]
+      }
+    }
+  }
+  return time.locales[time.defaultLocale]
+}
+
+/**
+ * Parses time details from a string, based on a format string.
+ * @param {string} input
+ * @param {string} format
+ * @param {string=} locale
+ * @return {Array.<number>}
+ */
+var strptime = time.strptime = function(input, format, locale) {
+  return new TimeParser(format, getLocale(locale)).parse(input)
+}
+
+/**
+ * Convenience wrapper around time.strptime which returns a JavaScript Date.
+ * @param {string} input
+ * @param {string} format
+ * @param {string=} locale
+ * @return {date}
+ */
+time.strpdate = function(input, format, locale) {
+  var t = strptime(input, format, locale)
+  return new Date(t[0], t[1] - 1, t[2], t[3], t[4], t[5])
+}
+
+/**
+ * A partial implementation of <code>strftime</code>, which formats a date
+ * according to a format string. An Error will be thrown if an invalid
+ * format string is given.
+ * @param {date} date
+ * @param {string} format
+ * @param {string=} locale
+ * @return {string}
+ */
+time.strftime = function(date, format, locale) {
+  if (strftimeFormatCheck.test(format)) {
+    throw new Error('strftime format ends with raw %')
+  }
+  locale = getLocale(locale)
+  return format.replace(/(%.)/g, function(s, f) {
+    var code = f.charAt(1)
+    if (typeof formatterDirectives[code] == 'undefined') {
+      throw new Error('strftime format contains an unknown directive: ' + f)
+    }
+    return formatterDirectives[code](date, locale)
+  })
+}
+
+module.exports = time
+
+},{"./is":55}],58:[function(require,module,exports){
+'use strict';
+
+// parseUri 1.2.2
+// (c) Steven Levithan <stevenlevithan.com>
+// MIT License
+function parseUri (str) {
+  var o = parseUri.options
+    , m = o.parser[o.strictMode ? "strict" : "loose"].exec(str)
+    , uri = {}
+    , i = 14
+
+  while (i--) { uri[o.key[i]] = m[i] || "" }
+
+  uri[o.q.name] = {};
+  uri[o.key[12]].replace(o.q.parser, function ($0, $1, $2) {
+    if ($1) { uri[o.q.name][$1] = $2 }
+  })
+
+  return uri
+}
+
+parseUri.options = {
+  strictMode: false
+, key: ['source','protocol','authority','userInfo','user','password','host','port','relative','path','directory','file','query','anchor']
+, q: {
+    name: 'queryKey'
+  , parser: /(?:^|&)([^&=]*)=?([^&]*)/g
+  }
+, parser: {
+    strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/
+  , loose: /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/
+  }
+}
+
+// makeURI 1.2.2 - create a URI from an object specification; compatible with
+// parseURI (http://blog.stevenlevithan.com/archives/parseuri)
+// (c) Niall Smart <niallsmart.com>
+// MIT License
+function makeUri(u) {
+  var uri = ''
+  if (u.protocol) {
+    uri += u.protocol + '://'
+  }
+  if (u.user) {
+    uri += u.user
+  }
+  if (u.password) {
+    uri += ':' + u.password
+  }
+  if (u.user || u.password) {
+    uri += '@'
+  }
+  if (u.host) {
+    uri += u.host
+  }
+  if (u.port) {
+    uri += ':' + u.port
+  }
+  if (u.path) {
+    uri += u.path
+  }
+  var qk = u.queryKey
+  var qs = []
+  for (var k in qk) {
+    if (!qk.hasOwnProperty(k)) {
+      continue
+    }
+    var v = encodeURIComponent(qk[k])
+    k = encodeURIComponent(k)
+    if (v) {
+      qs.push(k + '=' + v)
+    }
+    else {
+      qs.push(k)
+    }
+  }
+  if (qs.length > 0) {
+    uri += '?' + qs.join('&')
+  }
+  if (u.anchor) {
+    uri += '#' + u.anchor
+  }
+  return uri
+}
+
+module.exports = {
+  parseUri: parseUri
+, makeUri: makeUri
+}
+
+},{}],59:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var time = require('isomorph/time')
+
+var formats = require('./formats')
+var locales = require('./locales')
+
+var Field = require('./Field')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+var $__1=  require('./util'),strip=$__1.strip
+
+/**
+ * Base field for fields which validate that their input is a date or time.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var BaseTemporalField = Field.extend({
+  inputFormatType: ''
+, constructor: function BaseTemporalField(kwargs) {
+    kwargs = object.extend({inputFormats: null}, kwargs)
+    Field.call(this, kwargs)
+    this.inputFormats = kwargs.inputFormats
+  }
+})
+
+/**
+ * Validates that its input is a valid date or time.
+ * @param {(string|Date)} value user input.
+ * @return {Date}
+ * @throws {ValidationError} if the input is invalid.
+ */
+BaseTemporalField.prototype.toJavaScript = function(value) {
+  if (!is.Date(value)) {
+    value = strip(value)
+  }
+  if (is.String(value)) {
+    if (this.inputFormats === null) {
+      this.inputFormats = formats.getFormat(this.inputFormatType)
+    }
+    for (var i = 0, l = this.inputFormats.length; i < l; i++) {
+      try {
+        return this.strpdate(value, this.inputFormats[i])
+      }
+      catch (e) {
+        // pass
+      }
+    }
+  }
+  throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+}
+
+/**
+ * Creates a Date from the given input if it's valid based on a format.
+ * @param {string} value
+ * @param {string} format
+ * @return {Date}
+ */
+BaseTemporalField.prototype.strpdate = function(value, format) {
+  return time.strpdate(value, format, locales.getDefaultLocale())
+}
+
+BaseTemporalField.prototype._hasChanged = function(initial, data) {
+  try {
+    data = this.toJavaScript(data)
+  }
+  catch (e) {
+    if (!(e instanceof ValidationError)) { throw e }
+    return true
+  }
+  initial = this.toJavaScript(initial)
+  if (!!initial && !!data) {
+    return initial.getTime() !== data.getTime()
+  }
+  else {
+    return initial !== data
+  }
+}
+
+
+module.exports = BaseTemporalField
+},{"./Field":83,"./formats":132,"./locales":134,"./util":135,"isomorph/is":55,"isomorph/object":56,"isomorph/time":57,"validators":288}],60:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+var CheckboxInput = require('./CheckboxInput')
+var Field = require('./Field')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * Normalises its input to a Boolean primitive.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var BooleanField = Field.extend({
+  widget: CheckboxInput
+
+, constructor: function BooleanField(kwargs) {
+    if (!(this instanceof BooleanField)) { return new BooleanField(kwargs) }
+    Field.call(this, kwargs)
+  }
+})
+
+BooleanField.prototype.toJavaScript = function(value) {
+  // Explicitly check for a 'false' string, which is what a hidden field will
+  // submit for false. Also check for '0', since this is what RadioSelect will
+  // provide. Because Boolean('anything') == true, we don't need to handle that
+  // explicitly.
+  if (is.String(value) && (value.toLowerCase() == 'false' || value == '0')) {
+    value = false
+  }
+  else {
+    value = Boolean(value)
+  }
+  value = Field.prototype.toJavaScript.call(this, value)
+  if (!value && this.required) {
+    throw ValidationError(this.errorMessages.required, {code: 'required'})
+  }
+  return value
+}
+
+BooleanField.prototype._hasChanged = function(initial, data) {
+  // Sometimes data or initial could be null or '' which should be the same
+  // thing as false.
+  if (initial === 'false') {
+    // showHiddenInitial may have transformed false to 'false'
+    initial = false
+  }
+  return (Boolean(initial) != Boolean(data))
+}
+
+module.exports = BooleanField
+},{"./CheckboxInput":65,"./Field":83,"isomorph/is":55,"validators":288}],61:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var is = require('isomorph/is')
+var format = require('isomorph/format').formatObj
+var object = require('isomorph/object')
+var React = require('react')
+
+var TextInput = require('./TextInput')
+var Textarea = require('./Textarea')
+
+var $__0=  require('./util'),prettyName=$__0.prettyName
+
+var SUFFIX_CHARS = ':?.!'
+
+/**
+ * A helper for rendering a field.
+ * @param {Form} form the form instance which the field is a part of.
+ * @param {Field} field the field to be rendered.
+ * @param {string} name the name associated with the field in the form.
+ * @constructor
+ */
+var BoundField = Concur.extend({
+  constructor: function BoundField(form, field, name) {
+    if (!(this instanceof BoundField)) { return new BoundField(form, field, name) }
+    this.form = form
+    this.field = field
+    this.name = name
+    this.htmlName = form.addPrefix(name)
+    this.htmlInitialName = form.addInitialPrefix(name)
+    this.htmlInitialId = form.addInitialPrefix(this.autoId())
+    this.label = this.field.label !== null ? this.field.label : prettyName(name)
+    this.helpText = field.helpText || ''
+  }
+})
+
+// ================================================================== Status ===
+
+/**
+ * @return {boolean} true if the value which will be displayed in the field's
+ *   widget is empty.
+ */
+BoundField.prototype.isEmpty = function() {
+  return this.field.isEmptyValue(this.value())
+}
+
+/**
+ * @return {boolean} true if the field has a pending async validation.
+ */
+BoundField.prototype.isPending = function() {
+  return typeof this.form._pendingAsyncValidation[this.name] != 'undefined'
+}
+
+/**
+ * @return {boolean} true if the field has some data in its form's cleanedData.
+ */
+BoundField.prototype.isCleaned = function() {
+  return typeof this.form.cleanedData[this.name] != 'undefined'
+}
+
+/**
+ * @return {boolean} true if the field's widget will render hidden field(s).
+ */
+BoundField.prototype.isHidden = function() {
+  return this.field.widget.isHidden
+}
+
+/**
+ * Determines the field's curent status in the form. Statuses are determined in
+ * the following order:
+ * * 'pending' - the field has a pending async validation.
+ * * 'error' - the field has a validation error.
+ * * 'valid' - the field has a value in form.cleanedData.
+ * * 'default' - the field meets none of the above criteria, e.g. it's been
+ *   rendered but hasn't been interacted with or validated yet.
+ * @return {string}
+ */
+BoundField.prototype.status = function() {
+  if (this.isPending()) { return 'pending' }
+  if (this.errors().isPopulated()) { return 'error' }
+  if (this.isCleaned()) { return 'valid' }
+  return 'default'
+}
+
+// ============================================================== Field Data ===
+
+/**
+ * Calculates and returns the id attribute for this BoundField if the associated
+ * form has an autoId. Returns an empty string otherwise.
+ */
+BoundField.prototype.autoId = function() {
+  var autoId = this.form.autoId
+  if (autoId) {
+    autoId = ''+autoId
+    if (autoId.indexOf('{name}') != -1) {
+      return format(autoId, {name: this.htmlName})
+    }
+    return this.htmlName
+  }
+  return ''
+}
+
+/**
+ * @return {*} user input data for the field, or null if none has been given.
+ */
+BoundField.prototype.data = function() {
+  return this.field.widget.valueFromData(this.form.data,
+                                         this.form.files,
+                                         this.htmlName)
+}
+
+/**
+ * @return {ErrorObject} errors for the field, which may be empty.
+ */
+BoundField.prototype.errors = function() {
+  return this.form.errors(this.name) || new this.form.errorConstructor()
+}
+
+/**
+ * @return {string=} the first error message for the field, or undefined if
+ *   there were none.
+ */
+BoundField.prototype.errorMessage = function() {
+  return this.errors().first()
+}
+
+/**
+ * @return {Array.<string>} all error messages for the field, will be empty if
+ *   there were none.
+ */
+BoundField.prototype.errorMessages = function() {
+  return this.errors().messages()
+}
+
+/**
+ * Gets or generates an id for the field's <label>.
+ * @return {string}
+ */
+BoundField.prototype.idForLabel = function() {
+  var widget = this.field.widget
+  var id = object.get(widget.attrs, 'id', this.autoId())
+  return widget.idForLabel(id)
+}
+
+/**
+ * @return {*} the value to be displayed in the field's widget.
+ */
+BoundField.prototype.value = function() {
+  var data
+  if (this.form.isInitialRender) {
+    data = this.initialValue()
+  }
+  else {
+    data = this.field.boundData(this.data(),
+                                object.get(this.form.initial,
+                                           this.name,
+                                           this.field.initial))
+  }
+  return this.field.prepareValue(data)
+}
+
+/**
+ * @return {*} the initial value for the field, will be null if none was
+ *   configured on the field or given to the form.
+ */
+BoundField.prototype.initialValue = function() {
+  var value = object.get(this.form.initial, this.name, this.field.initial)
+  if (is.Function(value)) {
+    value = value()
+  }
+  return value
+}
+
+// =============================================================== Rendering ===
+
+/**
+ * Renders a widget for the field.
+ * @param {Object=} kwargs widgets options.
+ * @param {Widget} kwargs.widget an override for the widget used to render the
+ *   field - if not provided, the field's configured widget will be used.
+ * @param {Object} kwargs.attrs additional attributes to be added to the field's
+ *   widget.
+ * @return {ReactElement}
+ */
+BoundField.prototype.asWidget = function(kwargs) {
+  kwargs = object.extend({
+    widget: null, attrs: null, onlyInitial: false
+  }, kwargs)
+  var widget = (kwargs.widget !== null ? kwargs.widget : this.field.widget)
+  var attrs = (kwargs.attrs !== null ? kwargs.attrs : {})
+  var autoId = this.autoId()
+  var name = !kwargs.onlyInitial ? this.htmlName : this.htmlInitialName
+  if (autoId &&
+      typeof attrs.id == 'undefined' &&
+      typeof widget.attrs.id == 'undefined') {
+    attrs.id = (!kwargs.onlyInitial ? autoId : this.htmlInitialId)
+  }
+  if (typeof attrs.key == 'undefined') {
+    attrs.key = name
+  }
+
+  var validation = this._getValidation(widget)
+
+  // Always Add an onChange event handler to update form.data when the field is
+  // changed.
+  attrs.onChange = this.form._handleFieldEvent.bind(this.form, {
+    event: 'onChange'
+  , validate: !!validation.onChange
+  , delay: validation.onChangeDelay
+  })
+
+  // If validation should happen on events other than onChange, also add event
+  // handlers for them.
+  if (validation != 'manual' && validation.events) {
+    for (var i = 0, l = validation.events.length; i < l; i++) {
+      var eventName = validation.events[i]
+      attrs[eventName] =
+        this.form._handleFieldEvent.bind(this.form, {event: eventName})
+    }
+  }
+
+  var renderKwargs = {attrs:attrs, controlled: this._isControlled(widget)}
+  if (widget.needsInitialValue) {
+    renderKwargs.initialValue = this.initialValue()
+  }
+  return widget.render(name, this.value(), renderKwargs)
+}
+
+/**
+ * Renders the field as a hidden field.
+ * @param {Object=} kwargs widget options.
+ * @return {ReactElement}
+ */
+BoundField.prototype.asHidden = function(kwargs) {
+  kwargs = object.extend({}, kwargs, {widget: new this.field.hiddenWidget()})
+  return this.asWidget(kwargs)
+}
+
+/**
+ * Renders the field as a text input.
+ * @param {Object=} kwargs widget options.
+ * @return {ReactElement}
+ */
+BoundField.prototype.asText = function(kwargs) {
+  kwargs = object.extend({}, kwargs, {widget: TextInput()})
+  return this.asWidget(kwargs)
+}
+
+/**
+ * Renders the field as a textarea.
+ * @param {Object=} kwargs widget options.
+ * @return {ReactElement}
+ */
+BoundField.prototype.asTextarea = function(kwargs) {
+  kwargs = object.extend({}, kwargs, {widget: Textarea()})
+  return this.asWidget(kwargs)
+}
+
+/**
+ * Determines CSS classes for this field based on what's configured in the field
+ * and form, and the field's current status.
+ * @param {string=} extraCssClasses additional CSS classes for the field.
+ * @return {string} space-separated CSS classes for this field.
+ */
+BoundField.prototype.cssClasses = function(extraCssClasses) {
+  var cssClasses = (extraCssClasses ? [extraCssClasses] : [])
+
+  // Field/row classes
+  if (this.field.cssClass !== null) {
+    cssClasses.push(this.field.cssClass)
+  }
+  if (typeof this.form.rowCssClass != 'undefined') {
+    cssClasses.push(this.form.rowCssClass)
+  }
+
+  // Status class
+  var status = this.status()
+  if (typeof this.form[status + 'CssClass'] != 'undefined') {
+    cssClasses.push(this.form[status + 'CssClass'])
+  }
+
+  // Required-ness classes
+  if (this.field.required) {
+    if (typeof this.form.requiredCssClass != 'undefined') {
+      cssClasses.push(this.form.requiredCssClass)
+    }
+  }
+  else if (typeof this.form.optionalCssClass != 'undefined') {
+    cssClasses.push(this.form.optionalCssClass)
+  }
+
+  return cssClasses.join(' ')
+}
+
+/**
+ * Renders a tag containing help text for the field.
+ * @param {Object=} kwargs configuration options.
+ * @param {string} kwargs.tagName allows overriding the type of tag - defaults
+ *   to 'span'.
+ * @param {string} kwargs.contents help text contents - if not provided,
+ *   contents will be taken from the field itself. To render raw HTML in help
+ *   text, it should be specified using the React convention for raw HTML,
+ *   which is to provide an object with a __html property.
+ * @param {Object} kwargs.attrs additional attributes to be added to the tag -
+ *   by default it will get a className of 'helpText'
+ * @return {ReactElement}
+ */
+BoundField.prototype.helpTextTag = function(kwargs) {
+  kwargs = object.extend({
+    tagName: 'span', attrs: null, contents: this.helpText
+  }, kwargs)
+  if (kwargs.contents) {
+    var attrs = object.extend({className: 'helpText'}, kwargs.attrs)
+    var contents = kwargs.contents
+    if (is.Object(contents) && object.hasOwn(contents, '__html')) {
+      attrs.dangerouslySetInnerHTML = contents
+      return React.createElement(kwargs.tagName, attrs)
+    }
+    return React.createElement(kwargs.tagName, attrs, contents)
+  }
+}
+
+/**
+ * Wraps the given contents in a <label> if the field has an id attribute. If
+ * contents aren't given, uses the field's label.
+ * If attrs are given, they're used as HTML attributes on the <label> tag.
+ * @param {Object=} kwargs configuration options.
+ * @param {string} kwargs.contents contents for the label - if not provided,
+ *   label contents will be generated from the field itself.
+ * @param {Object} kwargs.attrs additional attributes to be added to the label.
+ * @param {string} kwargs.labelSuffix allows overriding the form's labelSuffix.
+ * @return {ReactElement}
+ */
+BoundField.prototype.labelTag = function(kwargs) {
+  kwargs = object.extend({
+    contents: this.label, attrs: null, labelSuffix: this.form.labelSuffix
+  }, kwargs)
+  var contents = this._addLabelSuffix(kwargs.contents, kwargs.labelSuffix)
+  var widget = this.field.widget
+  var id = object.get(widget.attrs, 'id', this.autoId())
+  if (id) {
+    var attrs = object.extend(kwargs.attrs || {}, {htmlFor: widget.idForLabel(id)})
+    contents = React.createElement('label', attrs, contents)
+  }
+  return contents
+}
+
+/**
+ * @return {ReactElement}
+ */
+BoundField.prototype.render = function(kwargs) {
+  if (this.field.showHiddenInitial) {
+    return React.createElement('div', null, this.asWidget(kwargs),
+                               this.asHidden({onlyInitial: true}))
+  }
+  return this.asWidget(kwargs)
+}
+
+/**
+ * Returns a list of SubWidgets that comprise all widgets in this BoundField.
+ * This really is only useful for RadioSelect and CheckboxSelectMultiple
+ * widgets, so that you can iterate over individual inputs when rendering.
+ * @return {Array.<SubWidget>}
+ */
+BoundField.prototype.subWidgets = function() {
+  var id = this.field.widget.attrs.id || this.autoId()
+  var kwargs = {attrs: {}}
+  if (id) {
+    kwargs.attrs.id = id
+  }
+  return this.field.widget.subWidgets(this.htmlName, this.value(), kwargs)
+}
+
+/**
+ * @return {string}
+ */
+BoundField.prototype._addLabelSuffix = function(label, labelSuffix) {
+  // Only add the suffix if the label does not end in punctuation
+  if (labelSuffix && SUFFIX_CHARS.indexOf(label.charAt(label.length - 1)) == -1) {
+    return label + labelSuffix
+  }
+  return label
+}
+
+/**
+ * Determines if the widget should be a controlled or uncontrolled React
+ * component.
+ * @return {boolean}
+ */
+BoundField.prototype._isControlled = function(widget) {
+  if (arguments.length === 0) {
+    widget = this.field.widget
+  }
+  var controlled = false
+  if (widget.isValueSettable) {
+    // If the field has any controlled config set, it should take precedence,
+    // otherwise use the form's as it has a default.
+    controlled = (this.field.controlled !== null
+                  ? this.field.controlled
+                  : this.form.controlled)
+  }
+  return controlled
+}
+
+/**
+ * Gets the configured validation for the field or form, allowing the widget
+ * which is going to be rendered to override it if necessary.
+ * @param {Widget=} widget
+ * @return {?(Object|string)}
+ */
+BoundField.prototype._getValidation = function(widget) {
+  // If the field has any validation config set, it should take precedence,
+  // otherwise use the form's as it has a default.
+  var validation = this.field.validation || this.form.validation
+
+  // Allow widgets to override the type of validation that's used for them -
+  // primarily for inputs which can only be changed by click/selection.
+  if (validation !== 'manual' && widget.validation !== null) {
+    validation = widget.validation
+  }
+
+  return validation
+}
+
+module.exports = BoundField
+},{"./TextInput":121,"./Textarea":122,"./util":135,"Concur":1,"isomorph/format":54,"isomorph/is":55,"isomorph/object":56,"react":"react"}],62:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+var PasswordInput = require('./PasswordInput')
+var TextInput = require('./TextInput')
+
+var $__0=   require('validators'),MinLengthValidator=$__0.MinLengthValidator,MaxLengthValidator=$__0.MaxLengthValidator
+
+/**
+ * Validates that its input is a valid String.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var CharField = Field.extend({
+  constructor: function CharField(kwargs) {
+    if (!(this instanceof CharField)) { return new CharField(kwargs) }
+    kwargs = object.extend({maxLength: null, minLength: null}, kwargs)
+    this.maxLength = kwargs.maxLength
+    this.minLength = kwargs.minLength
+    Field.call(this, kwargs)
+    if (this.minLength !== null) {
+      this.validators.push(MinLengthValidator(this.minLength))
+    }
+    if (this.maxLength !== null) {
+      this.validators.push(MaxLengthValidator(this.maxLength))
+    }
+  }
+})
+
+/**
+ * @return {string}
+ */
+CharField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return ''
+  }
+  return ''+value
+}
+
+/**
+ * If this field is configured to enforce a maximum length, adds a suitable
+ * maxLength attribute to text input fields.
+ * @param {Widget} widget the widget being used to render this field's value.
+ * @return {Object} additional attributes which should be added to the widget.
+ */
+CharField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = Field.prototype.getWidgetAttrs.call(this, widget)
+  if (this.maxLength !== null && (widget instanceof TextInput ||
+                                  widget instanceof PasswordInput)) {
+    attrs.maxLength = ''+this.maxLength
+  }
+  return attrs
+}
+
+module.exports = CharField
+},{"./Field":83,"./PasswordInput":105,"./TextInput":121,"isomorph/object":56,"validators":288}],63:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+var ChoiceInput = require('./ChoiceInput')
+
+var CheckboxChoiceInput = ChoiceInput.extend({
+  constructor: function CheckboxChoiceInput(name, value, attrs, controlled, choice, index) {
+    if (!(this instanceof CheckboxChoiceInput)) {
+      return new CheckboxChoiceInput(name, value, attrs, controlled, choice, index)
+    }
+    if (!is.Array(value)) {
+      value = [value]
+    }
+    ChoiceInput.call(this, name, value, attrs, controlled, choice, index)
+    for (var i = 0, l = this.value.length; i < l; i++) {
+      this.value[i] = ''+this.value[i]
+    }
+  }
+, inputType: 'checkbox'
+})
+
+CheckboxChoiceInput.prototype.isChecked = function() {
+  return this.value.indexOf(this.choiceValue) !== -1
+}
+
+module.exports = CheckboxChoiceInput
+},{"./ChoiceInput":69,"isomorph/is":55}],64:[function(require,module,exports){
+'use strict';
+
+var CheckboxChoiceInput = require('./CheckboxChoiceInput')
+var ChoiceFieldRenderer = require('./ChoiceFieldRenderer')
+
+var CheckboxFieldRenderer = ChoiceFieldRenderer.extend({
+  constructor: function CheckboxFieldRenderer(name, value, attrs, controlled, choices) {
+    if (!(this instanceof CheckboxFieldRenderer)) {
+      return new CheckboxFieldRenderer(name, value, attrs, controlled, choices)
+    }
+    ChoiceFieldRenderer.apply(this, arguments)
+  }
+, choiceInputConstructor: CheckboxChoiceInput
+})
+
+module.exports = CheckboxFieldRenderer
+},{"./CheckboxChoiceInput":63,"./ChoiceFieldRenderer":68}],65:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var React = require('react')
+
+var Widget = require('./Widget')
+
+function defaultCheckTest(value) {
+  return (value !== false && value != null && value !== '')
+}
+
+/**
+ * An HTML <input type="checkbox"> widget.
+ * @constructor
+ * @extends {Widget}
+ * @param {Object=} kwargs
+ */
+var CheckboxInput = Widget.extend({
+  constructor: function CheckboxInput(kwargs) {
+    if (!(this instanceof Widget)) { return new CheckboxInput(kwargs) }
+    kwargs = object.extend({checkTest: defaultCheckTest}, kwargs)
+    Widget.call(this, kwargs)
+    this.checkTest = kwargs.checkTest
+  }
+, validation: {onChange: true}
+})
+
+CheckboxInput.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({}, kwargs)
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {type: 'checkbox',
+                                                  name: name})
+  if (value !== '' && value !== true && value !== false && value !== null &&
+      value !== undefined) {
+    // Only add the value attribute if value is non-empty
+    finalAttrs.value = value
+  }
+  var checkedAttr = (kwargs.controlled ? 'checked' : 'defaultChecked')
+  finalAttrs[checkedAttr] = this.checkTest(value)
+  return React.createElement('input', finalAttrs)
+}
+
+CheckboxInput.prototype.valueFromData = function(data, files, name) {
+  if (typeof data[name] == 'undefined') {
+    //  A missing value means False because HTML form submission does not
+    // send results for unselected checkboxes.
+    return false
+  }
+  var value = data[name]
+  var values = {'true': true, 'false': false}
+  // Translate true and false strings to boolean values
+  if (is.String(value)) {
+    value = object.get(values, value.toLowerCase(), value)
+  }
+  return !!value
+}
+
+module.exports = CheckboxInput
+},{"./Widget":129,"isomorph/is":55,"isomorph/object":56,"react":"react"}],66:[function(require,module,exports){
+'use strict';
+
+var CheckboxFieldRenderer = require('./CheckboxFieldRenderer')
+var RendererMixin = require('./RendererMixin')
+var SelectMultiple = require('./SelectMultiple')
+
+/**
+ * Multiple selections represented as a list of <input type="checkbox"> widgets.
+ * @constructor
+ * @extends {SelectMultiple}
+ * @param {Object=} kwargs
+ */
+var CheckboxSelectMultiple = SelectMultiple.extend({
+  __mixins__: [RendererMixin]
+, constructor: function(kwargs) {
+    if (!(this instanceof CheckboxSelectMultiple)) { return new CheckboxSelectMultiple(kwargs) }
+    RendererMixin.call(this, kwargs)
+    SelectMultiple.call(this, kwargs)
+  }
+, renderer: CheckboxFieldRenderer
+, _emptyValue: []
+})
+
+module.exports = CheckboxSelectMultiple
+},{"./CheckboxFieldRenderer":64,"./RendererMixin":113,"./SelectMultiple":115}],67:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+var Select = require('./Select')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+var $__1=  require('./util'),normaliseChoices=$__1.normaliseChoices
+
+/**
+ * Validates that its input is one of a valid list of choices.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var ChoiceField = Field.extend({
+  widget: Select
+, defaultErrorMessages: {
+    invalidChoice: 'Select a valid choice. {value} is not one of the available choices.'
+  }
+
+, constructor: function ChoiceField(kwargs) {
+    if (!(this instanceof ChoiceField)) { return new ChoiceField(kwargs) }
+    kwargs = object.extend({choices: []}, kwargs)
+    Field.call(this, kwargs)
+    this.setChoices(kwargs.choices)
+  }
+})
+
+ChoiceField.prototype.choices = function() { return this._choices }
+ChoiceField.prototype.setChoices = function(choices) {
+  // Setting choices also sets the choices on the widget
+  this._choices = this.widget.choices = normaliseChoices(choices)
+}
+
+ChoiceField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return ''
+  }
+  return ''+value
+}
+
+/**
+ * Validates that the given value is in this field's choices.
+ */
+ChoiceField.prototype.validate = function(value) {
+  Field.prototype.validate.call(this, value)
+  if (value && !this.validValue(value)) {
+    throw ValidationError(this.errorMessages.invalidChoice, {
+      code: 'invalidChoice'
+    , params: {value: value}
+    })
+  }
+}
+
+/**
+ * Checks to see if the provided value is a valid choice.
+ * @param {string} value the value to be validated.
+ */
+ChoiceField.prototype.validValue = function(value) {
+  var choices = this.choices()
+  for (var i = 0, l = choices.length; i < l; i++) {
+    if (is.Array(choices[i][1])) {
+      // This is an optgroup, so look inside the group for options
+      var optgroupChoices = choices[i][1]
+      for (var j = 0, m = optgroupChoices.length; j < m; j++) {
+        if (value === ''+optgroupChoices[j][0]) {
+          return true
+        }
+      }
+    }
+    else if (value === ''+choices[i][0]) {
+      return true
+    }
+  }
+  return false
+}
+
+module.exports = ChoiceField
+},{"./Field":83,"./Select":114,"./util":135,"isomorph/is":55,"isomorph/object":56,"validators":288}],68:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var React = require('react')
+
+/**
+ * An object used by choice Selects to enable customisation of choice widgets.
+ * @constructor
+ * @param {string} name
+ * @param {string} value
+ * @param {Object} attrs
+ * @param {boolean} controlled
+ * @param {Array} choices
+ */
+var ChoiceFieldRenderer = Concur.extend({
+  constructor: function ChoiceFieldRenderer(name, value, attrs, controlled, choices) {
+    if (!(this instanceof ChoiceFieldRenderer)) {
+      return new ChoiceFieldRenderer(name, value, attrs, controlled, choices)
+    }
+    this.name = name
+    this.value = value
+    this.attrs = attrs
+    this.controlled = controlled
+    this.choices = choices
+  }
+, choiceInputConstructor: null
+})
+
+ChoiceFieldRenderer.prototype.choiceInputs = function() {
+  var inputs = []
+  for (var i = 0, l = this.choices.length; i < l; i++) {
+    inputs.push(this.choiceInputConstructor(this.name, this.value,
+                                            object.extend({}, this.attrs),
+                                            this.controlled,
+                                            this.choices[i], i))
+  }
+  return inputs
+}
+
+ChoiceFieldRenderer.prototype.choiceInput = function(i) {
+  if (i >= this.choices.length) {
+    throw new Error('Index out of bounds: ' + i)
+  }
+  return this.choiceInputConstructor(this.name, this.value,
+                                     object.extend({}, this.attrs),
+                                     this.controlled,
+                                     this.choices[i], i)
+  }
+
+/**
+ * Outputs a <ul> for this set of choice fields.
+ * If an id was given to the field, it is applied to the <ul> (each item in the
+ * list will get an id of `$id_$i`).
+ */
+ChoiceFieldRenderer.prototype.render = function() {
+  var id = object.get(this.attrs, 'id', null)
+  var key = object.pop(this.attrs, 'key', null)
+  var items = []
+  for (var i = 0, l = this.choices.length; i < l; i++) {
+    var choice = this.choices[i]
+    var choiceValue = choice[0]
+    var choiceLabel = choice[1]
+    if (is.Array(choiceLabel)) {
+      var attrsPlus = object.extend({}, this.attrs)
+      if (id) {
+        attrsPlus.id +='_' + i
+      }
+      if (key) {
+        attrsPlus.key += '_' + i
+      }
+      var subRenderer = ChoiceFieldRenderer(this.name, this.value,
+                                            attrsPlus,
+                                            this.controlled,
+                                            choiceLabel)
+      subRenderer.choiceInputConstructor = this.choiceInputConstructor
+      items.push(React.createElement('li', null, choiceValue, subRenderer.render()))
+    }
+    else {
+      var w = this.choiceInputConstructor(this.name, this.value,
+                                          object.extend({}, this.attrs),
+                                          this.controlled,
+                                          choice, i)
+      items.push(React.createElement('li', null, w.render()))
+    }
+  }
+  var listAttrs = {}
+  if (id) {
+    listAttrs.id = id
+  }
+  return React.createElement('ul', listAttrs, items)
+}
+
+module.exports = ChoiceFieldRenderer
+},{"Concur":1,"isomorph/is":55,"isomorph/object":56,"react":"react"}],69:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var SubWidget = require('./SubWidget')
+var Widget = require('./Widget')
+
+/**
+ * An object used by ChoiceFieldRenderer that represents a single
+ * <input>.
+ */
+var ChoiceInput = SubWidget.extend({
+  constructor: function ChoiceInput(name, value, attrs, controlled, choice, index) {
+    this.name = name
+    this.value = value
+    this.attrs = attrs
+    this.controlled = controlled
+    this.choiceValue = ''+choice[0]
+    this.choiceLabel = ''+choice[1]
+    this.index = index
+    if (typeof this.attrs.id != 'undefined') {
+      this.attrs.id += '_' + this.index
+    }
+    if (typeof this.attrs.key != 'undefined') {
+      this.attrs.key += '_' + this.index
+    }
+  }
+, inputType: null // Subclasses must define this
+})
+
+/**
+ * Renders a <label> enclosing the widget and its label text.
+ */
+ChoiceInput.prototype.render = function() {
+  var labelAttrs = {}
+  if (this.idForLabel()) {
+    labelAttrs.htmlFor = this.idForLabel()
+  }
+  return React.createElement('label', labelAttrs, this.tag(), ' ', this.choiceLabel)
+}
+
+ChoiceInput.prototype.isChecked = function() {
+  return this.value === this.choiceValue
+}
+
+/**
+ * Renders the <input> portion of the widget.
+ */
+ChoiceInput.prototype.tag = function() {
+  var finalAttrs = Widget.prototype.buildAttrs.call(this, {}, {
+    type: this.inputType, name: this.name, value: this.choiceValue
+  })
+  var checkedAttr = (this.controlled ? 'checked' : 'defaultChecked')
+  finalAttrs[checkedAttr] = this.isChecked()
+  return React.createElement('input', finalAttrs)
+}
+
+ChoiceInput.prototype.idForLabel = function() {
+  return object.get(this.attrs, 'id', '')
+}
+
+module.exports = ChoiceInput
+},{"./SubWidget":120,"./Widget":129,"isomorph/object":56,"react":"react"}],70:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var CheckboxInput = require('./CheckboxInput')
+var FileInput = require('./FileInput')
+
+var $__0=  require('./util'),formatToArray=$__0.formatToArray
+
+var FILE_INPUT_CONTRADICTION = {}
+
+/**
+ * @constructor
+ * @extends {FileInput}
+ * @param {Object=} kwargs
+ */
+var ClearableFileInput = FileInput.extend({
+  needsInitialValue: true
+, isValueSettable: false
+, constructor: function ClearableFileInput(kwargs) {
+    if (!(this instanceof ClearableFileInput)) { return new ClearableFileInput(kwargs) }
+    FileInput.call(this, kwargs)
+  }
+, initialText: 'Currently'
+, inputText: 'Change'
+, clearCheckboxLabel: 'Clear'
+, templateWithInitial: function(params) {
+    return formatToArray(
+      '{initialText}: {initial} {clearTemplate}{br}{inputText}: {input}'
+    , object.extend(params, {br: React.createElement('br', null)})
+    )
+  }
+, templateWithClear: function(params) {
+    return formatToArray(
+      '{checkbox} {label}'
+    , object.extend(params, {
+        label: React.createElement('label', {htmlFor: params.checkboxId}, params.label)
+      })
+    )
+  }
+, urlMarkupTemplate: function(href, name) {
+    return React.createElement('a', {href: href}, name)
+  }
+})
+
+ClearableFileInput.FILE_INPUT_CONTRADICTION = FILE_INPUT_CONTRADICTION
+
+/**
+ * Given the name of the file input, return the name of the clear checkbox
+ * input.
+ */
+ClearableFileInput.prototype.clearCheckboxName = function(name) {
+  return name + '-clear'
+}
+
+/**
+ * Given the name of the clear checkbox input, return the HTML id for it.
+ */
+ClearableFileInput.prototype.clearCheckboxId = function(name) {
+  return name + '_id'
+}
+
+ClearableFileInput.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({attrs: {}}, kwargs)
+  kwargs.attrs.key = 'input'
+  var input = FileInput.prototype.render.call(this, name, value, kwargs)
+  var initialValue = kwargs.initialValue
+  if (!initialValue && value && typeof value.url != 'undefined') {
+    initialValue = value
+  }
+  if (initialValue && typeof initialValue.url != 'undefined') {
+    var clearTemplate
+    if (!this.isRequired) {
+      var clearCheckboxName = this.clearCheckboxName(name)
+      var clearCheckboxId = this.clearCheckboxId(clearCheckboxName)
+      clearTemplate = this.templateWithClear({
+        checkbox: CheckboxInput().render(clearCheckboxName, false, {attrs: {'id': clearCheckboxId}})
+      , checkboxId: clearCheckboxId
+      , label: this.clearCheckboxLabel
+      })
+    }
+    var contents = this.templateWithInitial({
+      initialText: this.initialText
+    , initial: this.urlMarkupTemplate(initialValue.url, ''+initialValue)
+    , clearTemplate: clearTemplate
+    , inputText: this.inputText
+    , input: input
+    })
+    return React.createElement('span', null, contents)
+  }
+  else {
+    return React.createElement('span', null, input)
+  }
+}
+
+ClearableFileInput.prototype.valueFromData = function(data, files, name) {
+  var upload = FileInput.prototype.valueFromData(data, files, name)
+  if (!this.isRequired &&
+      CheckboxInput.prototype.valueFromData.call(this, data, files,
+                                                 this.clearCheckboxName(name))) {
+    if (upload) {
+      // If the user contradicts themselves (uploads a new file AND
+      // checks the "clear" checkbox), we return a unique marker
+      // object that FileField will turn into a ValidationError.
+      return FILE_INPUT_CONTRADICTION
+    }
+    // false signals to clear any existing value, as opposed to just null
+    return false
+  }
+  return upload
+}
+
+module.exports = ClearableFileInput
+},{"./CheckboxInput":65,"./FileInput":85,"./util":135,"isomorph/object":56,"react":"react"}],71:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+
+/**
+ * A Field whose clean() method calls multiple Field clean() methods.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var ComboField = Field.extend({
+  constructor: function ComboField(kwargs) {
+    if (!(this instanceof ComboField)) { return new ComboField(kwargs) }
+    kwargs = object.extend({fields: []}, kwargs)
+    Field.call(this, kwargs)
+    // Set required to False on the individual fields, because the required
+    // validation will be handled by ComboField, not by those individual fields.
+    for (var i = 0, l = kwargs.fields.length; i < l; i++) {
+      kwargs.fields[i].required = false
+    }
+    this.fields = kwargs.fields
+  }
+})
+
+ComboField.prototype.clean = function(value) {
+  Field.prototype.clean.call(this, value)
+  for (var i = 0, l = this.fields.length; i < l; i++) {
+    value = this.fields[i].clean(value)
+  }
+  return value
+}
+
+module.exports = ComboField
+},{"./Field":83,"isomorph/object":56}],72:[function(require,module,exports){
+'use strict';
+
+var BaseTemporalField = require('./BaseTemporalField')
+var DateInput = require('./DateInput')
+
+/**
+ * Validates that its input is a date.
+ * @constructor
+ * @extends {BaseTemporalField}
+ * @param {Object=} kwargs
+ */
+var DateField = BaseTemporalField.extend({
+  widget: DateInput
+, inputFormatType: 'DATE_INPUT_FORMATS'
+, defaultErrorMessages: {
+    invalid: 'Enter a valid date.'
+  }
+
+, constructor: function DateField(kwargs) {
+    if (!(this instanceof DateField)) { return new DateField(kwargs) }
+    BaseTemporalField.call(this, kwargs)
+  }
+})
+
+/**
+ * Validates that the input can be converted to a date.
+ * @param {?(string|Date)} value user input.
+ * @return {?Date} a with its year, month and day attributes set, or null for
+ *   empty values when they are allowed.
+ * @throws {ValidationError} if the input is invalid.
+ */
+DateField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  }
+  return BaseTemporalField.prototype.toJavaScript.call(this, value)
+}
+
+module.exports = DateField
+},{"./BaseTemporalField":59,"./DateInput":73}],73:[function(require,module,exports){
+'use strict';
+
+var DateTimeBaseInput = require('./DateTimeBaseInput')
+
+/**
+ * @constructor
+ * @extends {DateTimeBaseInput}
+ * @param {Object=} kwargs
+ */
+var DateInput = DateTimeBaseInput.extend({
+  formatType: 'DATE_INPUT_FORMATS'
+, constructor: function DateInput(kwargs) {
+    if (!(this instanceof DateInput)) { return new DateInput(kwargs) }
+    DateTimeBaseInput.call(this, kwargs)
+  }
+})
+
+module.exports = DateInput
+},{"./DateTimeBaseInput":74}],74:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var time = require('isomorph/time')
+
+var formats = require('./formats')
+var locales = require('./locales')
+var TextInput = require('./TextInput')
+
+/**
+ * A <input type="text"> which, if given a Date object to display, formats it as
+ * an appropriate date/time String.
+ * @constructor
+ * @extends {TextInput}
+ * @param {Object=} kwargs
+ */
+var DateTimeBaseInput = TextInput.extend({
+  formatType: ''
+, constructor: function DateTimeBaseInput(kwargs) {
+    kwargs = object.extend({format: null}, kwargs)
+    TextInput.call(this, kwargs)
+    this.format = kwargs.format
+  }
+})
+
+DateTimeBaseInput.prototype._formatValue = function(value) {
+  if (is.Date(value)) {
+    if (this.format === null) {
+      this.format = formats.getFormat(this.formatType)[0]
+    }
+    return time.strftime(value, this.format, locales.getDefaultLocale())
+  }
+  return value
+}
+
+module.exports = DateTimeBaseInput
+},{"./TextInput":121,"./formats":132,"./locales":134,"isomorph/is":55,"isomorph/object":56,"isomorph/time":57}],75:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+var BaseTemporalField = require('./BaseTemporalField')
+var DateTimeInput = require('./DateTimeInput')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * Validates that its input is a date/time.
+ * @constructor
+ * @extends {BaseTemporalField}
+ * @param {Object=} kwargs
+ */
+var DateTimeField = BaseTemporalField.extend({
+  widget: DateTimeInput
+, inputFormatType: 'DATETIME_INPUT_FORMATS'
+, defaultErrorMessages: {
+    invalid: 'Enter a valid date/time.'
+  }
+
+, constructor: function DateTimeField(kwargs) {
+    if (!(this instanceof DateTimeField)) { return new DateTimeField(kwargs) }
+    BaseTemporalField.call(this, kwargs)
+  }
+})
+
+/**
+ * @param {?(string|Date|Array.<string>)} value user input.
+ * @return {?Date}
+ * @throws {ValidationError} if the input is invalid.
+ */
+DateTimeField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+  if (value instanceof Date) {
+    return value
+  }
+  if (is.Array(value)) {
+    // Input comes from a SplitDateTimeWidget, for example, so it's two
+    // components: date and time.
+    if (value.length != 2) {
+      throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+    }
+    if (this.isEmptyValue(value[0]) && this.isEmptyValue(value[1])) {
+      return null
+    }
+    value = value.join(' ')
+  }
+  return BaseTemporalField.prototype.toJavaScript.call(this, value)
+}
+
+
+module.exports = DateTimeField
+},{"./BaseTemporalField":59,"./DateTimeInput":76,"isomorph/is":55,"validators":288}],76:[function(require,module,exports){
+'use strict';
+
+var DateTimeBaseInput = require('./DateTimeBaseInput')
+
+/**
+ * @constructor
+ * @extends {DateTimeBaseInput}
+ * @param {Object=} kwargs
+ */
+var DateTimeInput = DateTimeBaseInput.extend({
+  formatType: 'DATETIME_INPUT_FORMATS'
+, constructor: function DateTimeInput(kwargs) {
+    if (!(this instanceof DateTimeInput)) { return new DateTimeInput(kwargs) }
+    DateTimeBaseInput.call(this, kwargs)
+  }
+})
+
+module.exports = DateTimeInput
+},{"./DateTimeBaseInput":74}],77:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+var IntegerField = require('./IntegerField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+var $__1=  require('./util'),strip=$__1.strip
+
+/**
+ * Validates that its input is a decimal number.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var DecimalField = IntegerField.extend({
+  defaultErrorMessages: {
+    invalid: 'Enter a number.'
+  , maxDigits: 'Ensure that there are no more than {max} digits in total.'
+  , maxDecimalPlaces: 'Ensure that there are no more than {max} decimal places.'
+  , maxWholeDigits: 'Ensure that there are no more than {max} digits before the decimal point.'
+  }
+
+, constructor: function DecimalField(kwargs) {
+    if (!(this instanceof DecimalField)) { return new DecimalField(kwargs) }
+    kwargs = object.extend({maxDigits: null, decimalPlaces: null}, kwargs)
+    this.maxDigits = kwargs.maxDigits
+    this.decimalPlaces = kwargs.decimalPlaces
+    IntegerField.call(this, kwargs)
+  }
+})
+
+/** Decimal validation regular expression, in lieu of a Decimal type. */
+DecimalField.DECIMAL_REGEXP = /^[-+]?(?:\d+(?:\.\d*)?|(?:\d+)?\.\d+)$/
+
+/**
+ * DecimalField overrides the clean() method as it performs its own validation
+ * against a different value than that given to any defined validators, due to
+ * JavaScript lacking a built-in Decimal type. Decimal format and component size
+ * checks will be performed against a normalised string representation of the
+ * input, whereas Validators will be passed a float version of the value for
+ * min/max checking.
+ * @param {string|Number} value
+ * @return {string} a normalised version of the input.
+ */
+DecimalField.prototype.clean = function(value) {
+  // Take care of empty, required validation
+  Field.prototype.validate.call(this, value)
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+
+  // Coerce to string and validate that it looks Decimal-like
+  value = strip(''+value)
+  if (!DecimalField.DECIMAL_REGEXP.test(value)) {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+
+  // In lieu of a Decimal type, DecimalField validates against a string
+  // representation of a Decimal, in which:
+  // * Any leading sign has been stripped
+  var negative = false
+  if (value.charAt(0) == '+' || value.charAt(0) == '-') {
+    negative = (value.charAt(0) == '-')
+    value = value.substr(1)
+  }
+  // * Leading zeros have been stripped from digits before the decimal point,
+  //   but trailing digits are retained after the decimal point.
+  value = value.replace(/^0+/, '')
+  // Reset to zero if we just wiped out all the digits in the input
+  if (value === '' || value == '.') {
+    value = '0'
+  }
+  // * If the input ended with a '.', it is stripped
+  if (value.indexOf('.') == value.length - 1) {
+    value = value.substring(0, value.length - 1)
+  }
+
+  // Perform own validation
+  var pieces = value.split('.')
+  var wholeDigits = pieces[0].length
+  var decimals = (pieces.length == 2 ? pieces[1].length : 0)
+  var digits = wholeDigits + decimals
+  if (this.maxDigits !== null && digits > this.maxDigits) {
+    throw ValidationError(this.errorMessages.maxDigits, {
+      code: 'maxDigits'
+    , params: {max: this.maxDigits}
+    })
+  }
+  if (this.decimalPlaces !== null && decimals > this.decimalPlaces) {
+    throw ValidationError(this.errorMessages.maxDecimalPlaces, {
+      code: 'maxDecimalPlaces'
+    , params: {max: this.decimalPlaces}
+    })
+  }
+  if (this.maxDigits !== null &&
+      this.decimalPlaces !== null &&
+      wholeDigits > (this.maxDigits - this.decimalPlaces)) {
+    throw ValidationError(this.errorMessages.maxWholeDigits, {
+      code: 'maxWholeDigits'
+    , params: {max: (this.maxDigits - this.decimalPlaces)}
+    })
+  }
+
+  // * Values which did not have a leading zero gain a single leading zero
+  if (value.charAt(0) == '.') {
+    value = '0' + value
+  }
+  // Restore sign if necessary
+  if (negative) {
+    value = '-' + value
+  }
+
+  // Validate against a float value - best we can do in the meantime
+  this.runValidators(parseFloat(value))
+
+  // Return the normalised String representation
+  return value
+}
+
+DecimalField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = IntegerField.prototype.getWidgetAttrs.call(this, widget)
+   if (!object.hasOwn(widget.attrs, 'step')) {
+    var step = 'any'
+    if (this.decimalPlaces !== null) {
+      // Use exponential notation for small values since they might
+      // be parsed as 0 otherwise.
+      if (this.decimalPlaces === 0) {
+        step = '1'
+      }
+      else if (this.decimalPlaces < 7) {
+        step = '0.' + '000001'.slice(-this.decimalPlaces)
+      }
+      else {
+        step = '1e-' + this.decimalPlaces
+      }
+    }
+    object.setDefault(attrs, 'step', step)
+  }
+  return attrs
+}
+
+module.exports = DecimalField
+},{"./Field":83,"./IntegerField":96,"./util":135,"isomorph/object":56,"validators":288}],78:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+
+// TODO Support declaring propTypes when extending forms - merge them in here
+
+/**
+ * Meta function for handling declarative fields and inheriting fields from
+ * forms further up the inheritance chain or being explicitly mixed-in, which
+ * sets up baseFields and declaredFields on a new Form constructor's prototype.
+ * @param {Object.<string,*>} prototypeProps
+ */
+function DeclarativeFieldsMeta(prototypeProps) {
+  // Pop Fields instances from prototypeProps to build up the new form's own
+  // declaredFields.
+  var fields = []
+  Object.keys(prototypeProps).forEach(function(name) {
+    if (prototypeProps[name] instanceof Field) {
+      fields.push([name, prototypeProps[name]])
+      delete prototypeProps[name]
+    }
+  })
+  fields.sort(function(a, b) {
+    return a[1].creationCounter - b[1].creationCounter
+  })
+  prototypeProps.declaredFields = object.fromItems(fields)
+
+  // Build up final declaredFields from the form being extended, forms being
+  // mixed in and the new form's own declaredFields, in that order of
+  // precedence.
+  var declaredFields = {}
+
+  // If we're extending another form, we don't need to check for shadowed
+  // fields, as it's at the bottom of the pile for inheriting declaredFields.
+  if (object.hasOwn(this, 'declaredFields')) {
+    object.extend(declaredFields, this.declaredFields)
+  }
+
+  // If any mixins which look like Form constructors were given, inherit their
+  // declaredFields and check for shadowed fields.
+  if (object.hasOwn(prototypeProps, '__mixins__')) {
+    var mixins = prototypeProps.__mixins__
+    if (!is.Array(mixins)) { mixins = [mixins] }
+    // Process mixins from left-to-right, the same precedence they'll get for
+    // having their prototype properties mixed in.
+    for (var i = 0, l = mixins.length; i < l; i++) {
+      var mixin = mixins[i]
+      if (is.Function(mixin) && object.hasOwn(mixin.prototype, 'declaredFields')) {
+        // Extend mixed-in declaredFields over the top of what's already there,
+        // then delete any fields which have been shadowed by a non-Field
+        // property in its prototype.
+        object.extend(declaredFields, mixin.prototype.declaredFields)
+        Object.keys(mixin.prototype).forEach(function(name) {
+          if (object.hasOwn(declaredFields, name)) {
+            delete declaredFields[name]
+          }
+        })
+        // To avoid overwriting the new form's baseFields, declaredFields or
+        // constructor when the rest of the mixin's prototype is mixed-in by
+        // Concur, replace the mixin with an object containing only its other
+        // prototype properties.
+        var mixinPrototype = object.extend({}, mixin.prototype)
+        delete mixinPrototype.baseFields
+        delete mixinPrototype.declaredFields
+        delete mixinPrototype.constructor
+        mixins[i] = mixinPrototype
+      }
+    }
+    // We may have wrapped a single mixin in an Array - assign it back to the
+    // new form's prototype for processing by Concur.
+    prototypeProps.__mixins__ = mixins
+  }
+
+  // Finally - extend the new form's own declaredFields over the top of
+  // declaredFields being inherited, then delete any fields which have been
+  // shadowed by a non-Field property in its prototype.
+  object.extend(declaredFields, prototypeProps.declaredFields)
+  Object.keys(prototypeProps).forEach(function(name) {
+    if (object.hasOwn(declaredFields, name)) {
+      delete declaredFields[name]
+    }
+  })
+
+  prototypeProps.baseFields = declaredFields
+  prototypeProps.declaredFields = declaredFields
+
+  // If a clean method is specified as [field1, field2, ..., cleanFunction],
+  // replace it with the clean function and attach the field names to the
+  // function.
+  if (object.hasOwn(prototypeProps, 'clean') && is.Array(prototypeProps.clean)) {
+    var clean = prototypeProps.clean.pop()
+    clean.fields = object.lookup(prototypeProps.clean)
+    prototypeProps.clean = clean
+  }
+}
+
+module.exports = DeclarativeFieldsMeta
+},{"./Field":83,"isomorph/is":55,"isomorph/object":56}],79:[function(require,module,exports){
+'use strict';
+
+var util = require('./util')
+
+var CharField = require('./CharField')
+var EmailInput = require('./EmailInput')
+
+var $__0=  require('validators'),validateEmail=$__0.validateEmail
+
+/**
+ * Validates that its input appears to be a valid e-mail address.
+ * @constructor
+ * @extends {CharField}
+ * @param {Object=} kwargs
+ */
+var EmailField = CharField.extend({
+  widget: EmailInput
+, defaultValidators: [validateEmail]
+
+, constructor: function EmailField(kwargs) {
+    if (!(this instanceof EmailField)) { return new EmailField(kwargs) }
+    CharField.call(this, kwargs)
+  }
+})
+
+EmailField.prototype.clean = function(value) {
+  value = util.strip(this.toJavaScript(value))
+  return CharField.prototype.clean.call(this, value)
+}
+
+
+module.exports = EmailField
+},{"./CharField":62,"./EmailInput":80,"./util":135,"validators":288}],80:[function(require,module,exports){
+'use strict';
+
+var TextInput = require('./TextInput')
+
+/**
+ * An HTML <input type="email"> widget.
+ * @constructor
+ * @extends {TextInput}
+ * @param {Object=} kwargs
+ */
+var EmailInput = TextInput.extend({
+  constructor: function EmailInput(kwargs) {
+    if (!(this instanceof EmailInput)) { return new EmailInput(kwargs) }
+    TextInput.call(this, kwargs)
+  }
+, inputType: 'email'
+})
+
+module.exports = EmailInput
+},{"./TextInput":121}],81:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var object = require('isomorph/object')
+var React = require('react')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * A list of errors which knows how to display itself in various formats.
+ * @param {Array=} list a list of errors.
+ * @constructor
+ */
+var ErrorList = Concur.extend({
+  constructor: function ErrorList(list) {
+    if (!(this instanceof ErrorList)) { return new ErrorList(list) }
+    this.data = list || []
+  }
+})
+
+/**
+ * @param {Array.<Object>} list
+ * @return {ErrorList}
+ */
+ErrorList.fromJSON = function(list) {
+  var result = new ErrorList()
+  result.fromJSON(list)
+  return result
+}
+
+/**
+ * Adds more errors.
+ * @param {Array} errorList a list of errors.
+ */
+ErrorList.prototype.extend = function(errorList) {
+  this.data.push.apply(this.data, errorList)
+}
+
+/**
+ * @return {number} the number of errors.
+ */
+ErrorList.prototype.length = function() {
+  return this.data.length
+}
+
+/**
+ * @return {boolean} true if any errors are present.
+ */
+ErrorList.prototype.isPopulated = function() {
+  return (this.length() > 0)
+}
+
+/**
+ * @return {string} the first message held in this ErrorList.
+ */
+ErrorList.prototype.first = function() {
+  if (this.data.length > 0) {
+    var error = this.data[0]
+    if (error instanceof ValidationError) {
+      error = error.messages()[0]
+    }
+    return error
+  }
+}
+
+/**
+ * @return {Array.<string>} the list of messages held in this ErrorList.
+ */
+ErrorList.prototype.messages = function() {
+  var messages = []
+  for (var i = 0, l = this.data.length; i < l; i++) {
+    var error = this.data[i]
+    if (error instanceof ValidationError) {
+      error = error.messages()[0]
+    }
+    messages.push(error)
+  }
+  return messages
+}
+
+/**
+ * Default display is as a list.
+ * @return {ReactElement}
+ */
+ErrorList.prototype.render = function(kwargs) {
+  return this.asUl(kwargs)
+}
+
+/**
+ * Displays errors as a list.
+ * @return {ReactElement}
+ */
+ErrorList.prototype.asUl = function(kwargs) {
+  if (!this.isPopulated()) {
+    return
+  }
+  kwargs = object.extend({className: 'errorlist'}, kwargs)
+  return React.createElement('ul', {className: kwargs.className},
+    this.messages().map(function(error) {
+      return React.createElement('li', null, error)
+    })
+  )
+}
+
+/**
+ * Displays errors as text.
+ * @return {string}
+ */
+ErrorList.prototype.asText = ErrorList.prototype.toString =function() {
+  return this.messages().map(function(error) {
+    return '* ' + error
+  }).join('\n')
+}
+
+/**
+ * @return {Array}
+ */
+ErrorList.prototype.asData = function() {
+  return this.data
+}
+
+/**
+ * @return {Object}
+ */
+ErrorList.prototype.toJSON = function() {
+  return new ValidationError(this.data).errorList.map(function(error) {
+    return {
+      message: error.messages()[0]
+    , code: error.code || ''
+    }
+  })
+}
+
+/**
+ * @param {Array.<Object>} list
+ */
+ErrorList.prototype.fromJSON = function(list) {
+  this.data = list.map(function(err) {
+    return new ValidationError(err.message, {code: err.code})
+  })
+}
+
+module.exports = ErrorList
+
+},{"Concur":1,"isomorph/object":56,"react":"react","validators":288}],82:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var object = require('isomorph/object')
+var React = require('react')
+
+var ErrorList = require('./ErrorList')
+
+/**
+ * A collection of field errors that knows how to display itself in various
+ * formats. This object's .error properties are the field names and
+ * corresponding values are the errors.
+ * @constructor
+ */
+var ErrorObject = Concur.extend({
+  constructor: function ErrorObject() {
+    if (!(this instanceof ErrorObject)) { return new ErrorObject() }
+    this.errors = {}
+  }
+})
+
+/**
+ * @param {Object} jsonObj
+ * @param {function=} errorConstructor
+ * @return {ErrorObject}
+ */
+ErrorObject.fromJSON = function(jsonObj, errorConstructor) {
+  var result = new ErrorObject()
+  result.fromJSON(jsonObj, errorConstructor)
+  return result
+}
+
+/**
+ * Sets a field's errors.
+ * @param {string} fieldName
+ * @param {ErrorList} errors
+ */
+ErrorObject.prototype.set = function(fieldName, errors) {
+  this.errors[fieldName] = errors
+}
+
+/**
+ * Gets a field's errors.
+ * @param {string} fieldName
+ * @return {ErrorList}
+ */
+ErrorObject.prototype.get = function(fieldName) {
+  return this.errors[fieldName]
+}
+
+/**
+ * Removes errors for a field.
+ * @param {string} fieldName
+ * @return {boolean} true if there were errors for the field.
+ */
+ErrorObject.prototype.remove = function(fieldName) {
+  return delete this.errors[fieldName]
+}
+
+/**
+ * Removes errors for multiple fields.
+ * @param {Array.<string>} fieldNames
+ */
+ErrorObject.prototype.removeAll = function(fieldNames) {
+  for (var i = 0, l = fieldNames.length; i < l; i++) {
+    delete this.errors[fieldNames[i]]
+  }
+}
+
+/**
+ * @return {boolean} true if the field has errors.
+ */
+ErrorObject.prototype.hasField = function(fieldName) {
+  return object.hasOwn(this.errors, fieldName)
+}
+
+/**
+ * @return {number}
+ */
+ErrorObject.prototype.length = function() {
+  return Object.keys(this.errors).length
+}
+
+/**
+ * @return {boolean} true if any errors are present.
+ */
+ErrorObject.prototype.isPopulated = function() {
+  return (this.length() > 0)
+}
+
+/**
+ * Default display is as a list.
+ * @return {ReactElement}
+ */
+ErrorObject.prototype.render = function(kwargs) {
+  return this.asUl(kwargs)
+}
+
+/**
+ * Displays error details as a list.
+ * @return {ReactElement}
+ */
+ErrorObject.prototype.asUl = function(kwargs) {
+  kwargs = object.extend({className: 'errorlist'}, kwargs)
+  var items = Object.keys(this.errors).map(function(fieldName) {
+    return React.createElement('li', null, fieldName, this.errors[fieldName].asUl())
+  }.bind(this))
+  if (items.length === 0) { return }
+  return React.createElement('ul', {className: kwargs.className}, items)
+}
+
+/**
+ * Displays error details as text.
+ * @return {string}
+ */
+ErrorObject.prototype.asText = ErrorObject.prototype.toString = function() {
+  return Object.keys(this.errors).map(function(fieldName) {
+    var messages = this.errors[fieldName].messages()
+    return ['* ' + fieldName].concat(messages.map(function(message) {
+      return ('  * ' + message)
+    })).join('\n')
+  }.bind(this)).join('\n')
+}
+
+/**
+ * @return {Object}
+ */
+ErrorObject.prototype.asData = function() {
+  var data = {}
+  Object.keys(this.errors).map(function(fieldName) {
+    data[fieldName] = this.errors[fieldName].asData()
+  }.bind(this))
+  return data
+}
+
+/**
+ * @return {Object}
+ */
+ErrorObject.prototype.toJSON = function() {
+  var jsonObj = {}
+  Object.keys(this.errors).map(function(fieldName) {
+    jsonObj[fieldName] = this.errors[fieldName].toJSON()
+  }.bind(this))
+  return jsonObj
+}
+
+/**
+ * @param {Object} jsonObj
+ * @param {function=} errorConstructor
+ */
+ErrorObject.prototype.fromJSON = function(jsonObj, errorConstructor) {
+  errorConstructor = errorConstructor || ErrorList
+  this.errors = {}
+  var fieldNames = Object.keys(jsonObj)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var fieldName = fieldNames[i]
+    this.errors[fieldName] = errorConstructor.fromJSON(jsonObj[fieldName])
+  }
+}
+
+module.exports = ErrorObject
+
+},{"./ErrorList":81,"Concur":1,"isomorph/object":56,"react":"react"}],83:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var HiddenInput = require('./HiddenInput')
+var Widget = require('./Widget')
+var TextInput = require('./TextInput')
+
+var $__0=   require('validators'),EMPTY_VALUES=$__0.EMPTY_VALUES,ValidationError=$__0.ValidationError
+var $__1=  require('./util'),normaliseValidation=$__1.normaliseValidation
+
+/**
+ * An object that is responsible for doing validation and normalisation, or
+ * "cleaning", for example: an EmailField makes sure its data is a valid
+ * e-mail address and makes sure that acceptable "blank" values all have the
+ * same representation.
+ * @constructor
+ * @param {Object=} kwargs
+ */
+var Field = Concur.extend({
+  widget: TextInput         // Default widget to use when rendering this type of Field
+, hiddenWidget: HiddenInput // Default widget to use when rendering this as "hidden"
+, defaultValidators: []             // Default list of validators
+  // Add an 'invalid' entry to defaultErrorMessages if you want a specific
+  // field error message not raised by the field validators.
+, defaultErrorMessages: {
+    required: 'This field is required.'
+  }
+, emptyValues: EMPTY_VALUES.slice()
+, emptyValueArray: true // Should isEmptyValue check for empty Arrays?
+
+, constructor: function Field(kwargs) {
+    kwargs = object.extend({
+      required: true, widget: null, label: null, initial: null,
+      helpText: null, errorMessages: null, showHiddenInitial: false,
+      validators: [], cssClass: null, validation: null, controlled: null,
+      custom: null, widgetAttrs: {}
+    }, kwargs)
+    this.required = kwargs.required
+    this.label = kwargs.label
+    this.initial = kwargs.initial
+    this.showHiddenInitial = kwargs.showHiddenInitial
+    this.helpText = kwargs.helpText || ''
+    this.cssClass = kwargs.cssClass
+    this.validation = normaliseValidation(kwargs.validation)
+    this.controlled = kwargs.controlled
+    this.custom = kwargs.custom
+    this.widgetAttrs = kwargs.widgetAttrs
+
+    var widget = kwargs.widget || this.widget
+    if (!(widget instanceof Widget)) {
+      // We must have a Widget constructor, so construct with it
+      widget = new widget()
+    }
+    // Let the widget know whether it should display as required
+    widget.isRequired = this.required
+    // Hook into this.getWidgetAttrs() for any Field-specific HTML attributes
+    object.extend(widget.attrs, this.getWidgetAttrs(widget))
+    this.widget = widget
+
+    // Increment the creation counter and save our local copy
+    this.creationCounter = Field.creationCounter++
+
+    // Copy error messages for this instance into a new object and override
+    // with any provided error messages.
+    var messages = [{}]
+    for (var i = this.constructor.__mro__.length - 1; i >=0; i--) {
+      messages.push(object.get(this.constructor.__mro__[i].prototype,
+                               'defaultErrorMessages', null))
+    }
+    messages.push(kwargs.errorMessages)
+    this.errorMessages = object.extend.apply(object, messages)
+
+    this.validators = this.defaultValidators.concat(kwargs.validators)
+  }
+})
+
+/**
+ * Tracks each time a Field instance is created; used to retain order.
+ */
+Field.creationCounter = 0
+
+Field.prototype.prepareValue = function(value) {
+  return value
+}
+
+/**
+ * @param {*} value user input.
+ * @throws {ValidationError} if the input is invalid.
+ */
+Field.prototype.toJavaScript = function(value) {
+  return value
+}
+
+/**
+ * Checks for the given value being === one of the configured empty values, plus
+ * any additional checks required due to JavaScript's lack of a generic object
+ * equality checking mechanism.
+ */
+Field.prototype.isEmptyValue = function(value) {
+  if (this.emptyValues.indexOf(value) != -1) {
+    return true
+  }
+  return (this.emptyValueArray === true && is.Array(value) && value.length === 0)
+}
+
+Field.prototype.validate = function(value) {
+  if (this.required && this.isEmptyValue(value)) {
+    throw ValidationError(this.errorMessages.required, {code: 'required'})
+  }
+}
+
+Field.prototype.runValidators = function(value) {
+  if (this.isEmptyValue(value)) {
+    return
+  }
+  var errors = []
+  for (var i = 0, l = this.validators.length; i < l; i++) {
+    var validator = this.validators[i]
+    try {
+      validator(value)
+    }
+    catch (e) {
+      if (!(e instanceof ValidationError)) { throw e }
+      if (object.hasOwn(e, 'code') &&
+          object.hasOwn(this.errorMessages, e.code)) {
+        e.message = this.errorMessages[e.code]
+      }
+      errors.push.apply(errors, e.errorList)
+    }
+  }
+  if (errors.length > 0) {
+    throw ValidationError(errors)
+  }
+}
+
+/**
+ * Validates the given value and returns its "cleaned" value as an appropriate
+ * JavaScript object.
+ * @param {string} value user input.
+ * @throws {ValidationError} if the input is invalid.
+ */
+Field.prototype.clean = function(value) {
+  value = this.toJavaScript(value)
+  this.validate(value)
+  this.runValidators(value)
+  return value
+}
+
+/**
+ * Return the value that should be shown for this field on render of a bound
+ * form, given the submitted data for the field and the initial data, if any.
+ * For most fields, this will simply be data; FileFields need to handle it a bit
+ * differently.
+ */
+Field.prototype.boundData = function(data, initial) {
+  return data
+}
+
+/**
+ * Specifies HTML attributes which should be added to a given widget for this
+ * field.
+ * @param {Widget} widget a widget.
+ * @return {Object} an object specifying HTML attributes that should be added to
+ *   the given widget when rendered, based on this field.
+ */
+Field.prototype.getWidgetAttrs = function(widget) {
+  return object.extend({}, this.widgetAttrs)
+}
+
+/**
+ * @return {boolean} true if data differs from initial.
+ */
+Field.prototype._hasChanged = function(initial, data) {
+  // For purposes of seeing whether something has changed, null is the same
+  // as an empty string, if the data or initial value we get is null, replace
+  // it with ''.
+  var initialValue = (initial === null ? '' : initial)
+  try {
+    data = this.toJavaScript(data)
+    if (typeof this._coerce == 'function') {
+      data = this._coerce(data)
+    }
+  }
+  catch (e) {
+    if (!(e instanceof ValidationError)) { throw e }
+    return true
+  }
+  var dataValue = (data === null ? '' : data)
+  return (''+initialValue != ''+dataValue) // TODO is forcing to string necessary?
+}
+
+module.exports = Field
+},{"./HiddenInput":92,"./TextInput":121,"./Widget":129,"./util":135,"Concur":1,"isomorph/is":55,"isomorph/object":56,"validators":288}],84:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var env = require('./env')
+
+var ClearableFileInput = require('./ClearableFileInput')
+var Field = require('./Field')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * Validates that its input is a valid uploaded file.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var FileField = Field.extend({
+  widget: ClearableFileInput
+, defaultErrorMessages: {
+    invalid: 'No file was submitted. Check the encoding type on the form.'
+  , missing: 'No file was submitted.'
+  , empty: 'The submitted file is empty.'
+  , maxLength: 'Ensure this filename has at most {max} characters (it has {length}).'
+  , contradiction: 'Please either submit a file or check the clear checkbox, not both.'
+  }
+
+, constructor: function FileField(kwargs) {
+    if (!(this instanceof FileField)) { return new FileField(kwargs) }
+    kwargs = object.extend({maxLength: null, allowEmptyFile: false}, kwargs)
+    this.maxLength = kwargs.maxLength
+    this.allowEmptyFile = kwargs.allowEmptyFile
+    delete kwargs.maxLength
+    Field.call(this, kwargs)
+  }
+})
+
+FileField.prototype.toJavaScript = function(data, initial) {
+  if (this.isEmptyValue(data)) {
+    return null
+  }
+
+  // If the browser doesn't support File objects, we can't do anything more
+  if (env.browser && is.String(data)) {
+    return data
+  }
+
+  // File objects should have name and size attributes
+  if (typeof data.name == 'undefined' || typeof data.size == 'undefined') {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+
+  var name = data.name
+  var suze = Number(data.size)
+
+  if (this.maxLength !== null && name.length > this.maxLength) {
+    throw ValidationError(this.errorMessages.maxLength, {
+      code: 'maxLength'
+    , params: {max: this.maxLength, length: name.length}
+    })
+  }
+  if (!name) {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+  if (!this.allowEmptyFile && suze === 0) {
+    throw ValidationError(this.errorMessages.empty, {code: 'empty'})
+  }
+
+  return data
+}
+
+FileField.prototype.clean = function(data, initial) {
+  // If the widget got contradictory inputs, we raise a validation error
+  if (data === ClearableFileInput.FILE_INPUT_CONTRADICTION) {
+    throw ValidationError(this.errorMessages.contradiction,
+                          {code: 'contradiction'})
+  }
+  // false means the field value should be cleared; further validation is
+  // not needed.
+  if (data === false) {
+    if (!this.required) {
+      return false
+    }
+    // If the field is required, clearing is not possible (the widget
+    // shouldn't return false data in that case anyway). false is not
+    // in EMPTY_VALUES; if a false value makes it this far it should be
+    // validated from here on out as null (so it will be caught by the
+    // required check).
+    data = null
+  }
+  if (!data && initial) {
+    return initial
+  }
+  return Field.prototype.clean.call(this, data)
+}
+
+FileField.prototype.boundData = function(data, initial) {
+  if (data === null || data === ClearableFileInput.FILE_INPUT_CONTRADICTION) {
+    return initial
+  }
+  return data
+}
+
+FileField.prototype._hasChanged = function(initial, data) {
+  return (data !== null)
+}
+
+module.exports = FileField
+},{"./ClearableFileInput":70,"./Field":83,"./env":131,"isomorph/is":55,"isomorph/object":56,"validators":288}],85:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Input = require('./Input')
+
+var env =require('./env')
+
+/**
+ * An HTML <input type="file"> widget.
+ * @constructor
+ * @extends {Input}
+ * @param {Object=} kwargs
+ */
+var FileInput = Input.extend({
+  constructor: function FileInput(kwargs) {
+    if (!(this instanceof FileInput)) { return new FileInput(kwargs) }
+    Input.call(this, kwargs)
+  }
+, inputType: 'file'
+, needsMultipartForm: true
+, validation: {onChange: true}
+, isValueSettable: false
+})
+
+FileInput.prototype.render = function(name, value, kwargs) {
+  return Input.prototype.render.call(this, name, null, kwargs)
+}
+
+/**
+ * On the client, files will be populated with File objects from the input's
+ * FileList when supported, otherwise its value will be in data as a fallback.
+ */
+FileInput.prototype.valueFromData = function(data, files, name) {
+  var dataSource = files
+  if (env.browser && !(name in files)) {
+    dataSource = data
+  }
+  return object.get(dataSource, name, null)
+}
+
+module.exports = FileInput
+},{"./Input":95,"./env":131,"isomorph/object":56}],86:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var ChoiceField = require('./ChoiceField')
+
+/**
+ * Allows choosing from files inside a certain directory.
+ * @constructor
+ * @extends {ChoiceField}
+ * @param {string} path
+ * @param {Object=} kwargs
+ */
+var FilePathField = ChoiceField.extend({
+  constructor: function FilePathField(path, kwargs) {
+    if (!(this instanceof FilePathField)) { return new FilePathField(path, kwargs) }
+    kwargs = object.extend({
+      match: null, recursive: false, required: true, widget: null,
+      label: null, initial: null, helpText: null,
+      allowFiles: true, allowFolders: false
+    }, kwargs)
+
+    this.path = path
+    this.match = object.pop(kwargs, 'match')
+    this.recursive = object.pop(kwargs, 'recursive')
+    this.allowFiles = object.pop(kwargs, 'allowFiles')
+    this.allowFolders = object.pop(kwargs, 'allowFolders')
+    delete kwargs.match
+    delete kwargs.recursive
+
+    kwargs.choices = []
+    ChoiceField.call(this, kwargs)
+
+    if (this.required) {
+      this.setChoices([])
+    }
+    else {
+      this.setChoices([['', '---------']])
+    }
+
+    if (this.match !== null) {
+      this.matchRE = new RegExp(this.match)
+    }
+
+    // TODO Plug in file paths when running on the server
+
+    this.widget.choices = this.choices()
+  }
+})
+
+module.exports = FilePathField
+},{"./ChoiceField":67,"isomorph/object":56}],87:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+var IntegerField = require('./IntegerField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+var $__1=  require('./util'),strip=$__1.strip
+
+/**
+ * Validates that its input is a valid float.
+ * @constructor
+ * @extends {IntegerField}
+ * @param {Object=} kwargs
+ */
+var FloatField = IntegerField.extend({
+  defaultErrorMessages: {
+    invalid: 'Enter a number.'
+  }
+
+, constructor: function FloatField(kwargs) {
+    if (!(this instanceof FloatField)) { return new FloatField(kwargs) }
+    IntegerField.call(this, kwargs)
+  }
+})
+
+/** Float validation regular expression, as parseFloat() is too forgiving. */
+FloatField.FLOAT_REGEXP = /^[-+]?(?:\d+(?:\.\d*)?|(?:\d+)?\.\d+)$/
+
+/**
+ * Validates that the input looks like valid input for parseFloat() and the
+ * result of calling it isn't NaN.
+ * @param {*} value user input.
+ * @return a Number obtained from parseFloat(), or null for empty values.
+ * @throws {ValidationError} if the input is invalid.
+ */
+FloatField.prototype.toJavaScript = function(value) {
+  value = Field.prototype.toJavaScript.call(this, value)
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+  value = strip(value)
+  if (!FloatField.FLOAT_REGEXP.test(value)) {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+  value = parseFloat(value)
+  if (isNaN(value)) {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+  return value
+}
+
+/**
+ * Determines if data has changed from initial. In JavaScript, trailing zeroes
+ * in floats are dropped when a float is coerced to a String, so e.g., an
+ * initial value of 1.0 would not match a data value of '1.0' if we were to use
+ * the Widget object's _hasChanged, which checks coerced String values.
+ * @return {boolean} true if data has changed from initial.
+ */
+FloatField.prototype._hasChanged = function(initial, data) {
+  // For purposes of seeing whether something has changed, null is the same
+  // as an empty string, if the data or initial value we get is null, replace
+  // it with ''.
+  var dataValue = (data === null ? '' : data)
+  var initialValue = (initial === null ? '' : initial)
+  if (initialValue === dataValue) {
+    return false
+  }
+  else if (initialValue === '' || dataValue === '') {
+    return true
+  }
+  return (parseFloat(''+initialValue) != parseFloat(''+dataValue))
+}
+
+FloatField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = IntegerField.prototype.getWidgetAttrs.call(this, widget)
+  if (!object.hasOwn(widget.attrs, 'step')) {
+    object.setDefault(attrs, 'step', 'any')
+  }
+  return attrs
+}
+
+module.exports = FloatField
+},{"./Field":83,"./IntegerField":96,"./util":135,"isomorph/object":56,"validators":288}],88:[function(require,module,exports){
+(function (process){
+'use strict';
+
+var Concur = require('Concur')
+var getFormData = require('get-form-data')
+var copy = require('isomorph/copy')
+var $__0=  require('isomorph/format'),formatObj=$__0.formatObj
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var constants = require('./constants')
+
+var BoundField = require('./BoundField')
+var DeclarativeFieldsMeta = require('./DeclarativeFieldsMeta')
+var ErrorList = require('./ErrorList')
+var ErrorObject = require('./ErrorObject')
+var FileField = require('./FileField')
+var MultipleFileField = require('./MultipleFileField')
+
+var $__1=  require('validators'),ValidationError=$__1.ValidationError
+var $__2=      require('./util'),cancellable=$__2.cancellable,debounce=$__2.debounce,info=$__2.info,warning=$__2.warning,normaliseValidation=$__2.normaliseValidation
+
+function noop() {}
+var sentinel = {}
+
+var NON_FIELD_ERRORS = constants.NON_FIELD_ERRORS
+
+/**
+ * Checks if a field's view of raw input data (via its Widget) has changed.
+ */
+function fieldDataHasChanged(previous, current) {
+  if (is.Array(previous) && is.Array(current)) {
+    if (previous.length != current.length) { return true }
+    for (var i = 0, l = previous.length; i < l; i++) {
+      if (previous[i] != current[i]) { return true }
+    }
+    return false
+  }
+  return previous != current
+}
+
+if ('production' !== process.env.NODE_ENV) {
+  var warnedOnImpliedValidateAuto = false
+}
+
+/**
+ * A collection of Fields that knows how to validate and display itself.
+ * @constructor
+ * @param {Object.<string, *>} kwargs form options.
+ */
+var Form = Concur.extend({
+  __meta__: DeclarativeFieldsMeta,
+
+  prefixFormat: '{prefix}-{name}',
+
+  constructor: function Form(kwargs) {
+    // TODO Perform PropType checks on kwargs in development mode
+    kwargs = object.extend({
+      data: null, files: null, autoId: 'id_{name}', prefix: null,
+      initial: null, errorConstructor: ErrorList, labelSuffix: ':',
+      emptyPermitted: false, validation: null, controlled: false,
+      onChange: null, errors: null
+    }, kwargs)
+    this.isInitialRender = (kwargs.data == null && kwargs.files == null)
+    this.data = kwargs.data || {}
+    this.files = kwargs.files || {}
+    this.autoId = kwargs.autoId
+    this.prefix = kwargs.prefix
+    this.initial = kwargs.initial || {}
+    this.cleanedData = {}
+    this.errorConstructor = kwargs.errorConstructor
+    this.labelSuffix = kwargs.labelSuffix
+    this.emptyPermitted = kwargs.emptyPermitted
+    this.controlled = kwargs.controlled
+    this.onChange = kwargs.onChange
+
+    // Auto validation is implied when onChange is passed
+    if (is.Function(kwargs.onChange)) {
+      if ('production' !== process.env.NODE_ENV) {
+        if (!warnedOnImpliedValidateAuto && kwargs.validation === 'auto') {
+          info('Passing onChange to a Form or FormSet constructor also ' +
+               "implies validation: 'auto' by default - you don't have " +
+               'to set it manually.')
+          warnedOnImpliedValidateAuto = true
+        }
+      }
+      if (kwargs.validation == null) {
+        kwargs.validation = 'auto'
+      }
+    }
+    this.validation = normaliseValidation(kwargs.validation || 'manual')
+
+    this._errors = kwargs.errors
+
+    // Cancellable debounced functions for delayed event validation
+    this._pendingEventValidation = {}
+    // Input data as it was last time validation was performed on a field
+    this._lastValidatedData = {}
+    // Cached result of the last call to hasChanged()
+    this._lastHasChanged = null
+
+    // Lookup for names of fields pending validation
+    this._pendingValidation = {}
+    // Cancellable callbacks for pending async validation
+    this._pendingAsyncValidation = {}
+    // Lookup for names of fields pending validation which clean() depends on
+    this._runCleanAfter = {}
+    // Callback to be run the next time validation finishes
+    this._onValidate = null
+
+    // The baseFields attribute is the *prototype-wide* definition of fields.
+    // Because a particular *instance* might want to alter this.fields, we
+    // create this.fields here by deep copying baseFields. Instances should
+    // always modify this.fields; they should not modify baseFields.
+    this.fields = copy.deepCopy(this.baseFields)
+
+    if ('production' !== process.env.NODE_ENV) {
+      // Now that form.fields exists, we can check if there's any configuration
+      // which *needs* onChange on the form or its fields.
+      if (!is.Function(kwargs.onChange) && this._needsOnChange()) {
+        warning("You didn't provide an onChange callback for a " +
+                this._formName() + ' which has controlled fields. This ' +
+                'will result in read-only fields.')
+      }
+    }
+
+    // Copy initial values to the data object, as it represents form input -
+    // literally so in the case of controlled components once we start taking
+    // some data and isInitialRender flips to false.
+    if (this.isInitialRender) {
+      this._copyInitialToData()
+    }
+  }
+})
+
+// XXX Don't alter form extension arguments - fix this in Concur
+var _extend = Form.extend
+Form.extend = function(prototypeProps, constructorProps) {
+  return _extend.call(this, object.extend({}, prototypeProps), constructorProps)
+}
+
+/**
+ * Calls the onChange function if it's been provided. This method will be called
+ * every time the form makes a change to its state which requires redisplay.
+ */
+Form.prototype._stateChanged = function() {
+  if (typeof this.onChange == 'function') {
+    this.onChange()
+  }
+}
+
+/**
+ * Copies initial data to the input data object, as it represents form input -
+ * when using controlled components once we start taking some data,
+ * isInitialRender flips to false and this.data is used for rendering widgets.
+ */
+Form.prototype._copyInitialToData = function() {
+  var initialData = object.extend(this._fieldInitialData(), this.initial)
+  var initialFieldNames = Object.keys(initialData)
+  for (var i = 0, l = initialFieldNames.length; i < l; i++) {
+    var fieldName = initialFieldNames[i]
+    if (typeof this.fields[fieldName] == 'undefined') { continue }
+    // Don't copy initial to input data for fields which can't have the
+    // initial data set as their current value.
+    if (!this.fields[fieldName].widget.isValueSettable) { continue }
+    this.data[this.addPrefix(fieldName)] = initialData[fieldName]
+  }
+}
+
+/**
+ * Gets initial data configured in this form's fields.
+ * @return {Object.<string,*>}
+ */
+Form.prototype._fieldInitialData = function() {
+  var fieldInitial = {}
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l; i++) {
+    var fieldName = fieldNames[i]
+    var initial = this.fields[fieldName].initial
+    if (initial !== null) {
+      fieldInitial[fieldName] = initial
+    }
+  }
+  return fieldInitial
+}
+
+/**
+ * Tries to construct a display name for the form for display in messages.
+ * @return {string}
+ */
+Form.prototype._formName = function() {
+  var name = this.displayName || this.constructor.name
+  return (name ? "'" + name + "'" : 'Form')
+}
+
+/**
+ * @return {boolean} true if the form or any of its fields are configured to
+ *   generate controlled components.
+ */
+Form.prototype._needsOnChange = function() {
+  if (this.controlled === true) {
+    return true
+  }
+  var names = Object.keys(this.fields)
+  for (var i = 0, l = names.length; i < l; i++) {
+    if (this.fields[names[i]].controlled === true) {
+      return true
+    }
+  }
+  return false
+}
+
+// ============================================================== Validation ===
+
+/**
+ * Validates the form from scratch. If a <form> is given, data from it will be
+ * set on this form first. Otherwise, validation will be done with this form's
+ * current input data.
+ * @param {(ReactElement|HTMLFormElement)=} form the <form> containing this
+ * form's rendered widgets - this can be a React <form> component or a real
+ * <form> DOM node.
+ * @param {function(err, isValid, cleanedData)=} cb callback for asynchronous
+ *   validation.
+ * @return {boolean|undefined} true if the form only has synchronous validation
+ *   and is valid.
+ * @throws if the form has asynchronous validation and a callback is not
+ *   provided.
+ */
+Form.prototype.validate = function(form, cb) {
+  this._cancelPendingOperations()
+  if (is.Function(form)) {
+    cb = form
+    form = null
+  }
+  if (form) {
+    if (typeof form.getDOMNode == 'function') {
+      form = form.getDOMNode()
+    }
+    this.data = getFormData(form)
+  }
+  return (this.isAsync() ? this._validateAsync(cb) : this._validateSync())
+}
+
+Form.prototype._validateAsync = function(cb) {
+  if (!is.Function(cb)) {
+    throw new Error(
+      'You must provide a callback to validate() when a form has ' +
+      'asynchronous validation.'
+    )
+  }
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  this._onValidate = cb
+  this.fullClean()
+  // Display async progress indicators
+  this._stateChanged()
+}
+
+Form.prototype._validateSync = function() {
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  this.fullClean()
+  // Display changes to valid/invalid state
+  this._stateChanged()
+  return this.isValid()
+}
+
+/**
+ * Cleans data for all fields and triggers cross-form cleaning.
+ */
+Form.prototype.fullClean = function() {
+  this._errors = new ErrorObject()
+  if (this.isInitialRender) {
+    return // Stop further processing
+  }
+
+  this.cleanedData = {}
+
+  // If the form is permitted to be empty, and none of the form data has
+  // changed from the initial data, short circuit any validation.
+  if (this.emptyPermitted && !this.hasChanged()) {
+    this._finishedValidation(null)
+    return
+  }
+
+  this._cleanFields()
+}
+
+/**
+ * Cleans data for the given field names and triggers cross-form cleaning in
+ * case any cleanedData it uses has changed.
+ * @param {Array.<string>} fields field names.
+ */
+Form.prototype.partialClean = function(fields) {
+  this._removeErrors(fields)
+
+  // If the form is permitted to be empty, and none of the form data has
+  // changed from the initial data, short circuit any validation.
+  if (this.emptyPermitted && !this.hasChanged()) {
+    if (this._errors.isPopulated()) {
+      this._errors = ErrorObject()
+    }
+    return
+  }
+
+  this._preCleanFields(fields)
+  for (var i = 0, l = fields.length; i < l; i++) {
+    this._cleanField(fields[i])
+  }
+}
+
+/**
+ * Validates and cleans every field in the form.
+ */
+Form.prototype._cleanFields = function() {
+  var fieldNames = Object.keys(this.fields)
+  this._preCleanFields(fieldNames)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    this._cleanField(fieldNames[i])
+  }
+}
+
+/**
+ * Sets up pending validation state prior to cleaning fields and configures
+ * cross-field cleaning to run after its dependent fields have been cleaned, or
+ * after all fields have been cleaned if dependencies have not been configured.
+ * @param {Array.<string>} fieldNames fields which are about to be cleaned.
+ */
+Form.prototype._preCleanFields = function(fieldNames) {
+  // Add all field names to those pending validation
+  object.extend(this._pendingValidation, object.lookup(fieldNames))
+
+  // Add appropriate field names to determine when to run cross-field cleaning
+  var i, l
+  if (typeof this.clean.fields != 'undefined') {
+    for (i = 0, l = fieldNames.length; i < l; i++) {
+      if (this.clean.fields[fieldNames[i]]) {
+        this._runCleanAfter[fieldNames[i]] = true
+      }
+    }
+  }
+  else {
+    // Ignore any invalid field names given
+    for (i = 0, l = fieldNames.length; i < l; i++) {
+      if (this.fields[fieldNames[i]]) {
+        this._runCleanAfter[fieldNames[i]] = true
+      }
+    }
+  }
+}
+
+/**
+ * Validates and cleans the named field and runs any custom validation function
+ * that's been provided for it.
+ * @param {string} name the name of a form field.
+ */
+Form.prototype._cleanField = function(name) {
+  if (!object.hasOwn(this.fields, name)) {
+    throw new Error(this._formName() + " has no field named '" + name + "'")
+  }
+
+  var field = this.fields[name]
+  // valueFromData() gets the data from the data objects.
+  // Each widget type knows how to retrieve its own data, because some widgets
+  // split data over several HTML fields.
+  var value = field.widget.valueFromData(this.data, this.files,
+                                         this.addPrefix(name))
+  var async = false
+  var error = null
+
+  try {
+    if (field instanceof FileField) {
+      var initial = object.get(this.initial, name, field.initial)
+      value = field.clean(value, initial)
+    }
+    else {
+      value = field.clean(value)
+    }
+    this.cleanedData[name] = value
+    var customClean = this._getCustomClean(name)
+    if (is.Function(customClean)) {
+      async = this._runCustomClean(name, customClean)
+    }
+  }
+  catch (e) {
+    if (e instanceof ValidationError) {
+      this.addError(name, e)
+    }
+    else {
+      error = e
+    }
+  }
+
+  if (!async) {
+    this._fieldCleaned(name, error)
+  }
+}
+
+/**
+ * Gets the custom cleaning method for a field. These can be named clean<Name>
+ * or clean_<name>.
+ * @param {string} fieldName
+ * @return {function|undefined}
+ */
+Form.prototype._getCustomClean = function(fieldName) {
+  return (this['clean' + fieldName.charAt(0).toUpperCase() + fieldName.substr(1)] ||
+          this['clean_' + fieldName])
+}
+
+/**
+ * Calls a custom cleaning method, expecting synchronous or asynchronous
+ * behaviour, depending on its arity.
+ * @param {string} fieldName a field name.
+ * @param {(function()|function(function(Error, string, string|ValidationError)))} customClean
+ *   the custom cleaning method for the field.
+ * @return {boolean} true if cleaning is running asynchronously, false if it just
+ *   ran synchronously.
+ */
+Form.prototype._runCustomClean = function(fieldName, customClean) {
+  // Check arity to see if we have a callback in the function signature
+  if (customClean.length === 0) {
+    // Synchronous processing only expected
+    customClean.call(this)
+    return false
+  }
+
+  // If custom validation is async and there's one pending, prevent its
+  // callback from doing anything.
+  if (typeof this._pendingAsyncValidation[fieldName] != 'undefined') {
+    object.pop(this._pendingAsyncValidation, fieldName).cancel()
+  }
+  // Set up callback for async processing - the argument for addError()
+  // should be passed via the callback as calling it directly prevents us
+  // from completely ignoring the callback if validation fires again.
+  var callback = function(err, validationError) {
+    if (validationError) {
+      this.addError(fieldName == NON_FIELD_ERRORS ? null : fieldName, validationError)
+    }
+    this._fieldCleaned(fieldName, err)
+    this._stateChanged()
+  }.bind(this)
+  var cancellableCallback = cancellable(callback)
+
+  // An explicit return value of false indicates that async processing is
+  // being skipped (e.g. because sync checks in the method failed first)
+  var returnValue = customClean.call(this, cancellableCallback)
+  if (returnValue !== false) {
+    // Async processing is happening! Make the callback cancellable and
+    // hook up any custom onCancel handling provided.
+    if (returnValue && typeof returnValue.onCancel == 'function') {
+      callback.onCancel = returnValue.onCancel
+    }
+    this._pendingAsyncValidation[fieldName] = cancellableCallback
+    return true
+  }
+}
+
+/**
+ * Callback for completion of field cleaning. Triggers further field cleaning or
+ * signals the end of validation, as necessary.
+ * @param {string} fieldName
+ * @param {Error=} err an error caught while cleaning the field.
+ */
+Form.prototype._fieldCleaned = function(fieldName, err) {
+  var wasPending = delete this._pendingValidation[fieldName]
+  if (this._pendingAsyncValidation[fieldName]) {
+    delete this._pendingAsyncValidation[fieldName]
+  }
+
+  if (err) {
+    if ("production" !== process.env.NODE_ENV) {
+      console.error('Error cleaning ' + this._formName() + '.' + fieldName +
+                    ':' + err.message)
+    }
+    // Stop tracking validation progress on error, and don't call clean()
+    this._pendingValidation = {}
+    this._runCleanAfter = {}
+    this._finishedValidation(err)
+    return
+  }
+
+  // Run clean() if this was the last field it was waiting for
+  if (this._runCleanAfter[fieldName]) {
+    delete this._runCleanAfter[fieldName]
+    if (is.Empty(this._runCleanAfter)) {
+      this._cleanForm()
+      return
+    }
+  }
+
+  // Signal the end of validation if this was the last field we were waiting for
+  if (wasPending && is.Empty(this._pendingValidation)) {
+    this._finishedValidation(null)
+  }
+}
+
+/**
+ * Hook for doing any extra form-wide cleaning after each Field has been cleaned.
+ * Any ValidationError thrown by synchronous validation in this method will not
+ * be associated with a particular field; it will have a special-case association
+ * with the field named '__all__'.
+ * @param {function(Error, string, string|ValidationError)=} cb a callback to signal the
+ *   end of asynchronous validation.
+ */
+Form.prototype.clean = noop
+
+/**
+ * Calls the clean() hook.
+ */
+Form.prototype._cleanForm = function() {
+  var async = false
+  var error = null
+  try {
+    if (this.clean !== noop) {
+      async = this._runCustomClean(NON_FIELD_ERRORS, this.clean)
+    }
+  }
+  catch (e) {
+    if (e instanceof ValidationError) {
+      this.addError(null, e)
+    }
+    else {
+      error = e
+    }
+  }
+
+  if (!async) {
+    this._fieldCleaned(NON_FIELD_ERRORS, error)
+  }
+}
+
+Form.prototype._finishedValidation = function(err) {
+  if (!this.isAsync()) {
+    if (err) {
+      throw err
+    }
+    // Synchronous form validation results will be returned via the original
+    // call which triggered validation.
+    return
+  }
+  if (is.Function(this._onValidate)) {
+    var callback = this._onValidate
+    this._onValidate = null
+    if (err) {
+      return callback(err)
+    }
+    var isValid = this.isValid()
+    callback(null, isValid, isValid ? this.cleanedData : null)
+  }
+}
+
+/**
+ * Cancels any pending field validations and async validations.
+ */
+Form.prototype._cancelPendingOperations = function() {
+  Object.keys(this._pendingEventValidation).forEach(function(field) {
+    object.pop(this._pendingEventValidation, field).cancel()
+  }.bind(this))
+  Object.keys(this._pendingAsyncValidation).forEach(function(field) {
+    object.pop(this._pendingAsyncValidation, field).cancel()
+  }.bind(this))
+}
+
+// ========================================================== Event Handling ===
+
+/**
+ * Handles validating the field which is the target of the given event based
+ * on its validation config. This will be hooked up to the appropriate event
+ * as per the field's validation config.
+ * @param {Object} validation the field's validation config for the event.
+ * @param {SyntheticEvent} e the event being handled.
+ */
+Form.prototype._handleFieldEvent = function(validation, e) {
+  // Update form.data with the current value of the field which is the target of
+  // the event.
+  var htmlName = e.target.name
+  var fieldName = this.removePrefix(e.target.getAttribute('data-newforms-field') || htmlName)
+  var field = this.fields[fieldName]
+  var targetData = getFormData.getNamedFormElementData(e.target.form, htmlName)
+  this.data[htmlName] = targetData
+  if (field instanceof FileField && 'files' in e.target) {
+    var files = e.target.files
+    this.files[htmlName] = (field instanceof MultipleFileField
+                            ? Array.prototype.slice.call(files)
+                            : files[0])
+  }
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  if (this.controlled || field.controlled) {
+    this._stateChanged()
+  }
+
+  // Bail out early if the event is only being handled to update the field's data
+  if (validation.validate === false) { return }
+
+  var validate = false
+
+  // Special cases for onBlur, as it ends a user's interaction with a text input
+  if (validation.event == 'onBlur') {
+    // If there is any pending validation, trigger it immediately
+    if (typeof this._pendingEventValidation[fieldName] != 'undefined') {
+      this._pendingEventValidation[fieldName].trigger()
+      return
+    }
+    // Always validate if the field is required and the input which was blurred
+    // was empty (some fields have multiple inputs).
+    validate = (field.required && field.isEmptyValue(targetData))
+  }
+
+  // Always validate if this is the first time the field has been interacted
+  // with.
+  if (!validate) {
+    var lastValidatedData = object.get(this._lastValidatedData, fieldName, sentinel)
+    validate = (lastValidatedData === sentinel)
+  }
+
+  // Otherwise, validate if data has changed since validation was last performed
+  // - this prevents displayed validation errors being cleared unnecessarily.
+  if (!validate) {
+    var fieldData = field.widget.valueFromData(this.data, this.files, this.addPrefix(fieldName))
+    validate = fieldDataHasChanged(lastValidatedData, fieldData)
+  }
+
+  // Cancel any pending validation as it's no longer needed - this can happen
+  // if the user edits a field with debounced validation and it ends up back
+  // at its original value before validation is triggered.
+  if (!validate && typeof this._pendingEventValidation[fieldName] != 'undefined') {
+    object.pop(this._pendingEventValidation, fieldName).cancel()
+  }
+
+  // If we don't need to validate, we're done handling the event
+  if (!validate) { return }
+
+  if (validation.delay) {
+    this._delayedFieldValidation(fieldName, validation.delay)
+  }
+  else {
+    this._immediateFieldValidation(fieldName)
+  }
+}
+
+/**
+ * Sets up delayed validation of a field with a debounced function and calls it,
+ * or just calls the function again if it already exists, to reset the delay.
+ * @param {string} fieldName
+ * @param {number} delay delay time in ms.
+ */
+Form.prototype._delayedFieldValidation = function(fieldName, delay) {
+  if (typeof this._pendingEventValidation[fieldName] == 'undefined') {
+    this._pendingEventValidation[fieldName] = debounce(function() {
+      delete this._pendingEventValidation[fieldName]
+      this._immediateFieldValidation(fieldName)
+    }.bind(this), delay)
+  }
+  this._pendingEventValidation[fieldName]()
+}
+
+/**
+ * Validates a field and notifies the React component that state has changed.
+ * @param {string} fieldName
+ */
+Form.prototype._immediateFieldValidation = function(fieldName) {
+  // Remove and cancel any pending validation for the field to avoid doubling up
+  // when both delayed and immediate validation are configured.
+  if (typeof this._pendingEventValidation[fieldName] != 'undefined') {
+    object.pop(this._pendingEventValidation, fieldName).cancel()
+  }
+  this._lastValidatedData[fieldName] =
+      this.fields[fieldName].widget.valueFromData(this.data, this.files,
+                                                  this.addPrefix(fieldName))
+  this.partialClean([fieldName])
+  this._stateChanged()
+}
+
+// ============================================================== Mutability ===
+
+/**
+ * Resets a form data back to its initial state, optionally providing new initial
+ * data.
+ * @param {Object.<string, *>=} newInitial new initial data for the form.
+ */
+Form.prototype.reset = function(newInitial) {
+  this._cancelPendingOperations()
+
+  if (typeof newInitial != 'undefined') {
+    this.initial = newInitial
+  }
+
+  this.data = {}
+  this.cleanedData = {}
+  this.isInitialRender = true
+
+  this._errors = null
+  this._lastHasChanged = null
+  this._pendingValidation = {}
+  this._runCleanAfter = {}
+  this._lastValidatedData = {}
+  this._onValidate = null
+
+  this._copyInitialToData()
+  this._stateChanged()
+}
+
+/**
+ * Sets the form's entire input data, also triggering validation by default.
+ * @param {object.<string,*>} data new input data for the form.
+ * @param {object.<string,boolean>} kwargs data setting options.
+ * @return {boolean|undefined} if data setting options indicate the new data
+ *   should be validated and the form does not have asynchronous validation
+ *   configured: true if the new data is valid.
+ */
+Form.prototype.setData = function(data, kwargs) {
+  kwargs = object.extend({
+    prefixed: false, validate: true, _triggerStateChange: true
+  }, kwargs)
+
+  this.data = (kwargs.prefixed ? data : this._prefixData(data))
+
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  if (kwargs.validate) {
+    this._errors = null
+    // This call ultimately triggers a fullClean() because _errors is null
+    var isValid = this.isValid()
+  }
+  else {
+    // Prevent validation being triggered if errors() is accessed during render
+    this._errors = new ErrorObject()
+  }
+
+  if (kwargs._triggerStateChange) {
+    this._stateChanged()
+  }
+
+  if (kwargs.validate && !this.isAsync()) {
+    return isValid
+  }
+}
+
+/**
+ * Sets the form's entire input data wth data extracted from a <form>, which
+ * will be prefixed, if prefixes are being used.
+ * @param {Object.<strong, *>} formData
+ * @param {Object.<string, boolean>} kwargs setData options.
+ */
+Form.prototype.setFormData = function(formData, kwargs) {
+  return this.setData(formData, object.extend(kwargs || {}, {prefixed: true}))
+}
+
+/**
+ * Updates some of the form's input data, optionally triggering validation of
+ * updated fields and form-wide cleaning, or clears existing errors from the
+ * updated fields.
+ * @param {Object.<string, *>} data updated input data for the form.
+ * @param {Object.<string, boolean>} kwargs update options.
+ */
+Form.prototype.updateData = function(data, kwargs) {
+  kwargs = object.extend({
+    prefixed: false, validate: true, clearValidation: true
+  }, kwargs)
+
+  object.extend(this.data, (kwargs.prefixed ? data : this._prefixData(data)))
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+
+  var fields = Object.keys(data)
+  if (kwargs.prefixed) {
+    fields = fields.map(this.removePrefix.bind(this))
+  }
+
+  if (kwargs.validate) {
+    this.partialClean(fields)
+  }
+  else if (kwargs.clearValidation) {
+    this._removeErrors(fields)
+    this._removeCleanedData(fields)
+    this._cleanForm()
+  }
+
+  this._stateChanged()
+}
+
+/**
+ * Removes any cleanedData present for the given form fields.
+ * @param {Array.<string>} fields field names.
+ */
+Form.prototype._removeCleanedData = function(fields) {
+  for (var i = 0, l = fields.length; i < l; i++) {
+    delete this.cleanedData[fields[i]]
+  }
+}
+
+// ============================================================= BoundFields ===
+
+/**
+ * Creates a BoundField for the field with the given name.
+ * @param {string} name a field name.
+ * @return {BoundField} a BoundField for the field.
+ */
+Form.prototype.boundField = function(name) {
+  if (!object.hasOwn(this.fields, name)) {
+    throw new Error(this._formName() + " does not have a '" + name + "' field.")
+  }
+  return new BoundField(this, this.fields[name], name)
+}
+
+/**
+ * Creates a BoundField for each field in the form, in the order in which the
+ * fields were created.
+ * @param {function(Field, string)=} test if provided, this function will be
+ *   called with field and name arguments - BoundFields will only be generated
+ *   for fields for which true is returned.
+ * @return {Array.<BoundField>} a list of BoundField objects.
+ */
+Form.prototype.boundFields = function(test) {
+  var bfs = []
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var fieldName = fieldNames[i]
+    if (!test || test(this.fields[fieldName], fieldName)) {
+      bfs.push(new BoundField(this, this.fields[fieldName], fieldName))
+    }
+  }
+  return bfs
+}
+
+/**
+ * Like boundFields(), but returns a name -> BoundField object instead.
+ * @return {Object.<string, BoundField>}
+ */
+Form.prototype.boundFieldsObj = function() {
+  var bfs = {}
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var fieldName = fieldNames[i]
+    bfs[fieldName] = new BoundField(this, this.fields[fieldName], fieldName)
+  }
+  return bfs
+}
+
+/**
+ * Returns a list of all the BoundField objects that correspond to hidden
+ * fields. Useful for manual form layout.
+ * @return {Array.<BoundField>}
+ */
+Form.prototype.hiddenFields = function() {
+  return this.boundFields(function(field) {
+    return field.widget.isHidden
+  })
+}
+
+/**
+ * Returns a list of BoundField objects that do not correspond to hidden fields.
+ * The opposite of the hiddenFields() method.
+ * @return {Array.<BoundField>}
+ */
+Form.prototype.visibleFields = function() {
+  return this.boundFields(function(field) {
+    return !field.widget.isHidden
+  })
+}
+
+// ================================================================== Errors ===
+
+/**
+ * Updates the content of this._errors.
+ * The field argument is the name of the field to which the errors should be
+ * added. If its value is null the errors will be treated as NON_FIELD_ERRORS.
+ * The error argument can be a single error, a list of errors, or an object that
+ * maps field names to lists of errors. What we define as an "error" can be
+ * either a simple string or an instance of ValidationError with its message
+ * attribute set and what we define as list or object can be an actual list or
+ * object or an instance of ValidationError with its errorList or errorObj
+ * property set.
+ * If error is an object, the field argument *must* be null and errors will be
+ * added to the fields that correspond to the properties of the object.
+ * @param {?string} field the name of a form field.
+ * @param {(string|ValidationError|Array.<(string|ValidationError)>|Object<string,(string|ValidationError|Array.<(string|ValidationError)>))} error
+ */
+Form.prototype.addError = function(field, error) {
+  if (!(error instanceof ValidationError)) {
+    // Normalise to ValidationError and let its constructor do the hard work of
+    // making sense of the input.
+    error = ValidationError(error)
+  }
+
+  if (object.hasOwn(error, 'errorObj')) {
+    if (field !== null) {
+      throw new Error("The 'field' argument to form.addError() must be null when " +
+                      "the 'error' argument contains errors for multiple fields.")
+    }
+    error = error.errorObj
+  }
+  else {
+    var errorList = error.errorList
+    error = {}
+    error[field || NON_FIELD_ERRORS] = errorList
+  }
+
+  var fields = Object.keys(error)
+  for (var i = 0, l = fields.length; i < l; i++) {
+    field = fields[i]
+    errorList = error[field]
+    if (!this._errors.hasField(field)) {
+      if (field !== NON_FIELD_ERRORS && !object.hasOwn(this.fields, field)) {
+        throw new Error(this._formName() + " has no field named '" + field + "'")
+      }
+      this._errors.set(field, new this.errorConstructor())
+    }
+    else {
+      // Filter out any error messages which are duplicates of existing
+      // messages. This can happen if onChange validation which uses addError()
+      // is fired repeatedly and is adding an error message to a field other
+      // then the one being changed.
+      var messageLookup = object.lookup(this._errors.get(field).messages())
+      var newMessages = ErrorList(errorList).messages()
+      for (var j = errorList.length - 1; j >= 0; j--) {
+        if (messageLookup[newMessages[j]]) {
+          errorList.splice(j, 1)
+        }
+      }
+    }
+
+    if (errorList.length > 0) {
+      this._errors.get(field).extend(errorList)
+    }
+
+    if (object.hasOwn(this.cleanedData, field)) {
+      delete this.cleanedData[field]
+    }
+  }
+}
+
+/**
+ * Getter for errors, which first cleans the form if there are no errors
+ * defined yet.
+ * @param {string=} name if given, errors for this field name will be returned
+ *   instead of the full error object.
+ * @return {ErrorObject|ErrorList} form or field errors
+ */
+Form.prototype.errors = function(name) {
+  if (this._errors == null) {
+    this.fullClean()
+  }
+  if (name) {
+    return this._errors.get(name)
+  }
+  return this._errors
+}
+
+/**
+ * @return {ErrorObject} errors that aren't associated with a particular field -
+ *   i.e., errors generated by clean(). Will be empty if there are none.
+ */
+Form.prototype.nonFieldErrors = function() {
+  return (this.errors(NON_FIELD_ERRORS) || new this.errorConstructor())
+}
+
+/**
+ * @param {ErrorObject} errors
+ */
+Form.prototype.setErrors = function(errors) {
+  this._errors = errors
+  this._stateChanged()
+}
+
+/**
+ * Removes any validation errors present for the given form fields. If validation
+ * has not been performed yet, initialises the errors object.
+ * @param {Array.<string>} fields field names.
+ */
+Form.prototype._removeErrors = function(fields) {
+  if (this._errors == null) {
+    this._errors = ErrorObject()
+  }
+  else {
+    // TODO use clean.fields if available
+    this._errors.remove(NON_FIELD_ERRORS)
+    this._errors.removeAll(fields)
+  }
+}
+
+// ================================================================= Changes ===
+
+/**
+ * Determines which fields have changed from initial form data.
+ * @param {boolean=} _hasChangedCheck if true, the method is only being run to
+ *   determine if any fields have changed, not to get the list of fields.
+ * @return {Array.<string>|boolean} a list of changed field names or true if
+ *   only checking for changes and one is found.
+ */
+Form.prototype.changedData = function(_hasChangedCheck) {
+  var changedData = []
+  var initialValue
+  // XXX: For now we're asking the individual fields whether or not
+  // the data has changed. It would probably be more efficient to hash
+  // the initial data, store it in a hidden field, and compare a hash
+  // of the submitted data, but we'd need a way to easily get the
+  // string value for a given field. Right now, that logic is embedded
+  // in the render method of each field's widget.
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var name = fieldNames[i]
+    var field = this.fields[name]
+    var prefixedName = this.addPrefix(name)
+    var dataValue = field.widget.valueFromData(this.data, this.files, prefixedName)
+    if (!field.showHiddenInitial) {
+      initialValue = object.get(this.initial, name, field.initial)
+      if (is.Function(initialValue)) {
+        initialValue = initialValue()
+      }
+    }
+    else {
+      var initialPrefixedName = this.addInitialPrefix(name)
+      var hiddenWidget = new field.hiddenWidget()
+      try {
+        initialValue = hiddenWidget.valueFromData(
+                this.data, this.files, initialPrefixedName)
+      }
+      catch (e) {
+        if (!(e instanceof ValidationError)) { throw e }
+        // Always assume data has changed if validation fails
+        if (_hasChangedCheck) {
+          return true
+        }
+        changedData.push(name)
+        continue
+      }
+    }
+    if (field._hasChanged(initialValue, dataValue)) {
+      if (_hasChangedCheck) {
+        return true
+      }
+      changedData.push(name)
+    }
+  }
+  if (_hasChangedCheck) {
+    return false
+  }
+  return changedData
+}
+
+/**
+ * @return {boolean} true if input data differs from initial data.
+ */
+Form.prototype.hasChanged = function() {
+  this._lastHasChanged = this.changedData(true)
+  return this._lastHasChanged
+}
+
+// ================================================================== Status ===
+
+/**
+ * @return {boolean} true if the form needs a callback argument for final
+ *   validation.
+ */
+Form.prototype.isAsync = function() {
+  if (this.clean.length == 1) { return true }
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var customClean = this._getCustomClean(fieldNames[i])
+    if (is.Function(customClean) && customClean.length == 1) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * @return {boolean} true if all required fields have been completed.
+ */
+Form.prototype.isComplete = function() {
+  if (!this.isValid() || this.isPending()) {
+    return false
+  }
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l; i++) {
+    var fieldName = fieldNames[i]
+    if (this.fields[fieldName].required &&
+        typeof this.cleanedData[fieldName] == 'undefined') {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * @return {boolean} true if the form needs to be multipart-encoded, in other
+ *   words, if it has a FileField.
+ */
+Form.prototype.isMultipart = function() {
+  var fieldNames = Object.keys(this.fields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    if (this.fields[fieldNames[i]].widget.needsMultipartForm) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * @return {boolean} true if the form is waiting for async validation to
+ *   complete.
+ */
+Form.prototype.isPending = function() {
+  return !is.Empty(this._pendingAsyncValidation)
+}
+
+/**
+ * @return {boolean} true if the form doesn't have any errors.
+ */
+Form.prototype.isValid = function() {
+  if (this.isInitialRender) {
+    return false
+  }
+  return !this.errors().isPopulated()
+}
+
+/**
+ * @return {boolean} true if the form is waiting for async validation of its
+ *   clean() method to complete.
+ */
+Form.prototype.nonFieldPending = function() {
+  return typeof this._pendingAsyncValidation[NON_FIELD_ERRORS] != 'undefined'
+}
+
+/**
+ * @return {boolean} true if this form is allowed to be empty and if input data
+ *   differs from initial data. This can be used to determine when required
+ *   fields in an extra FormSet form become truly required.
+ */
+Form.prototype.notEmpty = function() {
+  return (this.emptyPermitted && this._lastHasChanged === true)
+}
+
+// ================================================================ Prefixes ===
+
+/**
+ * Adds an initial prefix for checking dynamic initial values.
+ * @param {string} fieldName a field name.
+ * @return {string}
+ */
+Form.prototype.addInitialPrefix = function(fieldName) {
+  return 'initial-' + this.addPrefix(fieldName)
+}
+
+/**
+ * Prepends a prefix to a field name if this form has one set.
+ * @param {string} fieldName a form field name.
+ * @return {string} the field name with a prefix prepended if this form has a
+ *   prefix set, otherwise the field name as-is.
+ * @return {string}
+ */
+Form.prototype.addPrefix = function(fieldName) {
+  if (this.prefix !== null) {
+    return formatObj(this.prefixFormat, {prefix: this.prefix, name: fieldName})
+  }
+  return fieldName
+}
+
+/**
+ * Extracts a form field name from the name attribute of a rendered form input.
+ * @param {string} htmlName a name attribute from a rendered form input.
+ * @return {string}
+ */
+Form.prototype.removePrefix = function(htmlName) {
+  if (this.prefix !== null) {
+    var partialPrefix = this.prefixFormat.replace('{prefix}', this.prefix)
+    var startIndex = partialPrefix.indexOf('{name}')
+    var lengthDiff = htmlName.length - partialPrefix.length
+    return htmlName.substr(startIndex, /* length of {name} */ 6 + lengthDiff)
+  }
+  return htmlName
+}
+
+/**
+ * Creates a version of the given data object with prefixes removed from the
+ * property names if this form has a prefix, otherwise returns the object
+ * itself.
+ * @param {object.<string,*>} data
+ * @return {Object.<string,*>}
+ */
+Form.prototype._deprefixData = function(data) {
+  if (this.prefix == null) { return data }
+  var prefixedData = {}
+  var fieldNames = Object.keys(data)
+  for (var i = 0, l = fieldNames.length; i < l; i++) {
+    prefixedData[this.removePrefix(fieldNames[i])] = data[fieldNames[i]]
+  }
+  return prefixedData
+}
+
+/**
+ * Creates a version of the given data object with prefixes added to the
+ * property names if this form has a prefix, otherwise returns the object
+ * itself.
+ * @param {object.<string,*>} data
+ * @return {Object.<string,*>}
+ */
+Form.prototype._prefixData = function(data) {
+  if (this.prefix == null) { return data }
+  var prefixedData = {}
+  var fieldNames = Object.keys(data)
+  for (var i = 0, l = fieldNames.length; i < l; i++) {
+    prefixedData[this.addPrefix(fieldNames[i])] = data[fieldNames[i]]
+  }
+  return prefixedData
+}
+
+module.exports = Form
+}).call(this,require('_process'))
+},{"./BoundField":61,"./DeclarativeFieldsMeta":78,"./ErrorList":81,"./ErrorObject":82,"./FileField":84,"./MultipleFileField":100,"./constants":130,"./util":135,"Concur":1,"_process":292,"get-form-data":29,"isomorph/copy":53,"isomorph/format":54,"isomorph/is":55,"isomorph/object":56,"validators":288}],89:[function(require,module,exports){
+'use strict';
+
+var React = require('react')
+
+var BoundField = require('./BoundField')
+var ProgressMixin = require('./ProgressMixin')
+
+/**
+ * Renders a "row" in a form. This can contain manually provided contents, or
+ * if a BoundField is given, it will be used to display a field's label, widget,
+ * error message(s), help text and async pending indicator.
+ */
+var FormRow = React.createClass({displayName: "FormRow",
+  mixins: [ProgressMixin],
+  propTypes: {
+    bf: React.PropTypes.instanceOf(BoundField)
+  , className: React.PropTypes.string
+  , component: React.PropTypes.any
+  , content: React.PropTypes.any
+  , hidden: React.PropTypes.bool
+  , __all__:function(props) {
+      if (!props.bf && !props.content) {
+        return new Error(
+          'Invalid props supplied to `FormRow`, either `bf` or `content` ' +
+          'must be specified.'
+        )
+      }
+      if (props.bf && props.content) {
+        return new Error(
+          'Both `bf` and `content` props were passed to `FormRow` - `bf` ' +
+          'will be ignored.'
+        )
+      }
+    }
+  },
+
+  getDefaultProps:function() {
+    return {
+      component: 'div'
+    }
+  },
+
+  render:function() {
+    var attrs = {}
+    if (this.props.className) {
+      attrs.className = this.props.className
+    }
+    if (this.props.hidden) {
+      attrs.style = {display: 'none'}
+    }
+    // If content was given, use it
+    if (this.props.content) {
+      return React.createElement(this.props.component, React.__spread({},  attrs), this.props.content)
+    }
+    // Otherwise render a BoundField
+    var bf = this.props.bf
+    var isPending = bf.isPending()
+    return React.createElement(this.props.component, React.__spread({},  attrs), 
+      bf.label && bf.labelTag(), " ", bf.render(), 
+      isPending && ' ', 
+      isPending && this.renderProgress(), 
+      bf.errors().render(), 
+      bf.helpText && ' ', 
+      bf.helpTextTag()
+    )
+  }
+})
+
+module.exports = FormRow
+},{"./BoundField":61,"./ProgressMixin":106,"react":"react"}],90:[function(require,module,exports){
+(function (process){
+'use strict';
+
+var Concur = require('Concur')
+var getFormData = require('get-form-data')
+var is = require('isomorph/is')
+var $__0=  require('isomorph/format'),formatObj=$__0.formatObj
+var object = require('isomorph/object')
+
+var constants = require('./constants')
+var env = require('./env')
+
+var BooleanField = require('./BooleanField')
+var ErrorList = require('./ErrorList')
+var Form = require('./Form')
+var HiddenInput = require('./HiddenInput')
+var IntegerField = require('./IntegerField')
+var isFormAsync = require('./isFormAsync')
+
+var $__1=  require('validators'),ValidationError=$__1.ValidationError
+var $__2=  require('./util'),cancellable=$__2.cancellable
+
+function noop() {}
+
+// Name associated with clean() validation
+var CLEAN_VALIDATION = 'clean'
+
+// Special field names
+var DELETION_FIELD_NAME = 'DELETE'
+var INITIAL_FORM_COUNT = 'INITIAL_FORMS'
+var MAX_NUM_FORM_COUNT = 'MAX_NUM_FORMS'
+var MIN_NUM_FORM_COUNT = 'MIN_NUM_FORMS'
+var ORDERING_FIELD_NAME = 'ORDER'
+var TOTAL_FORM_COUNT = 'TOTAL_FORMS'
+
+// Default minimum number of forms in a formset
+var DEFAULT_MIN_NUM = constants.FORMSET_DEFAULT_MIN_NUM
+
+// Default maximum number of forms in a formset, to prevent memory exhaustion
+var DEFAULT_MAX_NUM = constants.FORMSET_DEFAULT_MAX_NUM
+
+/**
+ * ManagementForm is used to keep track of how many form instances are displayed
+ * on the page. If adding new forms via JavaScript, you should increment the
+ * count field of this form as well.
+ * @constructor
+ */
+var ManagementForm = (function() {
+  var fields = {}
+  fields[TOTAL_FORM_COUNT] = IntegerField({widget: HiddenInput})
+  fields[INITIAL_FORM_COUNT] = IntegerField({widget: HiddenInput})
+  // MIN_NUM_FORM_COUNT and MAX_NUM_FORM_COUNT are output with the rest of
+  // the management form, but only for the convenience of client-side
+  // code. The POST value of them returned from the client is not checked.
+  fields[MIN_NUM_FORM_COUNT] = IntegerField({required: false, widget: HiddenInput})
+  fields[MAX_NUM_FORM_COUNT] = IntegerField({required: false, widget: HiddenInput})
+  return Form.extend(fields)
+})()
+
+/**
+ * A collection of instances of the same Form.
+ * @constructor
+ * @param {Object=} kwargs
+ */
+var FormSet = Concur.extend({
+  prefixFormat: '{prefix}-{index}',
+
+  constructor: function FormSet(kwargs) {
+    // TODO Perform PropType checks on kwargs in development mode
+    kwargs = object.extend({
+      // Formset options
+      form: this.form || null, extra: is.Number(this.extra) ? this.extra : 1,
+      canOrder: this.canOrder || false, canDelete: this.canDelete || false,
+      maxNum: is.Number(this.maxNum) ? this.maxNum : DEFAULT_MAX_NUM,
+      validateMax: this.validateMax || false,
+      minNum: is.Number(this.minNum) ? this.minNum : DEFAULT_MIN_NUM,
+      validateMin: this.validateMin || false,
+      managementFormCssClass: this.magagementFormCssClass || null,
+      // Form options
+      data: null, files: null, autoId: 'id_{name}', prefix: null,
+      initial: null, errorConstructor: ErrorList, validation: null,
+      controlled: false, onChange: null
+    }, kwargs)
+
+    if (!is.Function(kwargs.form)) {
+      throw new Error(
+        'A FormSet must be given a Form constructor to use, either via its ' +
+        'constructor\'s `form` option or via its prototype, passing a `form` ' +
+        'property to `FormSet.extend()`.'
+      )
+    }
+
+    this.form = kwargs.form
+    this.extra = kwargs.extra + kwargs.minNum
+    this.canOrder = kwargs.canOrder
+    this.canDelete = kwargs.canDelete
+    this.maxNum = kwargs.maxNum
+    this.validateMax = kwargs.validateMax
+    this.minNum = kwargs.minNum
+    this.validateMin = kwargs.validateMin
+    // Hard limit on forms instantiated, to prevent memory-exhaustion attacks
+    // limit is simply maxNum + DEFAULT_MAX_NUM (which is 2 * DEFAULT_MAX_NUM
+    // if maxNum is not provided in the first place)
+    this.absoluteMax = kwargs.maxNum + DEFAULT_MAX_NUM
+
+    this.isInitialRender = (kwargs.data === null && kwargs.files === null)
+    this.prefix = kwargs.prefix || this.getDefaultPrefix()
+    this.autoId = kwargs.autoId
+    this.data = kwargs.data || {}
+    this.files = kwargs.files || {}
+    this.initial = kwargs.initial
+    this.errorConstructor = kwargs.errorConstructor
+    this.managementFormCssClass = kwargs.managementFormCssClass
+    this.validation = kwargs.validation
+    this.controlled = kwargs.controlled
+    this.onChange = kwargs.onChange
+
+    this._forms = null
+    this._errors = null
+    this._nonFormErrors = null
+
+    // Lookup for pending validation
+    this._pendingValidation = {}
+    // Cancellable callbacks for pending async validation
+    this._pendingAsyncValidation = {}
+    // Lookup for pending validation which formset cleaning depends on
+    this._cleanFormsetAfter = {}
+    // Callback to be run the next time validation finishes
+    this._onValidate = null
+  }
+})
+
+/**
+ * Tries to construct a display name for the formset for display in messages.
+ * @return {string}
+ */
+FormSet.prototype._formsetName = function() {
+  var name = this.displayName || this.constructor.name
+  return (name ? "'" + name + "'" : 'FormSet')
+}
+
+/**
+ * Calls the onChange function if it's been provided. This method will be called
+ * every time the formset makes a change to its state which requires redisplay.
+ */
+FormSet.prototype._stateChanged = function() {
+  if (typeof this.onChange == 'function') {
+    this.onChange()
+  }
+}
+
+// ============================================================== Validation ===
+
+/**
+ * Forces the formset to revalidate from scratch. If a <form> is given, data
+ * from it will be set on this formset's forms first. Otherwise, validation will
+ * be done with current input data.
+ * @param {(ReactElement|HTMLFormElement)=} form the <form> containing this
+ *   formset's rendered widgets - this can be a React <form> component or a real
+ *   <form> DOM node.
+ * @param {function(err, isValid, cleanedData)=} cb callback for asynchronous
+ *   validation.
+ * @return {boolean|undefined} true if the form only has synchronous validation
+ *   and is valid.
+ * @throws if the formset or its form has asynchronous validation and a callback
+ *   is not provided.
+ */
+FormSet.prototype.validate = function(form, cb) {
+  this._cancelPendingOperations()
+  if (is.Function(form)) {
+    cb = form
+    form = null
+  }
+  if (form) {
+    if (typeof form.getDOMNode == 'function') {
+      form = form.getDOMNode()
+    }
+    this.setData(getFormData(form), {
+      validate: false
+    , _triggerStateChange: false
+    })
+  }
+  return (this.isAsync() ? this._validateAsync(cb) : this._validateSync())
+}
+
+FormSet.prototype._validateAsync = function(cb) {
+  if (!is.Function(cb)) {
+    throw new Error(
+      'You must provide a callback to validate() when a formset or its form ' +
+      'has asynchronous validation.'
+    )
+  }
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  this._onValidate = cb
+  this.fullClean()
+  // Update state to display async progress indicators
+  this._stateChanged()
+}
+
+FormSet.prototype._validateSync = function() {
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  this.fullClean()
+  // Display changes to valid/invalid state
+  this._stateChanged()
+  return this.isValid()
+}
+
+/**
+ * Cleans all of this.data and populates this._errors and this._nonFormErrors.
+ */
+FormSet.prototype.fullClean = function() {
+  this._errors = []
+  this._nonFormErrors = new this.errorConstructor()
+
+  if (this.isInitialRender) {
+    return // Stop further processing
+  }
+
+  this._cleanForms()
+}
+
+/**
+ * Validates and cleans every form in the formset.
+ */
+FormSet.prototype._cleanForms = function() {
+  var forms = this.forms()
+  var formIndexLookup = object.lookup(Object.keys(forms))
+  object.extend(this._pendingValidation, formIndexLookup)
+  object.extend(this._cleanFormsetAfter, formIndexLookup)
+  for (var i = 0, l = forms.length; i < l; i++) {
+    this._cleanForm(i, forms[i])
+  }
+  // Make sure clean gets called even if the formset is empty
+  if (forms.length === 0) {
+    this._cleanFormsetAfter.empty = true
+    this._formCleaned('empty', null)
+  }
+}
+
+/**
+ * Validates and cleans the form at the given index.
+ * @param {number} index the index of the form in the formset.
+ * @param {Form} form
+ */
+FormSet.prototype._cleanForm = function(index, form) {
+  if (!form.isAsync()) {
+    form.validate()
+    this._errors[index] = form.errors()
+    this._formCleaned(index, null)
+    return
+  }
+
+  // If the form is async and there's one pending, prevent its callback from
+  // doing anything.
+  if (typeof this._pendingAsyncValidation[index] != 'undefined') {
+    object.pop(this._pendingAsyncValidation, index).cancel()
+  }
+  // Set up callback for async processing
+  var callback = function(err) {
+    if (!err) {
+      this._errors[index] = form.errors()
+    }
+    this._formCleaned(index, err)
+    this._stateChanged()
+  }.bind(this)
+  callback.onCancel = function() {
+    form._cancelPendingOperations()
+  }
+  this._pendingAsyncValidation[index] = cancellable(callback)
+  form.validate(callback)
+}
+
+/**
+ * Callback for completion of form cleaning. Triggers formset cleaning or
+ * signals the end of validation, as necessary.
+ * @param {number|string} name the name associated with the cleaning that's completed.
+ * @param {Error=} err an error caught while cleaning.
+ */
+FormSet.prototype._formCleaned = function(name, err) {
+  delete this._pendingValidation[name]
+  if (this._pendingAsyncValidation[name]) {
+    delete this._pendingAsyncValidation[name]
+  }
+
+  if (err) {
+    if ("production" !== process.env.NODE_ENV) {
+      console.error('Error cleaning formset[' + name + ']:' + err.message)
+    }
+    // Stop tracking validation progress on error, and don't call clean()
+    this._pendingValidation = {}
+    this._cleanFormsetAfter = {}
+    this._finishedValidation(err)
+    return
+  }
+
+  // Run clean() if this this was the last field it was waiting for
+  if (this._cleanFormsetAfter[name]) {
+    delete this._cleanFormsetAfter[name]
+    if (is.Empty(this._cleanFormsetAfter)) {
+      this._cleanFormset()
+      return
+    }
+  }
+
+  // Signal the end of validation if this was the last field we were waiting for
+  if (name == CLEAN_VALIDATION) {
+    this._finishedValidation(null)
+  }
+}
+
+/**
+ * Hook for doing any extra formset-wide cleaning after Form.clean() has been
+ * called on every form. Any ValidationError raised by this method will not be
+ * associated with a particular form; it will be accessible via
+ * formset.nonFormErrors()
+ */
+FormSet.prototype.clean = noop
+
+/**
+ * Validates the number of forms and calls the clean() hook.
+ */
+FormSet.prototype._cleanFormset = function() {
+  var async = false
+  var error = null
+  try {
+    var totalFormCount = this.totalFormCount()
+    var deletedFormCount = this.deletedForms().length
+    if ((this.validateMax && totalFormCount - deletedFormCount > this.maxNum) ||
+        (!env.browser && this.managementForm().cleanedData[TOTAL_FORM_COUNT] > this.absoluteMax)) {
+      throw ValidationError('Please submit ' + this.maxNum + ' or fewer forms.',
+                            {code: 'tooManyForms'})
+    }
+    if (this.validateMin && totalFormCount - deletedFormCount < this.minNum) {
+      throw ValidationError('Please submit ' + this.minNum + ' or more forms.',
+                            {code: 'tooFewForms'})
+    }
+    // Give this.clean() a chance to do cross-form validation.
+    if (this.clean !== noop) {
+      async = this._runCustomClean(CLEAN_VALIDATION, this.clean)
+    }
+  }
+  catch (e) {
+    if (e instanceof ValidationError) {
+      this._nonFormErrors = new this.errorConstructor(e.messages())
+    }
+    else {
+      error = e
+    }
+  }
+
+  if (!async) {
+    this._formCleaned(CLEAN_VALIDATION, error)
+  }
+}
+
+/**
+ * Calls a custom cleaning method, expecting synchronous or asynchronous
+ * behaviour, depending on its arity.
+ * @param {string} name a name to associate with the cleaning method.
+ * @param {function} customClean
+ * @return {boolean} true if cleaning is running asynchronously, false if it just
+ *   ran synchronously.
+ */
+FormSet.prototype._runCustomClean = function(name, customClean) {
+  // Check arity to see if we have a callback in the function signature
+  if (customClean.length === 0) {
+    // Synchronous processing only expected
+    customClean.call(this)
+    return false
+  }
+
+  // If custom validation is async and there's one pending, prevent its
+  // callback from doing anything.
+  if (typeof this._pendingAsyncValidation[name] != 'undefined') {
+    object.pop(this._pendingAsyncValidation, name).cancel()
+  }
+  // Set up callback for async processing - arguments for addError()
+  // should be passed via the callback as calling it directly prevents us
+  // from completely ignoring the callback if validation fires again.
+  var callback = function(err, validationError) {
+    if (typeof validationError != 'undefined') {
+      this.addError(validationError)
+    }
+    this._formCleaned(name, err)
+    this._stateChanged()
+  }.bind(this)
+
+  // An explicit return value of false indicates that async processing is
+  // being skipped (e.g. because sync checks in the method failed first)
+  var returnValue = customClean.call(this, callback)
+  if (returnValue !== false) {
+    // Async processing is happening! Make the callback cancellable and
+    // hook up any custom onCancel handling provided.
+    if (returnValue && typeof returnValue.onCancel == 'function') {
+      callback.onCancel = returnValue.onCancel
+    }
+    this._pendingAsyncValidation[name] = cancellable(callback)
+    return true
+  }
+}
+
+FormSet.prototype._finishedValidation = function(err) {
+  if (!this.isAsync()) {
+    if (err) {
+      throw err
+    }
+    // Synchronous formset validation results will be returned via the original
+    // call which triggered validation.
+    return
+  }
+  if (is.Function(this._onValidate)) {
+    var callback = this._onValidate
+    this._onValidate = null
+    if (err) {
+      return callback(err)
+    }
+    var isValid = this.isValid()
+    callback(null, isValid, isValid ? this.cleanedData() : null)
+  }
+}
+
+/**
+ * Cancels any pending async validations.
+ */
+FormSet.prototype._cancelPendingOperations = function() {
+  Object.keys(this._pendingAsyncValidation).forEach(function(field) {
+    object.pop(this._pendingAsyncValidation, field).cancel()
+  }.bind(this))
+}
+
+/**
+ * Returns a list of form.cleanedData objects for every form in this.forms().
+ */
+FormSet.prototype.cleanedData = function() {
+  var forms = this.initialForms()
+  // Don't include empty or incomplete extra forms
+  forms.push.apply(forms, this.extraForms().filter(function(form) {
+    return form.hasChanged() && form.isComplete()
+  }))
+  return forms.map(function(form) { return form.cleanedData })
+}
+
+
+// ============================================================== Mutability ===
+
+/**
+ * Sets the formset's entire input data, also triggering validation by default.
+ * @param {Object.<string,*>} data new input data for forms, which must be
+ *   prefixed for uniqueness.
+ * @param {Object.<string,boolean>} kwargs data setting options.
+ * @return {boolean} if date setting options indicate the new data should be
+ *   validated, true if the new data is valid.
+ */
+FormSet.prototype.setData = function(data, kwargs) {
+  kwargs = object.extend({validate: true, _triggerStateChange: true}, kwargs)
+
+  this.data = data
+  var formDataSettingOptions = {
+    prefixed: true, validate: kwargs.validate, _triggerStateChange: false
+  }
+  this.forms().forEach(function(form) {
+    form.setData(data, formDataSettingOptions)
+  })
+
+  if (this.isInitialRender) {
+    this.isInitialRender = false
+  }
+  if (kwargs.validate) {
+    this._errors = null
+    // This call ultimately triggers a fullClean() because _errors is null
+    var isValid = this.isValid()
+  }
+  else {
+    // Prevent validation being triggered if errors() is accessed during render
+    this._errors = []
+    this._nonFormErrors = new this.errorConstructor()
+  }
+
+  if (kwargs._triggerStateChange) {
+    this._stateChanged()
+  }
+
+  if (kwargs.validate) {
+    return isValid
+  }
+}
+
+/**
+ * Alias to keep the FormSet data setting API the same as Form's.
+ */
+FormSet.prototype.setFormData = FormSet.prototype.setData
+
+// =================================================================== Forms ===
+
+/**
+ * Returns the ManagementForm instance for this FormSet.
+ * @browser the form is unbound and uses initial data from this FormSet.
+ * @server the form is bound to submitted data.
+ */
+FormSet.prototype.managementForm = function() {
+  var form
+  if (!env.browser && !this.isInitialRender) {
+    form = new ManagementForm({data: this.data, autoId: this.autoId,
+                               prefix: this.prefix})
+    if (!form.isValid()) {
+      throw ValidationError('ManagementForm data is missing or has been tampered with',
+                            {code: 'missing_management_form'})
+    }
+  }
+  else {
+    var initial = {}
+    initial[TOTAL_FORM_COUNT] = this.totalFormCount()
+    initial[INITIAL_FORM_COUNT] = this.initialFormCount()
+    initial[MIN_NUM_FORM_COUNT] = this.minNum
+    initial[MAX_NUM_FORM_COUNT] = this.maxNum
+    form = new ManagementForm({autoId: this.autoId,
+                               prefix: this.prefix,
+                               initial: initial})
+  }
+  if (this.managementFormCssClass !== null) {
+    form.hiddenFieldRowCssClass = this.managementFormCssClass
+  }
+  return form
+}
+
+/**
+ * Determines the number of form instances this formset contains, based on
+ * either submitted management data or initial configuration, as appropriate.
+ */
+FormSet.prototype.totalFormCount = function() {
+  if (!env.browser && !this.isInitialRender) {
+    // Return absoluteMax if it is lower than the actual total form count in
+    // the data; this is DoS protection to prevent clients  from forcing the
+    // server to instantiate arbitrary numbers of forms.
+    return Math.min(this.managementForm().cleanedData[TOTAL_FORM_COUNT], this.absoluteMax)
+  }
+  else {
+    var initialForms = this.initialFormCount()
+    var totalForms = this.initialFormCount() + this.extra
+    // Allow all existing related objects/inlines to be displayed, but don't
+    // allow extra beyond max_num.
+    if (this.maxNum !== null &&
+        initialForms > this.maxNum &&
+        this.maxNum >= 0) {
+      totalForms = initialForms
+    }
+    if (this.maxNum !== null &&
+        totalForms > this.maxNum &&
+        this.maxNum >= 0) {
+      totalForms = this.maxNum
+    }
+    return totalForms
+  }
+}
+
+/**
+ * Determines the number of initial form instances this formset contains, based
+ * on either submitted management data or initial configuration, as appropriate.
+ */
+FormSet.prototype.initialFormCount = function() {
+  if (!env.browser && !this.isInitialRender) {
+    return this.managementForm().cleanedData[INITIAL_FORM_COUNT]
+  }
+  else {
+    // Use the length of the initial data if it's there, 0 otherwise.
+    return (this.initial !== null && this.initial.length > 0
+            ? this.initial.length
+            : 0)
+  }
+}
+
+/**
+ * Instantiates forms when first accessed.
+ */
+FormSet.prototype.forms = function() {
+  if (this._forms !== null) { return this._forms }
+  var forms = []
+  var totalFormCount = this.totalFormCount()
+  for (var i = 0; i < totalFormCount; i++) {
+    forms.push(this._constructForm(i))
+  }
+  this._forms = forms
+  return forms
+}
+
+/**
+ * Adds another form and increments extra.
+ */
+FormSet.prototype.addAnother = function() {
+  var currentFormCount = this.totalFormCount()
+  this.extra++
+  if (this._forms !== null) {
+    this._forms[currentFormCount] = this._constructForm(currentFormCount)
+  }
+ this._stateChanged()
+}
+
+// Assumption - the UI will only let the user remove extra forms
+FormSet.prototype.removeForm = function(index) {
+  if (this.extra === 0) {
+    throw new Error("Can't remove a form when there are no extra forms")
+  }
+  this.extra--
+  if (this._forms !== null) {
+    this._forms.splice(index, 1)
+  }
+  if (this._errors !== null) {
+    this._errors.splice(index, 1)
+  }
+ this._stateChanged()
+}
+
+/**
+ * Instantiates and returns the ith form instance in the formset.
+ */
+FormSet.prototype._constructForm = function(i) {
+  var defaults = {
+    autoId: this.autoId
+  , prefix: this.addPrefix(i)
+  , errorConstructor: this.errorConstructor
+  , validation: this.validation
+  , controlled: this.controlled
+  , onChange: this.onChange
+  }
+  if (!this.isInitialRender) {
+    defaults.data = this.data
+    defaults.files = this.files
+  }
+  if (this.initial !== null && this.initial.length > 0) {
+    if (typeof this.initial[i] != 'undefined') {
+      defaults.initial = this.initial[i]
+    }
+  }
+  // Allow extra forms to be empty
+  if (i >= this.initialFormCount()) {
+    defaults.emptyPermitted = true
+  }
+
+  var form = new this.form(defaults)
+  this.addFields(form, i)
+  return form
+}
+
+/**
+ * Returns a list of all the initial forms in this formset.
+ */
+FormSet.prototype.initialForms = function() {
+  return this.forms().slice(0, this.initialFormCount())
+}
+
+/**
+ * Returns a list of all the extra forms in this formset.
+ */
+FormSet.prototype.extraForms = function() {
+  return this.forms().slice(this.initialFormCount())
+}
+
+FormSet.prototype.emptyForm = function() {
+  var kwargs = {
+    autoId: this.autoId,
+    prefix: this.addPrefix('__prefix__'),
+    emptyPermitted: true
+  }
+  var form = new this.form(kwargs)
+  this.addFields(form, null)
+  return form
+}
+
+/**
+ * Returns a list of forms that have been marked for deletion.
+ */
+FormSet.prototype.deletedForms = function() {
+  if (!this.isValid() || !this.canDelete) { return [] }
+
+  var forms = this.forms()
+
+  // Construct _deletedFormIndexes, which is just a list of form indexes
+  // that have had their deletion widget set to true.
+  if (typeof this._deletedFormIndexes == 'undefined') {
+    this._deletedFormIndexes = []
+    for (var i = 0, l = forms.length; i < l; i++) {
+      var form = forms[i]
+      // If this is an extra form and hasn't changed, ignore it
+      if (i >= this.initialFormCount() && !form.hasChanged()) {
+        continue
+      }
+      if (this._shouldDeleteForm(form)) {
+        this._deletedFormIndexes.push(i)
+      }
+    }
+  }
+
+  return this._deletedFormIndexes.map(function(i) { return forms[i] })
+}
+
+/**
+ * Returns a list of forms in the order specified by the incoming data.
+ * Throws an Error if ordering is not allowed.
+ */
+FormSet.prototype.orderedForms = function() {
+  if (!this.isValid() || !this.canOrder) {
+    throw new Error(this.constructor.name +
+                    " object has no attribute 'orderedForms'")
+  }
+
+  var forms = this.forms()
+
+  // Construct _ordering, which is a list of [form index, orderFieldValue]
+  // pairs. After constructing this list, we'll sort it by orderFieldValue
+  // so we have a way to get to the form indexes in the order specified by
+  // the form data.
+  if (typeof this._ordering == 'undefined') {
+    this._ordering = []
+    for (var i = 0, l = forms.length; i < l; i++) {
+      var form = forms[i]
+      // If this is an extra form and hasn't changed, ignore it
+      if (i >= this.initialFormCount() && !form.hasChanged()) {
+        continue
+      }
+      // Don't add data marked for deletion
+      if (this.canDelete && this._shouldDeleteForm(form)) {
+        continue
+      }
+      this._ordering.push([i, form.cleanedData[ORDERING_FIELD_NAME]])
+    }
+
+    // Null should be sorted below anything else. Allowing null as a
+    // comparison value makes it so we can leave ordering fields blank.
+    this._ordering.sort(function(x, y) {
+      if (x[1] === null && y[1] === null) {
+        // Sort by form index if both order field values are null
+        return x[0] - y[0]
+      }
+      if (x[1] === null) {
+        return 1
+      }
+      if (y[1] === null) {
+        return -1
+      }
+      return x[1] - y[1]
+    })
+  }
+
+  return this._ordering.map(function(ordering) { return forms[ordering[0]]})
+}
+
+/**
+ * A hook for adding extra fields on to each form instance.
+ * @param {Form} form the form fields are to be added to.
+ * @param {Number} index the index of the given form in the formset.
+ */
+FormSet.prototype.addFields = function(form, index) {
+  if (this.canOrder) {
+    // Only pre-fill the ordering field for initial forms
+    if (index != null && index < this.initialFormCount()) {
+      form.fields[ORDERING_FIELD_NAME] =
+          IntegerField({label: 'Order', initial: index + 1,
+                        required: false})
+    }
+    else {
+      form.fields[ORDERING_FIELD_NAME] =
+          IntegerField({label: 'Order', required: false})
+    }
+  }
+  if (this.canDelete) {
+    form.fields[DELETION_FIELD_NAME] =
+        BooleanField({label: 'Delete', required: false})
+  }
+}
+
+/**
+ * Returns whether or not the form was marked for deletion.
+ */
+FormSet.prototype._shouldDeleteForm = function(form) {
+  return object.get(form.cleanedData, DELETION_FIELD_NAME, false)
+}
+
+// ================================================================== Errors ===
+
+FormSet.prototype.addError = function(error) {
+  if (!(error instanceof ValidationError)) {
+    // Normalise to ValidationError and let its constructor do the hard work of
+    // making sense of the input.
+    error = ValidationError(error)
+  }
+
+  this._nonFormErrors.extend(error.errorList)
+}
+
+/**
+ * Returns a list of form.errors for every form in this.forms.
+ */
+FormSet.prototype.errors = function() {
+  if (this._errors === null) {
+    this.fullClean()
+  }
+  return this._errors
+}
+
+/**
+ * Returns an ErrorList of errors that aren't associated with a particular
+ * form -- i.e., from formset.clean(). Returns an empty ErrorList if there are
+ * none.
+ */
+FormSet.prototype.nonFormErrors = function() {
+  if (this._nonFormErrors === null) {
+    this.fullClean()
+  }
+  return this._nonFormErrors
+}
+
+/**
+ * Returns the number of errors across all forms in the formset.
+ */
+FormSet.prototype.totalErrorCount = function() {
+  return (this.nonFormErrors().length() +
+          this.errors().reduce(function(sum, formErrors) {
+            return sum + formErrors.length()
+          }, 0))
+}
+
+// ================================================================== Status ===
+
+/**
+ * Returns true if any form differs from initial.
+ */
+FormSet.prototype.hasChanged = function() {
+  var forms = this.forms()
+  for (var i = 0, l = forms.length; i < l; i++) {
+    if (forms[i].hasChanged()) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * @return {boolean} true if the formset needs a callback argument for final
+ *   validation.
+ */
+FormSet.prototype.isAsync = function() {
+  return (this.clean.length == 1 || isFormAsync(this.form))
+}
+
+/**
+ * @return {boolean} true if the formset needs to be multipart-encoded, i.e. it
+ * has a FileInput. Otherwise, false.
+ */
+FormSet.prototype.isMultipart = function() {
+  return (this.forms().length > 0 && this.forms()[0].isMultipart())
+}
+
+/**
+ * @return {boolean} true if the formset is waiting for async validation to
+ *   complete.
+ */
+FormSet.prototype.isPending = function() {
+  return !is.Empty(this._pendingAsyncValidation)
+}
+
+/**
+ * Returns true if every form in this.forms() is valid and there are no non-form
+ * errors.
+ */
+FormSet.prototype.isValid = function() {
+  if (this.isInitialRender) {
+    return false
+  }
+  // Triggers a full clean
+  var errors = this.errors()
+  var forms = this.forms()
+  for (var i = 0, l = errors.length; i < l ; i++) {
+    if (errors[i].isPopulated()) {
+      if (this.canDelete && this._shouldDeleteForm(forms[i])) {
+        // This form is going to be deleted so any of its errors should
+        // not cause the entire formset to be invalid.
+        continue
+      }
+      return false
+    }
+  }
+  return !this.nonFormErrors().isPopulated()
+}
+
+/**
+ * @return {boolean} true if the formset is waiting for async validation of its
+ *   clean() method to complete.
+ */
+FormSet.prototype.nonFormPending = function() {
+  return typeof this._pendingAsyncValidation[CLEAN_VALIDATION] != 'undefined'
+}
+
+// ================================================================ Prefixes ===
+
+/**
+ * Returns the formset prefix with the form index appended.
+ * @param {Number} index the index of a form in the formset.
+ */
+FormSet.prototype.addPrefix = function(index) {
+  return formatObj(this.prefixFormat, {prefix: this.prefix, index: index})
+}
+
+FormSet.prototype.getDefaultPrefix = function() {
+  return 'form'
+}
+
+module.exports = FormSet
+}).call(this,require('_process'))
+},{"./BooleanField":60,"./ErrorList":81,"./Form":88,"./HiddenInput":92,"./IntegerField":96,"./constants":130,"./env":131,"./isFormAsync":133,"./util":135,"Concur":1,"_process":292,"get-form-data":29,"isomorph/format":54,"isomorph/is":55,"isomorph/object":56,"validators":288}],91:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var validators = require('validators')
+
+var CharField = require('./CharField')
+
+var cleanIPv6Address = validators.ipv6.cleanIPv6Address
+
+var GenericIPAddressField = CharField.extend({
+  constructor: function GenericIPAddressField(kwargs) {
+    if (!(this instanceof GenericIPAddressField)) { return new GenericIPAddressField(kwargs) }
+    kwargs = object.extend({protocol: 'both', unpackIPv4: false}, kwargs)
+    this.unpackIPv4 = kwargs.unpackIPv4
+    this.defaultValidators =
+      validators.ipAddressValidators(kwargs.protocol, kwargs.unpackIPv4).validators
+    CharField.call(this, kwargs)
+  }
+})
+
+GenericIPAddressField.prototype.toJavaScript = function(value) {
+  if (!value) {
+    return ''
+  }
+  if (value && value.indexOf(':') != -1) {
+    return cleanIPv6Address(value, {unpackIPv4: this.unpackIPv4})
+  }
+  return value
+}
+
+
+module.exports = GenericIPAddressField
+},{"./CharField":62,"isomorph/object":56,"validators":288}],92:[function(require,module,exports){
+'use strict';
+
+var Input = require('./Input')
+
+/**
+ * An HTML <input type="hidden"> widget.
+ * @constructor
+ * @extends {Input}
+ * @param {Object=} kwargs
+ */
+var HiddenInput = Input.extend({
+  constructor: function HiddenInput(kwargs) {
+    if (!(this instanceof HiddenInput)) { return new HiddenInput(kwargs) }
+    Input.call(this, kwargs)
+  }
+, inputType: 'hidden'
+, isHidden: true
+})
+
+module.exports = HiddenInput
+},{"./Input":95}],93:[function(require,module,exports){
+'use strict';
+
+var CharField = require('./CharField')
+
+var $__0=  require('validators'),validateIPv4Address=$__0.validateIPv4Address
+
+/**
+ * Validates that its input is a valid IPv4 address.
+ * @constructor
+ * @extends {CharField}
+ * @param {Object=} kwargs
+ * @deprecated in favour of GenericIPAddressField
+ */
+var IPAddressField = CharField.extend({
+  defaultValidators: [validateIPv4Address]
+
+, constructor: function IPAddressField(kwargs) {
+    if (!(this instanceof IPAddressField)) { return new IPAddressField(kwargs) }
+    CharField.call(this, kwargs)
+  }
+})
+
+module.exports = IPAddressField
+},{"./CharField":62,"validators":288}],94:[function(require,module,exports){
+'use strict';
+
+var FileField = require('./FileField')
+
+/**
+ * Validates that its input is a valid uploaded image.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var ImageField = FileField.extend({
+  defaultErrorMessages: {
+    invalidImage: 'Upload a valid image. The file you uploaded was either not an image or a corrupted image.'
+  }
+
+, constructor: function ImageField(kwargs) {
+    if (!(this instanceof ImageField)) { return new ImageField(kwargs) }
+    FileField.call(this, kwargs)
+  }
+})
+
+/**
+ * Checks that the file-upload field data contains a valid image.
+ */
+ImageField.prototype.toJavaScript = function(data, initial) {
+  var f = FileField.prototype.toJavaScript.call(this, data, initial)
+  if (f === null) {
+    return null
+  }
+
+  // TODO Plug in image processing code when running on the server
+
+  return f
+}
+
+ImageField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = FileField.prototype.getWidgetAttrs.call(this, widget)
+  attrs.accept = 'image/*'
+  return attrs
+}
+
+
+module.exports = ImageField
+},{"./FileField":84}],95:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var Widget = require('./Widget')
+
+/**
+ * An HTML <input> widget.
+ * @constructor
+ * @extends {Widget}
+ * @param {Object=} kwargs
+ */
+var Input = Widget.extend({
+  constructor: function Input(kwargs) {
+    if (!(this instanceof Input)) { return new Input(kwargs) }
+    Widget.call(this, kwargs)
+  }
+  /** The type attribute of this input - subclasses must define it. */
+, inputType: null
+})
+
+Input.prototype._formatValue = function(value) {
+  return value
+}
+
+Input.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({attrs: null}, kwargs)
+  if (value === null) {
+    value = ''
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {type: this.inputType,
+                                                  name: name})
+  // Hidden inputs can be made controlled inputs by default, as the user
+  // can't directly interact with them.
+  var valueAttr = (kwargs.controlled || this.isHidden ? 'value' : 'defaultValue')
+  if (!(valueAttr == 'defaultValue' && value === '')) {
+    finalAttrs[valueAttr] = (value !== '' ? ''+this._formatValue(value) : value)
+  }
+  return React.createElement('input', finalAttrs)
+}
+
+module.exports = Input
+},{"./Widget":129,"isomorph/object":56,"react":"react"}],96:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var Field = require('./Field')
+var NumberInput = require('./NumberInput')
+
+var $__0=    require('validators'),MaxValueValidator=$__0.MaxValueValidator,MinValueValidator=$__0.MinValueValidator,ValidationError=$__0.ValidationError
+
+/**
+ * Validates that its input is a valid integer.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var IntegerField = Field.extend({
+  widget: NumberInput
+, defaultErrorMessages: {
+    invalid: 'Enter a whole number.'
+  }
+
+, constructor: function IntegerField(kwargs) {
+    if (!(this instanceof IntegerField)) { return new IntegerField(kwargs) }
+    kwargs = object.extend({maxValue: null, minValue: null}, kwargs)
+    this.maxValue = kwargs.maxValue
+    this.minValue = kwargs.minValue
+    Field.call(this, kwargs)
+
+    if (this.minValue !== null) {
+      this.validators.push(MinValueValidator(this.minValue))
+    }
+    if (this.maxValue !== null) {
+      this.validators.push(MaxValueValidator(this.maxValue))
+    }
+  }
+})
+
+/**
+ * Validates that Number() can be called on the input with a result that isn't
+ * NaN and doesn't contain any decimal points.
+ * @param {*} value user input.
+ * @return {?number} the result of Number(), or null for empty values.
+ * @throws {ValidationError} if the input is invalid.
+ */
+IntegerField.prototype.toJavaScript = function(value) {
+  value = Field.prototype.toJavaScript.call(this, value)
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+  value = Number(value)
+  if (isNaN(value) || value.toString().indexOf('.') != -1) {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+  return value
+}
+
+IntegerField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = Field.prototype.getWidgetAttrs.call(this, widget)
+  if (this.minValue !== null && !object.hasOwn(widget.attrs, 'min')) {
+    object.setDefault(attrs, 'min', this.minValue)
+  }
+  if (this.maxValue !== null && !object.hasOwn(widget.attrs, 'max')) {
+    object.setDefault(attrs, 'max', this.maxValue)
+  }
+  return attrs
+}
+
+module.exports = IntegerField
+},{"./Field":83,"./NumberInput":104,"isomorph/object":56,"validators":288}],97:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var Field = require('./Field')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * A Field that aggregates the logic of multiple Fields.
+ * Its clean() method takes a "decompressed" list of values, which are then
+ * cleaned into a single value according to this.fields. Each value in this
+ * list is cleaned by the corresponding field -- the first value is cleaned by
+ * the first field, the second value is cleaned by the second field, etc. Once
+ * all fields are cleaned, the list of clean values is "compressed" into a
+ * single value.
+ * Subclasses should not have to implement clean(). Instead, they must
+ * implement compress(), which takes a list of valid values and returns a
+ * "compressed" version of those values -- a single value.
+ * You'll probably want to use this with MultiWidget.
+ * @constructor
+ * @extends {Field}
+ * @param {Object=} kwargs
+ */
+var MultiValueField = Field.extend({
+  defaultErrorMessages: {
+    invalid: 'Enter a list of values.'
+  , incomplete: 'Enter a complete value.'
+  }
+
+, constructor: function MultiValueField(kwargs) {
+    if (!(this instanceof Field)) { return new MultiValueField(kwargs) }
+    kwargs = object.extend({fields: []}, kwargs)
+    this.requireAllFields = object.pop(kwargs, 'requireAllFields', true)
+    Field.call(this, kwargs)
+
+    for (var i = 0, l = kwargs.fields.length; i < l; i++) {
+      var f = kwargs.fields[i]
+      object.setDefault(f.errorMessages, 'incomplete',
+                        this.errorMessages.incomplete)
+      if (this.requireAllFields) {
+        // Set required to false on the individual fields, because the required
+        // validation will be handled by MultiValueField, not by those
+        // individual fields.
+        f.required = false
+      }
+    }
+    this.fields = kwargs.fields
+  }
+})
+
+MultiValueField.prototype.validate = function() {}
+
+/**
+ * Validates every value in the given list. A value is validated against the
+ * corresponding Field in this.fields.
+ * For example, if this MultiValueField was instantiated with
+ * {fields: [forms.DateField(), forms.TimeField()]}, clean() would call
+ * DateField.clean(value[0]) and TimeField.clean(value[1]).
+ * @param {Array} value user input for each field.
+ * @return the result of calling compress() on the cleaned input.
+ * @throws {ValidationError} if the input is invalid.
+ */
+MultiValueField.prototype.clean = function(value) {
+  var cleanData = []
+  var errors = []
+
+  if (!value || is.Array(value)) {
+    var allValuesEmpty = true
+    if (is.Array(value)) {
+      for (var i = 0, l = value.length; i < l; i++) {
+        if (value[i]) {
+          allValuesEmpty = false
+          break
+        }
+      }
+    }
+
+    if (!value || allValuesEmpty) {
+      if (this.required) {
+        throw ValidationError(this.errorMessages.required, {code: 'required'})
+      }
+      else {
+        return this.compress([])
+      }
+    }
+  }
+  else {
+    throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+  }
+
+  for (i = 0, l = this.fields.length; i < l; i++) {
+    var field = this.fields[i]
+    var fieldValue = value[i]
+    if (fieldValue === undefined) {
+      fieldValue = null
+    }
+    if (this.isEmptyValue(fieldValue)) {
+      if (this.requireAllFields) {
+        // Throw a 'required' error if the MultiValueField is required and any
+        // field is empty.
+        if (this.required) {
+          throw ValidationError(this.errorMessages.required, {code: 'required'})
+        }
+      }
+      else if (field.required) {
+        // Otherwise, add an 'incomplete' error to the list of collected errors
+        // and skip field cleaning, if a required field is empty.
+        if (errors.indexOf(field.errorMessages.incomplete) == -1) {
+          errors.push(field.errorMessages.incomplete)
+        }
+        continue
+      }
+    }
+
+    try {
+      cleanData.push(field.clean(fieldValue))
+    }
+    catch (e) {
+      if (!(e instanceof ValidationError)) { throw e }
+      // Collect all validation errors in a single list, which we'll throw at
+      // the end of clean(), rather than throwing a single exception for the
+      // first error we encounter. Skip duplicates.
+      errors = errors.concat(e.messages().filter(function(m) {
+        return errors.indexOf(m) == -1
+      }))
+    }
+  }
+
+  if (errors.length !== 0) {
+    throw ValidationError(errors)
+  }
+
+  var out = this.compress(cleanData)
+  this.validate(out)
+  this.runValidators(out)
+  return out
+}
+
+/**
+ * Returns a single value for the given list of values. The values can be
+ * assumed to be valid.
+ * For example, if this MultiValueField was instantiated with
+ * {fields: [forms.DateField(), forms.TimeField()]}, this might return a Date
+ * object created by combining the date and time in dataList.
+ * @param {Array} dataList
+ * @abstract
+ */
+MultiValueField.prototype.compress = function(dataList) {
+  throw new Error('Subclasses must implement this method.')
+}
+
+MultiValueField.prototype._hasChanged = function(initial, data) {
+  if (initial === null) {
+    initial = []
+    for (var i = 0, l = data.length; i < l; i++) {
+      initial.push('')
+    }
+  }
+  else if (!(is.Array(initial))) {
+    initial = this.widget.decompress(initial)
+  }
+
+  for (i = 0, l = this.fields.length; i < l; i++) {
+    if (this.fields[i]._hasChanged(initial[i], data[i])) {
+      return true
+    }
+  }
+  return false
+}
+
+module.exports = MultiValueField
+},{"./Field":83,"isomorph/is":55,"isomorph/object":56,"validators":288}],98:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var React = require('react')
+
+var Widget = require('./Widget')
+
+/**
+ * A widget that is composed of multiple widgets.
+ * @constructor
+ * @extends {Widget}
+ * @param {Object=} kwargs
+ */
+var MultiWidget = Widget.extend({
+  constructor: function MultiWidget(widgets, kwargs) {
+    if (!(this instanceof MultiWidget)) { return new MultiWidget(widgets, kwargs) }
+    this.widgets = []
+    var needsMultipartForm = false
+    for (var i = 0, l = widgets.length; i < l; i++) {
+      var widget = widgets[i] instanceof Widget ? widgets[i] : new widgets[i]()
+      if (widget.needsMultipartForm) {
+        needsMultipartForm = true
+      }
+      this.widgets.push(widget)
+    }
+    this.needsMultipartForm = needsMultipartForm
+    Widget.call(this, kwargs)
+  }
+})
+
+/**
+ * This method is different than other widgets', because it has to figure out
+ * how to split a single value for display in multiple widgets.
+ *
+ * If the given value is NOT a list, it will first be "decompressed" into a list
+ * before it is rendered by calling the  MultiWidget#decompress function.
+ *
+ * Each value in the list is rendered  with the corresponding widget -- the
+ * first value is rendered in the first widget, the second value is rendered in
+ * the second widget, and so on.
+ *
+ * @param {string} name the field name.
+ * @param {(array.<*>|*)} value a list of values, or a normal value (e.g., a String that has
+ *   been "compressed" from a list of values).
+ * @param {Object=} kwargs rendering options.
+ * @return a rendered collection of widgets.
+ */
+MultiWidget.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({}, kwargs)
+  if (!(is.Array(value))) {
+    value = this.decompress(value)
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {'data-newforms-field': name})
+  var id = object.get(finalAttrs, 'id', null)
+  var key = object.get(finalAttrs, 'key', null)
+  var renderedWidgets = []
+  for (var i = 0, l = this.widgets.length; i < l; i++) {
+    var widget = this.widgets[i]
+    var widgetValue = null
+    if (typeof value[i] != 'undefined') {
+      widgetValue = value[i]
+    }
+    if (id) {
+      finalAttrs.id = id + '_' + i
+    }
+    if (key) {
+      finalAttrs.key = key + '_' + i
+    }
+    renderedWidgets.push(
+        widget.render(name + '_' + i, widgetValue, {attrs: finalAttrs,
+                                                    controlled: kwargs.controlled}))
+  }
+  return this.formatOutput(renderedWidgets)
+}
+
+MultiWidget.prototype.idForLabel = function(id) {
+  if (id) {
+    id += '_0'
+  }
+  return id
+}
+
+MultiWidget.prototype.valueFromData = function(data, files, name) {
+  var values = []
+  for (var i = 0, l = this.widgets.length; i < l; i++) {
+    values[i] = this.widgets[i].valueFromData(data, files, name + '_' + i)
+  }
+  return values
+}
+
+/**
+ * Creates an element containing a given list of rendered widgets.
+ *
+ * This hook allows you to format the HTML design of the widgets, if needed.
+ *
+ * @param {Array} renderedWidgets a list of rendered widgets.
+ * @return a <div> containing the rendered widgets.
+ */
+MultiWidget.prototype.formatOutput = function(renderedWidgets) {
+  return React.createElement('div', null, renderedWidgets)
+}
+
+/**
+ * Creates a list of decompressed values for the given compressed value.
+ * @abstract
+ * @param value a compressed value, which can be assumed to be valid, but not
+ *   necessarily non-empty.
+ * @return a list of decompressed values for the given compressed value.
+ */
+MultiWidget.prototype.decompress = function(value) {
+  throw new Error('MultiWidget subclasses must implement a decompress() method.')
+}
+
+module.exports = MultiWidget
+},{"./Widget":129,"isomorph/is":55,"isomorph/object":56,"react":"react"}],99:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var ChoiceField = require('./ChoiceField')
+var MultipleHiddenInput = require('./MultipleHiddenInput')
+var SelectMultiple = require('./SelectMultiple')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * Validates that its input is one or more of a valid list of choices.
+ * @constructor
+ * @extends {ChoiceField}
+ * @param {Object=} kwargs
+ */
+var MultipleChoiceField = ChoiceField.extend({
+  hiddenWidget: MultipleHiddenInput
+, widget: SelectMultiple
+, defaultErrorMessages: {
+    invalidChoice: 'Select a valid choice. {value} is not one of the available choices.'
+  , invalidList: 'Enter a list of values.'
+  }
+
+, constructor: function MultipleChoiceField(kwargs) {
+    if (!(this instanceof MultipleChoiceField)) { return new MultipleChoiceField(kwargs) }
+    ChoiceField.call(this, kwargs)
+  }
+})
+
+MultipleChoiceField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return []
+  }
+  else if (!is.Array(value)) {
+    throw ValidationError(this.errorMessages.invalidList, {code: 'invalidList'})
+  }
+  var stringValues = []
+  for (var i = 0, l = value.length; i < l; i++) {
+    stringValues.push(''+value[i])
+  }
+  return stringValues
+}
+
+/**
+ * Validates that the input is a list and that each item is in this field's
+ * choices.
+ * @param {Array.<string>} value user input.
+ * @throws {ValidationError} if the input is invalid.
+ */
+MultipleChoiceField.prototype.validate = function(value) {
+  if (this.required && !value.length) {
+    throw ValidationError(this.errorMessages.required, {code: 'required'})
+  }
+  for (var i = 0, l = value.length; i < l; i++) {
+    if (!this.validValue(value[i])) {
+      throw ValidationError(this.errorMessages.invalidChoice, {
+        code: 'invalidChoice'
+      , params: {value: value[i]}
+      })
+    }
+  }
+}
+
+MultipleChoiceField.prototype._hasChanged = function(initial, data) {
+  if (initial === null) {
+    initial = []
+  }
+  if (data === null) {
+    data = []
+  }
+  if (initial.length != data.length) {
+    return true
+  }
+  var dataLookup = object.lookup(data)
+  for (var i = 0, l = initial.length; i < l; i++) {
+    if (typeof dataLookup[''+initial[i]] == 'undefined') {
+      return true
+    }
+  }
+  return false
+}
+
+module.exports = MultipleChoiceField
+},{"./ChoiceField":67,"./MultipleHiddenInput":101,"./SelectMultiple":115,"isomorph/is":55,"isomorph/object":56,"validators":288}],100:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+var env = require('./env')
+
+var Field = require('./Field')
+var FileInput = require('./FileInput')
+var FileField = require('./FileField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * Validates that its input is a list of valid files.
+ * @constructor
+ * @extends {FileField}
+ * @param {Object=} kwargs
+ */
+var MultipleFileField = FileField.extend({
+  widget: FileInput,
+
+  defaultErrorMessages: {
+    invalid: 'No files were submitted. Check the encoding type on the form.',
+    missing: 'No files were submitted.',
+    empty: '{name} is empty.',
+    maxLength: 'Ensure filenames have at most {max} characters ({name} has {length}).'
+  },
+
+  constructor: function MultipleFileField(kwargs) {
+    if (!(this instanceof MultipleFileField)) { return new MultipleFileField(kwargs) }
+    FileField.call(this, kwargs)
+  }
+})
+
+MultipleFileField.prototype.getWidgetAttrs = function(widget) {
+  var attrs = FileField.prototype.getWidgetAttrs.call(this, widget)
+  attrs.multiple = true
+  return attrs
+}
+
+MultipleFileField.prototype.toJavaScript = function(data, initial) {
+  if (this.isEmptyValue(data)) {
+    return []
+  }
+
+  // If the browser doesn't support File objects, we can't do anything more
+  if (env.browser && is.String(data)) {
+    return data
+  }
+
+  for (var i = 0, l = data.length; i < l; i++) {
+    var file = data[i]
+
+    // File objects should have name and size attributes
+    if (typeof file.name == 'undefined' || typeof file.size == 'undefined') {
+      throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+    }
+
+    var name = file.name
+    var size = Number(file.size)
+
+    if (this.maxLength !== null && name.length > this.maxLength) {
+      throw ValidationError(this.errorMessages.maxLength, {
+        code: 'maxLength',
+        params: {max: this.maxLength, name:name, length: name.length}
+      })
+    }
+    if (!name) {
+      throw ValidationError(this.errorMessages.invalid, {code: 'invalid'})
+    }
+    if (!this.allowEmptyFile && size === 0) {
+      throw ValidationError(this.errorMessages.empty, {
+        code: 'empty',
+        params: {name:name}
+      })
+    }
+  }
+
+  return data
+}
+
+MultipleFileField.prototype.clean = function(data, initial) {
+  if (this.isEmptyValue(data) && !this.isEmptyValue(initial)) {
+    return initial
+  }
+  return Field.prototype.clean.call(this, data)
+}
+
+MultipleFileField.prototype.validate = function(value) {
+  if (this.required && !value.length) {
+    throw ValidationError(this.errorMessages.required, {code: 'required'})
+  }
+}
+
+MultipleFileField.prototype._hasChanged = function(initial, data) {
+  return !this.isEmptyValue(data)
+}
+
+module.exports = MultipleFileField
+},{"./Field":83,"./FileField":84,"./FileInput":85,"./env":131,"isomorph/is":55,"validators":288}],101:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var HiddenInput = require('./HiddenInput')
+
+/**
+ * A widget that handles <input type="hidden"> for fields that have a list of
+ * values.
+ * @constructor
+ * @extends {HiddenInput}
+ * @param {Object=} kwargs
+ */
+var MultipleHiddenInput = HiddenInput.extend({
+  constructor: function MultipleHiddenInput(kwargs) {
+    if (!(this instanceof MultipleHiddenInput)) { return new MultipleHiddenInput(kwargs) }
+    HiddenInput.call(this, kwargs)
+  }
+})
+
+MultipleHiddenInput.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({attrs: null}, kwargs)
+  if (value === null) {
+    value = []
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {type: this.inputType,
+                                                  name: name})
+  var id = object.get(finalAttrs, 'id', null)
+  var key = object.get(finalAttrs, 'key', null)
+  var inputs = []
+  for (var i = 0, l = value.length; i < l; i++) {
+    var inputAttrs = object.extend({}, finalAttrs, {value: value[i]})
+    // Add numeric index suffixes to attributes which should be unique
+    if (id) {
+      inputAttrs.id = id + '_' + i
+    }
+    if (key) {
+      inputAttrs.key = id + '_' + i
+    }
+    inputs.push(React.createElement('input', inputAttrs))
+  }
+  return React.createElement('div', null, inputs)
+}
+
+MultipleHiddenInput.prototype.valueFromData = function(data, files, name) {
+  if (typeof data[name] != 'undefined') {
+    return [].concat(data[name])
+  }
+  return null
+}
+
+module.exports = MultipleHiddenInput
+},{"./HiddenInput":92,"isomorph/object":56,"react":"react"}],102:[function(require,module,exports){
+'use strict';
+
+var BooleanField = require('./BooleanField')
+var NullBooleanSelect = require('./NullBooleanSelect')
+
+/**
+ * A field whose valid values are null, true and false.
+ * Invalid values are cleaned to null.
+ * @constructor
+ * @extends {BooleanField}
+ * @param {Object=} kwargs
+ */
+var NullBooleanField = BooleanField.extend({
+  widget: NullBooleanSelect
+
+, constructor: function NullBooleanField(kwargs) {
+    if (!(this instanceof NullBooleanField)) { return new NullBooleanField(kwargs) }
+    BooleanField.call(this, kwargs)
+  }
+})
+
+NullBooleanField.prototype.toJavaScript = function(value) {
+  // Explicitly checks for the string 'True' and 'False', which is what a
+  // hidden field will submit for true and false, and for '1' and '0', which
+  // is what a RadioField will submit. Unlike the BooleanField we also need
+  // to check for true, because we are not using Boolean() function.
+  if (value === true || value == 'True' || value == 'true' || value == '1') {
+    return true
+  }
+  else if (value === false || value == 'False' || value == 'false' || value == '0') {
+    return false
+  }
+  return null
+}
+
+NullBooleanField.prototype.validate = function(value) {}
+
+NullBooleanField.prototype._hasChanged = function(initial, data) {
+  // null (unknown) and false (No) are not the same
+  if (initial !== null) {
+      initial = Boolean(initial)
+  }
+  if (data !== null) {
+      data = Boolean(data)
+  }
+  return initial != data
+}
+
+module.exports = NullBooleanField
+},{"./BooleanField":60,"./NullBooleanSelect":103}],103:[function(require,module,exports){
+'use strict';
+
+var Select = require('./Select')
+
+/**
+ * A <select> widget intended to be used with NullBooleanField.
+ * @constructor
+ * @extends {Select}
+ * @param {Object=} kwargs
+ */
+var NullBooleanSelect = Select.extend({
+  constructor: function NullBooleanSelect(kwargs) {
+    if (!(this instanceof NullBooleanSelect)) { return new NullBooleanSelect(kwargs) }
+    kwargs = kwargs || {}
+    // Set or override choices
+    kwargs.choices = [['1', 'Unknown'], ['2', 'Yes'], ['3', 'No']]
+    Select.call(this, kwargs)
+  }
+})
+
+NullBooleanSelect.prototype.render = function(name, value, kwargs) {
+  if (value === true || value == '2') {
+    value = '2'
+  }
+  else if (value === false || value == '3') {
+    value = '3'
+  }
+  else {
+    value = '1'
+  }
+  return Select.prototype.render.call(this, name, value, kwargs)
+}
+
+NullBooleanSelect.prototype.valueFromData = function(data, files, name) {
+  var value = null
+  if (typeof data[name] != 'undefined') {
+    var dataValue = data[name]
+    if (dataValue === true || dataValue == 'True' || dataValue == 'true' ||
+        dataValue == '2') {
+      value = true
+    }
+    else if (dataValue === false || dataValue == 'False' ||
+             dataValue == 'false' || dataValue == '3') {
+      value = false
+    }
+  }
+  return value
+}
+
+module.exports = NullBooleanSelect
+},{"./Select":114}],104:[function(require,module,exports){
+'use strict';
+
+var TextInput = require('./TextInput')
+
+/**
+ * An HTML <input type="number"> widget.
+ * @constructor
+ * @extends {TextInput}
+ * @param {Object=} kwargs
+ */
+var NumberInput = TextInput.extend({
+  constructor: function NumberInput(kwargs) {
+    if (!(this instanceof NumberInput)) { return new NumberInput(kwargs) }
+    TextInput.call(this, kwargs)
+  }
+, inputType: 'number'
+})
+
+module.exports = NumberInput
+},{"./TextInput":121}],105:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var env = require('./env')
+var TextInput = require('./TextInput')
+
+/**
+ * An HTML <input type="password"> widget.
+ * @constructor
+ * @extends {TextInput}
+ * @param {Object=} kwargs
+ */
+var PasswordInput = TextInput.extend({
+  constructor: function PasswordInput(kwargs) {
+    if (!(this instanceof PasswordInput)) { return new PasswordInput(kwargs) }
+    kwargs = object.extend({renderValue: false}, kwargs)
+    TextInput.call(this, kwargs)
+    this.renderValue = kwargs.renderValue
+  }
+, inputType: 'password'
+})
+
+PasswordInput.prototype.render = function(name, value, kwargs) {
+  if (!env.browser && !this.renderValue) {
+    value = ''
+  }
+  return TextInput.prototype.render.call(this, name, value, kwargs)
+}
+
+module.exports = PasswordInput
+},{"./TextInput":121,"./env":131,"isomorph/object":56}],106:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var React = require('react')
+
+var ProgressMixin = {
+  propTypes: {
+    progress: React.PropTypes.any // Component or function to render async progress
+  },
+
+  renderProgress:function() {
+    if (!this.props.progress) {
+      return React.createElement("progress", null, "Validating...")
+    }
+    if (is.Function(this.props.progress)) {
+      return this.props.progress()
+    }
+    return React.createElement(this.props.progress, null)
+  }
+}
+
+module.exports = ProgressMixin
+},{"isomorph/is":55,"react":"react"}],107:[function(require,module,exports){
+'use strict';
+
+var ChoiceInput = require('./ChoiceInput')
+
+var RadioChoiceInput = ChoiceInput.extend({
+  constructor: function RadioChoiceInput(name, value, attrs, controlled, choice, index) {
+    if (!(this instanceof RadioChoiceInput)) {
+      return new RadioChoiceInput(name, value, attrs, controlled, choice, index)
+    }
+    ChoiceInput.call(this, name, value, attrs, controlled, choice, index)
+    this.value = ''+this.value
+  }
+, inputType: 'radio'
+})
+
+module.exports = RadioChoiceInput
+},{"./ChoiceInput":69}],108:[function(require,module,exports){
+'use strict';
+
+var ChoiceFieldRenderer = require('./ChoiceFieldRenderer')
+var RadioChoiceInput = require('./RadioChoiceInput')
+
+var RadioFieldRenderer = ChoiceFieldRenderer.extend({
+  constructor: function RadioFieldRenderer(name, value, attrs, controlled, choices) {
+    if (!(this instanceof RadioFieldRenderer)) {
+      return new RadioFieldRenderer(name, value, attrs, controlled, choices)
+    }
+    ChoiceFieldRenderer.apply(this, arguments)
+  }
+, choiceInputConstructor: RadioChoiceInput
+})
+
+module.exports = RadioFieldRenderer
+},{"./ChoiceFieldRenderer":68,"./RadioChoiceInput":107}],109:[function(require,module,exports){
+'use strict';
+
+var RadioFieldRenderer = require('./RadioFieldRenderer')
+var RendererMixin = require('./RendererMixin')
+var Select = require('./Select')
+
+/**
+ * Renders a single select as a list of <input type="radio"> elements.
+ * @constructor
+ * @extends {Select}
+ * @param {Object=} kwargs
+ */
+var RadioSelect = Select.extend({
+  __mixins__: [RendererMixin]
+, constructor: function(kwargs) {
+    if (!(this instanceof RadioSelect)) { return new RadioSelect(kwargs) }
+    RendererMixin.call(this, kwargs)
+    Select.call(this, kwargs)
+  }
+, renderer: RadioFieldRenderer
+, _emptyValue: ''
+})
+
+module.exports = RadioSelect
+},{"./RadioFieldRenderer":108,"./RendererMixin":113,"./Select":114}],110:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+var CharField = require('./CharField')
+
+var $__0=  require('validators'),RegexValidator=$__0.RegexValidator
+
+/**
+ * Validates that its input matches a given regular expression.
+ * @constructor
+ * @extends {CharField}
+ * @param {(RegExp|string)} regex
+ * @param {Object=} kwargs
+ */
+var RegexField = CharField.extend({
+  constructor: function RegexField(regex, kwargs) {
+    if (!(this instanceof RegexField)) { return new RegexField(regex, kwargs) }
+    CharField.call(this, kwargs)
+    if (is.String(regex)) {
+      regex = new RegExp(regex)
+    }
+    this.regex = regex
+    this.validators.push(RegexValidator({regex: this.regex}))
+  }
+})
+
+module.exports = RegexField
+},{"./CharField":62,"isomorph/is":55,"validators":288}],111:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var ErrorObject = require('./ErrorObject')
+var Form = require('./Form')
+var FormRow = require('./FormRow')
+var ProgressMixin = require('./ProgressMixin')
+
+var $__0=  require('./constants'),NON_FIELD_ERRORS=$__0.NON_FIELD_ERRORS
+var $__1=   require('./util'),autoIdChecker=$__1.autoIdChecker,getProps=$__1.getProps
+
+var formProps = {
+  autoId: autoIdChecker
+, controlled: React.PropTypes.bool
+, data: React.PropTypes.object
+, emptyPermitted: React.PropTypes.bool
+, errorConstructor: React.PropTypes.func
+, errors: React.PropTypes.instanceOf(ErrorObject)
+, files: React.PropTypes.object
+, initial: React.PropTypes.object
+, labelSuffix: React.PropTypes.string
+, onChange: React.PropTypes.func
+, prefix: React.PropTypes.string
+, validation: React.PropTypes.oneOfType([
+    React.PropTypes.string
+  , React.PropTypes.object
+  ])
+}
+
+/**
+ * Renders a Form. A form instance or constructor can be given. If a constructor
+ * is given, an instance will be created when the component is mounted, and any
+ * additional props will be passed to the constructor as options.
+ */
+var RenderForm = React.createClass({displayName: "RenderForm",
+  mixins: [ProgressMixin],
+  propTypes: object.extend({}, formProps, {
+    className: React.PropTypes.string      // Class for the component wrapping all rows
+  , component: React.PropTypes.any         // Component to wrap all rows
+  , form: React.PropTypes.oneOfType([      // Form instance or constructor
+      React.PropTypes.func,
+      React.PropTypes.instanceOf(Form)
+    ]).isRequired
+  , row: React.PropTypes.any               // Component to render form rows
+  , rowComponent: React.PropTypes.any      // Component to wrap each row
+  }),
+
+  childContextTypes: {
+    form: React.PropTypes.instanceOf(Form)
+  },
+
+  getChildContext:function() {
+    return {form: this.form}
+  },
+
+  getDefaultProps:function() {
+    return {
+      component: 'div'
+    , row: FormRow
+    , rowComponent: 'div'
+    }
+  },
+
+  componentWillMount:function() {
+    if (this.props.form instanceof Form) {
+      this.form = this.props.form
+    }
+    else {
+      this.form = new this.props.form(object.extend({
+        onChange: this.forceUpdate.bind(this)
+      }, getProps(this.props, Object.keys(formProps))))
+    }
+  },
+
+  getForm:function() {
+    return this.form
+  },
+
+  render:function() {
+    // Allow a single child to be passed for custom rendering - passing any more
+    // will throw an error.
+    if (React.Children.count(this.props.children) !== 0) {
+      // Pass a form prop to the child, which will also be available via context
+      return React.cloneElement(React.Children.only(this.props.children), {form: this.form})
+    }
+
+    // Default rendering
+    var $__0=   this,form=$__0.form,props=$__0.props
+    var attrs = {}
+    if (this.props.className) {
+      attrs.className = props.className
+    }
+    var topErrors = form.nonFieldErrors()
+    var hiddenFields = form.hiddenFields().map(function(bf)  {
+      var errors = bf.errors()
+      if (errors.isPopulated) {
+        topErrors.extend(errors.messages().map(function(error)  {
+          return '(Hidden field ' + bf.name + ') ' + error
+        }))
+      }
+      return bf.render()
+    })
+
+    return React.createElement(props.component, React.__spread({},  attrs), 
+      topErrors.isPopulated() && React.createElement(props.row, {
+        className: form.errorCssClass, 
+        component: props.rowComponent, 
+        content: topErrors.render(), 
+        key: form.addPrefix(NON_FIELD_ERRORS)}
+      ), 
+      form.visibleFields().map(function(bf)  {return React.createElement(props.row, {
+        bf: bf, 
+        className: bf.cssClasses(), 
+        component: props.rowComponent, 
+        key: bf.htmlName, 
+        progress: props.progress}
+      );}), 
+      form.nonFieldPending() && React.createElement(props.row, {
+        className: form.pendingRowCssClass, 
+        component: props.rowComponent, 
+        content: this.renderProgress(), 
+        key: form.addPrefix('__pending__')}
+      ), 
+      hiddenFields.length > 0 && React.createElement(props.row, {
+        className: form.hiddenFieldRowCssClass, 
+        component: props.rowComponent, 
+        content: hiddenFields, 
+        hidden: true, 
+        key: form.addPrefix('__hidden__')}
+      )
+    )
+  }
+})
+
+module.exports = RenderForm
+
+},{"./ErrorObject":82,"./Form":88,"./FormRow":89,"./ProgressMixin":106,"./constants":130,"./util":135,"isomorph/object":56,"react":"react"}],112:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var FormRow = require('./FormRow')
+var FormSet = require('./FormSet')
+var ProgressMixin = require('./ProgressMixin')
+var RenderForm = require('./RenderForm')
+
+var $__0=  require('./constants'),NON_FIELD_ERRORS=$__0.NON_FIELD_ERRORS
+var $__1=   require('./util'),autoIdChecker=$__1.autoIdChecker,getProps=$__1.getProps
+
+var formsetProps = {
+  canDelete: React.PropTypes.bool
+, canOrder: React.PropTypes.bool
+, extra: React.PropTypes.number
+, form: React.PropTypes.func
+, maxNum: React.PropTypes.number
+, minNum: React.PropTypes.number
+, validateMax: React.PropTypes.bool
+, validateMin: React.PropTypes.bool
+
+, autoId: autoIdChecker
+, controlled: React.PropTypes.bool
+, data: React.PropTypes.object
+, errorConstructor: React.PropTypes.func
+, files: React.PropTypes.object
+, initial: React.PropTypes.object
+, onChange: React.PropTypes.func
+, prefix: React.PropTypes.string
+, validation: React.PropTypes.oneOfType([
+    React.PropTypes.string
+  , React.PropTypes.object
+  ])
+}
+
+/**
+ * Renders a Formset. A formset instance or constructor can be given. If a
+ * constructor is given, an instance will be created when the component is
+ * mounted, and any additional props will be passed to the constructor as
+ * options.
+ */
+var RenderFormSet = React.createClass({displayName: "RenderFormSet",
+  mixins: [ProgressMixin],
+  propTypes: object.extend({}, formsetProps, {
+    className: React.PropTypes.string         // Class for the component wrapping all forms
+  , component: React.PropTypes.any            // Component to wrap all forms
+  , formComponent: React.PropTypes.any        // Component to wrap each form
+  , formset: React.PropTypes.oneOfType([      // Formset instance or constructor
+      React.PropTypes.func,
+      React.PropTypes.instanceOf(FormSet)
+    ])
+  , row: React.PropTypes.any                  // Component to render form rows
+  , rowComponent: React.PropTypes.any         // Component to wrap each form row
+  , useManagementForm: React.PropTypes.bool   // Should ManagementForm hidden fields be rendered?
+  , __all__:function(props) {
+      if (!props.form && !props.formset) {
+        return new Error(
+          'Invalid props supplied to `RenderFormSet`, either `form` or ' +
+          '`formset` must be specified.'
+        )
+      }
+    }
+  }),
+
+  getDefaultProps:function() {
+    return {
+      component: 'div'
+    , formComponent: 'div'
+    , formset: FormSet
+    , row: FormRow
+    , rowComponent: 'div'
+    , useManagementForm: false
+    }
+  },
+
+  componentWillMount:function() {
+    if (this.props.formset instanceof FormSet) {
+      this.formset = this.props.formset
+    }
+    else {
+      this.formset = new this.props.formset(object.extend({
+        onChange: this.forceUpdate.bind(this)
+      }, getProps(this.props, Object.keys(formsetProps))))
+    }
+  },
+
+  getFormset:function() {
+    return this.formset
+  },
+
+  render:function() {
+    var $__0=   this,formset=$__0.formset,props=$__0.props
+    var attrs = {}
+    if (this.props.className) {
+      attrs.className = props.className
+    }
+    var topErrors = formset.nonFormErrors()
+
+    return React.createElement(props.component, React.__spread({},  attrs), 
+      topErrors.isPopulated() && React.createElement(props.row, {
+        className: formset.errorCssClass, 
+        content: topErrors.render(), 
+        key: formset.addPrefix(NON_FIELD_ERRORS), 
+        rowComponent: props.rowComponent}
+      ), 
+      formset.forms().map(function(form)  {return React.createElement(RenderForm, {
+        form: form, 
+        formComponent: props.formComponent, 
+        progress: props.progress, 
+        row: props.row, 
+        rowComponent: props.rowComponent}
+      );}), 
+      formset.nonFormPending() && React.createElement(props.row, {
+        className: formset.pendingRowCssClass, 
+        content: this.renderProgress(), 
+        key: formset.addPrefix('__pending__'), 
+        rowComponent: props.rowComponent}
+      ), 
+      props.useManagementForm && React.createElement(RenderForm, {
+        form: formset.managementForm(), 
+        formComponent: props.formComponent, 
+        row: props.row, 
+        rowComponent: props.rowComponent}
+      )
+    )
+  }
+})
+
+module.exports = RenderFormSet
+},{"./FormRow":89,"./FormSet":90,"./ProgressMixin":106,"./RenderForm":111,"./constants":130,"./util":135,"isomorph/object":56,"react":"react"}],113:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var object = require('isomorph/object')
+
+var RendererMixin = Concur.extend({
+  constructor: function RendererMixin(kwargs) {
+    kwargs = object.extend({renderer: null}, kwargs)
+    // Override the default renderer if we were passed one
+    if (kwargs.renderer !== null) {
+      this.renderer = kwargs.renderer
+    }
+  }
+, _emptyValue: null
+, validation: {onChange: true}
+})
+
+RendererMixin.prototype.subWidgets = function(name, value, kwargs) {
+  return this.getRenderer(name, value, kwargs).choiceInputs()
+}
+
+/**
+ * @return an instance of the renderer to be used to render this widget.
+ */
+RendererMixin.prototype.getRenderer = function(name, value, kwargs) {
+  kwargs = object.extend({choices: [], controlled: false}, kwargs)
+  if (value === null) {
+    value = this._emptyValue
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs)
+  var choices = this.choices.concat(kwargs.choices)
+  return new this.renderer(name, value, finalAttrs, kwargs.controlled, choices)
+}
+
+RendererMixin.prototype.render = function(name, value, kwargs) {
+  return this.getRenderer(name, value, kwargs).render()
+}
+
+/**
+ * Widgets using this RendererMixin are made of a collection of subwidgets, each
+ * with their own <label>, and distinct ID.
+ * The IDs are made distinct by y "_X" suffix, where X is the zero-based index
+ * of the choice field. Thus, the label for the main widget should reference the
+ * first subwidget, hence the "_0" suffix.
+ */
+RendererMixin.prototype.idForLabel = function(id) {
+  if (id) {
+    id += '_0'
+  }
+  return id
+}
+
+module.exports = RendererMixin
+},{"Concur":1,"isomorph/object":56}],114:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var React = require('react')
+
+var Widget = require('./Widget')
+
+var $__0=  require('./util'),normaliseChoices=$__0.normaliseChoices
+
+/**
+ * An HTML <select> widget.
+ * @constructor
+ * @extends {Widget}
+ * @param {Object=} kwargs
+ */
+var Select = Widget.extend({
+  constructor: function Select(kwargs) {
+    if (!(this instanceof Select)) { return new Select(kwargs) }
+    kwargs = object.extend({choices: []}, kwargs)
+    Widget.call(this, kwargs)
+    this.choices = normaliseChoices(kwargs.choices)
+  }
+, allowMultipleSelected: false
+, validation: {onChange: true}
+})
+
+/**
+ * Renders the widget.
+ * @param {string} name the field name.
+ * @param {*} selectedValue the value of an option which should be marked as
+ *   selected, or null if no value is selected -- will be normalised to a String
+ *   for comparison with choice values.
+ * @param {Object=} kwargs rendering options
+ * @param {Object=} kwargs.attrs additional HTML attributes for the rendered widget.
+ * @param {Array=} kwargs.choices choices to be used when rendering the widget, in
+ *   addition to those already held by the widget itself.
+ * @return a <select> element.
+ */
+Select.prototype.render = function(name, selectedValue, kwargs) {
+  kwargs = object.extend({choices: []}, kwargs)
+  if (selectedValue === null) {
+    selectedValue = ''
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {name: name})
+  var options = this.renderOptions(kwargs.choices)
+  var valueAttr = (kwargs.controlled ? 'value' : 'defaultValue')
+  finalAttrs[valueAttr] = selectedValue
+  return React.createElement('select', finalAttrs, options)
+}
+
+Select.prototype.renderOptions = function(additionalChoices) {
+  var options = []
+  var choices = this.choices.concat(normaliseChoices(additionalChoices))
+  for (var i = 0, l = choices.length, choice; i < l; i++) {
+    choice = choices[i]
+    if (is.Array(choice[1])) {
+      var optgroupOptions = []
+      var optgroupChoices = choice[1]
+      for (var j = 0, m = optgroupChoices.length; j < m; j++) {
+        optgroupOptions.push(this.renderOption(optgroupChoices[j][0],
+                                               optgroupChoices[j][1]))
+      }
+      options.push(React.createElement('optgroup', {label: choice[0], key: choice[9]}, optgroupOptions))
+    }
+    else {
+      options.push(this.renderOption(choice[0],
+                                     choice[1]))
+    }
+  }
+  return options
+}
+
+Select.prototype.renderOption = function(optValue, optLabel) {
+  optValue = ''+optValue
+  var attrs = {value: optValue, key: optValue + optLabel}
+  return React.createElement('option', attrs, optLabel)
+}
+
+module.exports = Select
+
+},{"./Widget":129,"./util":135,"isomorph/is":55,"isomorph/object":56,"react":"react"}],115:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var React = require('react')
+
+var Select = require('./Select')
+
+/**
+ * An HTML <select> widget which allows multiple selections.
+ * @constructor
+ * @extends {Select}
+ * @param {Object=} kwargs
+ */
+var SelectMultiple = Select.extend({
+  constructor: function SelectMultiple(kwargs) {
+    if (!(this instanceof SelectMultiple)) { return new SelectMultiple(kwargs) }
+    Select.call(this, kwargs)
+  }
+, allowMultipleSelected: true
+, validation: {onChange: true}
+})
+
+/**
+ * Renders the widget.
+ * @param {string} name the field name.
+ * @param {Array} selectedValues the values of options which should be marked as
+ *   selected, or null if no values are selected - these will be normalised to
+ *   Strings for comparison with choice values.
+ * @param {Object} [kwargs] additional rendering options.
+ * @return a <select> element which allows multiple selections.
+ */
+SelectMultiple.prototype.render = function(name, selectedValues, kwargs) {
+  kwargs = object.extend({choices: []}, kwargs)
+  if (selectedValues === null) {
+    selectedValues = []
+  }
+  if (!is.Array(selectedValues)) {
+    selectedValues = [selectedValues]
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {name: name,
+                                                  multiple: 'multiple'})
+  var options = this.renderOptions(kwargs.choices)
+  var valueAttr = (kwargs.controlled ? 'value' : 'defaultValue')
+  finalAttrs[valueAttr] = selectedValues
+  return React.createElement('select', finalAttrs, options)
+}
+
+/**
+ * Retrieves values for this widget from the given data.
+ * @param {Object} data form data.
+ * @param {Object} files file data.
+ * @param {string} name the field name to be used to retrieve data.
+ * @return {Array} values for this widget, or null if no values were provided.
+ */
+SelectMultiple.prototype.valueFromData = function(data, files, name) {
+  if (object.hasOwn(data, name) && data[name] != null) {
+    return [].concat(data[name])
+  }
+  return null
+}
+
+module.exports = SelectMultiple
+
+},{"./Select":114,"isomorph/is":55,"isomorph/object":56,"react":"react"}],116:[function(require,module,exports){
+'use strict';
+
+var validators = require('validators')
+
+var CharField = require('./CharField')
+
+var $__0=  require('./util'),strip=$__0.strip
+
+/**
+ * Validates that its input is a valid slug.
+ * @constructor
+ * @extends {CharField}
+ * @param {Object=} kwargs
+ */
+var SlugField = CharField.extend({
+  defaultValidators: [validators.validateSlug]
+, constructor: function SlugField(kwargs) {
+    if (!(this instanceof SlugField)) { return new SlugField(kwargs) }
+    CharField.call(this, kwargs)
+  }
+})
+
+SlugField.prototype.clean = function(value) {
+  value = strip(this.toJavaScript(value))
+  return CharField.prototype.clean.call(this, value)
+}
+
+module.exports = SlugField
+},{"./CharField":62,"./util":135,"validators":288}],117:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var DateField = require('./DateField')
+var MultiValueField = require('./MultiValueField')
+var SplitDateTimeWidget = require('./SplitDateTimeWidget')
+var SplitHiddenDateTimeWidget = require('./SplitHiddenDateTimeWidget')
+var TimeField = require('./TimeField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * A MultiValueField consisting of a DateField and a TimeField.
+ * @constructor
+ * @extends {MultiValueField}
+ * @param {Object=} kwargs
+ */
+var SplitDateTimeField = MultiValueField.extend({
+  hiddenWidget: SplitHiddenDateTimeWidget
+, widget: SplitDateTimeWidget
+, defaultErrorMessages: {
+    invalidDate: 'Enter a valid date.'
+  , invalidTime: 'Enter a valid time.'
+  }
+
+, constructor: function SplitDateTimeField(kwargs) {
+    if (!(this instanceof SplitDateTimeField)) { return new SplitDateTimeField(kwargs) }
+    kwargs = object.extend({
+      inputDateFormats: null, inputTimeFormats: null
+    }, kwargs)
+    var errors = object.extend({}, this.defaultErrorMessages)
+    if (typeof kwargs.errorMessages != 'undefined') {
+      object.extend(errors, kwargs.errorMessages)
+    }
+    kwargs.fields = [
+      DateField({inputFormats: kwargs.inputDateFormats,
+                 errorMessages: {invalid: errors.invalidDate}})
+    , TimeField({inputFormats: kwargs.inputTimeFormats,
+                 errorMessages: {invalid: errors.invalidTime}})
+    ]
+    MultiValueField.call(this, kwargs)
+  }
+})
+
+/**
+ * Validates that, if given, its input does not contain empty values.
+ * @param {?Array.<Date>} dataList a two-item list consisting of two Date
+ *   objects, the first of which represents a date, the second a time.
+ * @return {?Date} a Dare representing the given date and time, or null for
+ *   empty values.
+ */
+SplitDateTimeField.prototype.compress = function(dataList) {
+  if (is.Array(dataList) && dataList.length > 0) {
+    var d = dataList[0]
+    var t = dataList[1]
+    // Raise a validation error if date or time is empty (possible if
+    // SplitDateTimeField has required == false).
+    if (this.isEmptyValue(d)) {
+      throw ValidationError(this.errorMessages.invalidDate, {code: 'invalidDate'})
+    }
+    if (this.isEmptyValue(t)) {
+      throw ValidationError(this.errorMessages.invalidTime, {code: 'invalidTime'})
+    }
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(),
+                    t.getHours(), t.getMinutes(), t.getSeconds())
+  }
+  return null
+}
+
+module.exports = SplitDateTimeField
+},{"./DateField":72,"./MultiValueField":97,"./SplitDateTimeWidget":118,"./SplitHiddenDateTimeWidget":119,"./TimeField":123,"isomorph/is":55,"isomorph/object":56,"validators":288}],118:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var DateInput = require('./DateInput')
+var MultiWidget = require('./MultiWidget')
+var TimeInput = require('./TimeInput')
+
+/**
+ * Splits Date input into two <input type="text"> elements.
+ * @constructor
+ * @extends {MultiWidget}
+ * @param {Object=} kwargs
+ */
+var SplitDateTimeWidget = MultiWidget.extend({
+  constructor: function SplitDateTimeWidget(kwargs) {
+    if (!(this instanceof SplitDateTimeWidget)) { return new SplitDateTimeWidget(kwargs) }
+    kwargs = object.extend({dateFormat: null, timeFormat: null}, kwargs)
+    var widgets = [
+      DateInput({attrs: kwargs.attrs, format: kwargs.dateFormat})
+    , TimeInput({attrs: kwargs.attrs, format: kwargs.timeFormat})
+    ]
+    MultiWidget.call(this, widgets, kwargs.attrs)
+  }
+})
+
+SplitDateTimeWidget.prototype.decompress = function(value) {
+  if (value) {
+    return [
+      new Date(value.getFullYear(), value.getMonth(), value.getDate())
+    , new Date(1900, 0, 1, value.getHours(), value.getMinutes(), value.getSeconds())
+    ]
+  }
+  return [null, null]
+}
+
+module.exports = SplitDateTimeWidget
+},{"./DateInput":73,"./MultiWidget":98,"./TimeInput":124,"isomorph/object":56}],119:[function(require,module,exports){
+'use strict';
+
+var SplitDateTimeWidget = require('./SplitDateTimeWidget')
+
+/**
+ * Splits Date input into two <input type="hidden"> elements.
+ * @constructor
+ * @extends {SplitDateTimeWidget}
+ * @param {Object=} kwargs
+ */
+var SplitHiddenDateTimeWidget = SplitDateTimeWidget.extend({
+  constructor: function SplitHiddenDateTimeWidget(kwargs) {
+    if (!(this instanceof SplitHiddenDateTimeWidget)) { return new SplitHiddenDateTimeWidget(kwargs) }
+    SplitDateTimeWidget.call(this, kwargs)
+    for (var i = 0, l = this.widgets.length; i < l; i++) {
+      this.widgets[i].inputType = 'hidden'
+      this.widgets[i].isHidden = true
+    }
+  }
+, isHidden: true
+})
+
+module.exports = SplitHiddenDateTimeWidget
+},{"./SplitDateTimeWidget":118}],120:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var object = require('isomorph/object')
+
+/**
+ * Some widgets are made of multiple HTML elements -- namely, RadioSelect.
+ * This represents the "inner" HTML element of a widget.
+ * @constructor
+ */
+var SubWidget = Concur.extend({
+  constructor: function SubWidget(parentWidget, name, value, kwargs) {
+    if (!(this instanceof SubWidget)) {
+      return new SubWidget(parentWidget, name, value, kwargs)
+    }
+    this.parentWidget = parentWidget
+    this.name = name
+    this.value = value
+    kwargs = object.extend({attrs: null, choices: []}, kwargs)
+    this.attrs = kwargs.attrs
+    this.choices = kwargs.choices
+  }
+})
+
+SubWidget.prototype.render = function() {
+  var kwargs = {attrs: this.attrs}
+  if (this.choices.length) {
+    kwargs.choices = this.choices
+  }
+  return this.parentWidget.render(this.name, this.value, kwargs)
+}
+
+module.exports = SubWidget
+},{"Concur":1,"isomorph/object":56}],121:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var Input = require('./Input')
+
+/**
+ * An HTML <input type="text"> widget.
+ * @constructor
+ * @extends {Input}
+ * @param {Object=} kwargs
+ */
+var TextInput = Input.extend({
+  constructor: function TextInput(kwargs) {
+    if (!(this instanceof TextInput)) { return new TextInput(kwargs) }
+    kwargs = object.extend({attrs: null}, kwargs)
+    if (kwargs.attrs != null) {
+      this.inputType = object.pop(kwargs.attrs, 'type', this.inputType)
+    }
+    Input.call(this, kwargs)
+  }
+, inputType: 'text'
+})
+
+module.exports = TextInput
+},{"./Input":95,"isomorph/object":56}],122:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var React = require('react')
+
+var Widget = require('./Widget')
+
+/**
+ * An HTML <textarea> widget.
+ * @param {Object} [kwargs] configuration options
+ * @config {object} [attrs] HTML attributes for the rendered widget. Default
+ *   rows and cols attributes will be used if not provided.
+ * @constructor
+ * @extends {Widget}
+ * @param {Object=} kwargs
+ */
+var Textarea = Widget.extend({
+  constructor: function Textarea(kwargs) {
+    if (!(this instanceof Textarea)) { return new Textarea(kwargs) }
+    // Ensure we have something in attrs
+    kwargs = object.extend({attrs: null}, kwargs)
+    // Provide default 'cols' and 'rows' attributes
+    kwargs.attrs = object.extend({rows: '3', cols: '40'}, kwargs.attrs)
+    Widget.call(this, kwargs)
+  }
+})
+
+Textarea.prototype.render = function(name, value, kwargs) {
+  kwargs = object.extend({}, kwargs)
+  if (value === null) {
+    value = ''
+  }
+  var finalAttrs = this.buildAttrs(kwargs.attrs, {name: name})
+  var valueAttr = (kwargs.controlled ? 'value' : 'defaultValue')
+  finalAttrs[valueAttr] = value
+  return React.createElement('textarea', finalAttrs)
+}
+
+module.exports = Textarea
+},{"./Widget":129,"isomorph/object":56,"react":"react"}],123:[function(require,module,exports){
+'use strict';
+
+var time = require('isomorph/time')
+
+var locales = require('./locales')
+
+var BaseTemporalField = require('./BaseTemporalField')
+var TimeInput = require('./TimeInput')
+
+/**
+ * Validates that its input is a time.
+ * @constructor
+ * @extends {BaseTemporalField}
+ * @param {Object=} kwargs
+ */
+var TimeField = BaseTemporalField.extend({
+  widget: TimeInput
+, inputFormatType: 'TIME_INPUT_FORMATS'
+, defaultErrorMessages: {
+    invalid: 'Enter a valid time.'
+  }
+
+, constructor: function TimeField(kwargs) {
+    if (!(this instanceof TimeField)) { return new TimeField(kwargs) }
+    BaseTemporalField.call(this, kwargs)
+  }
+})
+
+/**
+ * Validates that the input can be converted to a time.
+ * @param {?(string|Date)} value user input.
+ * @return {?Date} a Date with its hour, minute and second attributes set, or
+ *   null for empty values when they are allowed.
+ * @throws {ValidationError} if the input is invalid.
+ */
+TimeField.prototype.toJavaScript = function(value) {
+  if (this.isEmptyValue(value)) {
+    return null
+  }
+  if (value instanceof Date) {
+    return new Date(1900, 0, 1, value.getHours(), value.getMinutes(), value.getSeconds())
+  }
+  return BaseTemporalField.prototype.toJavaScript.call(this, value)
+}
+
+/**
+ * Creates a Date representing a time from the given input if it's valid based
+ * on the format.
+ * @param {string} value
+ * @param {string} format
+ * @return {Date}
+ */
+TimeField.prototype.strpdate = function(value, format) {
+  var t = time.strptime(value, format, locales.getDefaultLocale())
+  return new Date(1900, 0, 1, t[3], t[4], t[5])
+}
+
+module.exports = TimeField
+},{"./BaseTemporalField":59,"./TimeInput":124,"./locales":134,"isomorph/time":57}],124:[function(require,module,exports){
+'use strict';
+
+var DateTimeBaseInput = require('./DateTimeBaseInput')
+
+/**
+ * @constructor
+ * @extends {DateTimeBaseInput}
+ * @param {Object=} kwargs
+ */
+var TimeInput = DateTimeBaseInput.extend({
+  formatType: 'TIME_INPUT_FORMATS'
+, constructor: function TimeInput(kwargs) {
+    if (!(this instanceof TimeInput)) { return new TimeInput(kwargs) }
+    DateTimeBaseInput.call(this, kwargs)
+  }
+})
+
+module.exports = TimeInput
+},{"./DateTimeBaseInput":74}],125:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var ChoiceField = require('./ChoiceField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * A ChoiceField which returns a value coerced by some provided function.
+ * @constructor
+ * @extends {ChoiceField}
+ * @param {Object=} kwargs
+ */
+var TypedChoiceField = ChoiceField.extend({
+  constructor: function TypedChoiceField(kwargs) {
+    if (!(this instanceof TypedChoiceField)) { return new TypedChoiceField(kwargs) }
+    kwargs = object.extend({
+      coerce: function(val) { return val }, emptyValue: ''
+    }, kwargs)
+    this.coerce = object.pop(kwargs, 'coerce')
+    this.emptyValue = object.pop(kwargs, 'emptyValue')
+    ChoiceField.call(this, kwargs)
+  }
+})
+
+/**
+ * Validate that the value can be coerced to the right type (if not empty).
+ */
+TypedChoiceField.prototype._coerce = function(value) {
+  if (value === this.emptyValue || this.isEmptyValue(value)) {
+    return this.emptyValue
+  }
+  try {
+    value = this.coerce(value)
+  }
+  catch (e) {
+    throw ValidationError(this.errorMessages.invalidChoice, {
+      code: 'invalidChoice'
+    , params: {value: value}
+    })
+  }
+  return value
+}
+
+TypedChoiceField.prototype.clean = function(value) {
+  value = ChoiceField.prototype.clean.call(this, value)
+  return this._coerce(value)
+}
+
+
+module.exports = TypedChoiceField
+},{"./ChoiceField":67,"isomorph/object":56,"validators":288}],126:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var MultipleChoiceField = require('./MultipleChoiceField')
+
+var $__0=  require('validators'),ValidationError=$__0.ValidationError
+
+/**
+ * A MultipleChoiceField which returns values coerced by some provided function.
+ * @constructor
+ * @extends {MultipleChoiceField}
+ * @param {Object=} kwargs
+ */
+var TypedMultipleChoiceField = MultipleChoiceField.extend({
+  constructor: function TypedMultipleChoiceField(kwargs) {
+    if (!(this instanceof TypedMultipleChoiceField)) { return new TypedMultipleChoiceField(kwargs) }
+    kwargs = object.extend({
+      coerce: function(val) { return val }, emptyValue: []
+    }, kwargs)
+    this.coerce = object.pop(kwargs, 'coerce')
+    this.emptyValue = object.pop(kwargs, 'emptyValue')
+    MultipleChoiceField.call(this, kwargs)
+  }
+})
+
+TypedMultipleChoiceField.prototype._coerce = function(value) {
+  if (value === this.emptyValue || this.isEmptyValue(value) ||
+      (is.Array(value) && !value.length)) {
+    return this.emptyValue
+  }
+  var newValue = []
+  for (var i = 0, l = value.length; i < l; i++) {
+    try {
+      newValue.push(this.coerce(value[i]))
+    }
+    catch (e) {
+      throw ValidationError(this.errorMessages.invalidChoice, {
+        code: 'invalidChoice'
+      , params: {value: value[i]}
+      })
+    }
+  }
+  return newValue
+}
+
+TypedMultipleChoiceField.prototype.clean = function(value) {
+  value = MultipleChoiceField.prototype.clean.call(this, value)
+  return this._coerce(value)
+}
+
+TypedMultipleChoiceField.prototype.validate = function(value) {
+  if (value !== this.emptyValue || (is.Array(value) && value.length)) {
+    MultipleChoiceField.prototype.validate.call(this, value)
+  }
+  else if (this.required) {
+    throw ValidationError(this.errorMessages.required, {code: 'required'})
+  }
+}
+
+module.exports = TypedMultipleChoiceField
+},{"./MultipleChoiceField":99,"isomorph/is":55,"isomorph/object":56,"validators":288}],127:[function(require,module,exports){
+'use strict';
+
+var url = require('isomorph/url')
+
+var CharField = require('./CharField')
+var URLInput = require('./URLInput')
+
+var $__0=  require('validators'),URLValidator=$__0.URLValidator
+var $__1=  require('./util'),strip=$__1.strip
+
+/**
+ * Validates that its input appears to be a valid URL.
+ * @constructor
+ * @extends {CharField}
+ * @param {Object=} kwargs
+ */
+var URLField = CharField.extend({
+  widget: URLInput
+, defaultErrorMessages: {
+    invalid: 'Enter a valid URL.'
+  }
+, defaultValidators: [URLValidator()]
+
+, constructor: function URLField(kwargs) {
+    if (!(this instanceof URLField)) { return new URLField(kwargs) }
+    CharField.call(this, kwargs)
+  }
+})
+
+URLField.prototype.toJavaScript = function(value) {
+  if (value) {
+    var urlFields = url.parseUri(value)
+    if (!urlFields.protocol) {
+      // If no URL protocol given, assume http://
+      urlFields.protocol = 'http'
+    }
+    if (!urlFields.path) {
+      // The path portion may need to be added before query params
+      urlFields.path = '/'
+    }
+    value = url.makeUri(urlFields)
+  }
+  return CharField.prototype.toJavaScript.call(this, value)
+}
+
+URLField.prototype.clean = function(value) {
+  value = strip(this.toJavaScript(value))
+  return CharField.prototype.clean.call(this, value)
+}
+
+module.exports = URLField
+},{"./CharField":62,"./URLInput":128,"./util":135,"isomorph/url":58,"validators":288}],128:[function(require,module,exports){
+'use strict';
+
+var TextInput = require('./TextInput')
+
+/**
+ * An HTML <input type="url"> widget.
+ * @constructor
+ * @extends {TextInput}
+ * @param {Object=} kwargs
+ */
+var URLInput = TextInput.extend({
+  constructor: function URLInput(kwargs) {
+    if (!(this instanceof URLInput)) { return new URLInput(kwargs) }
+    TextInput.call(this, kwargs)
+  }
+, inputType: 'url'
+})
+
+module.exports = URLInput
+},{"./TextInput":121}],129:[function(require,module,exports){
+'use strict';
+
+var Concur = require('Concur')
+var object = require('isomorph/object')
+var SubWidget = require('./SubWidget')
+
+/**
+ * An HTML form widget.
+ * @constructor
+ * @param {Object=} kwargs
+ */
+var Widget = Concur.extend({
+  constructor: function Widget(kwargs) {
+    kwargs = object.extend({attrs: null}, kwargs)
+    this.attrs = object.extend({}, kwargs.attrs)
+  }
+  /** Determines whether this corresponds to an <input type="hidden">. */
+, isHidden: false
+  /** Determines whether this widget needs a multipart-encoded form. */
+, needsMultipartForm: false
+  /** Determines whether this widget is for a required field. */
+, isRequired: false
+  /** Override for active validation config a particular widget needs to use. */
+, validation: null
+  /** Determines whether this widget's render logic always needs to use the initial value. */
+, needsInitialValue: false
+  /** Determines whether this widget's value can be set. */
+, isValueSettable: true
+})
+
+/**
+ * Yields all "subwidgets" of this widget. Used only by RadioSelect to
+ * allow access to individual <input type="radio"> buttons.
+ * Arguments are the same as for render().
+ * @return {Array.<SubWidget>}
+ */
+Widget.prototype.subWidgets = function(name, value, kwargs) {
+  return [SubWidget(this, name, value, kwargs)]
+}
+
+/**
+ * Returns this Widget rendered as HTML.
+ * The value given is not guaranteed to be valid input, so subclass
+ * implementations should program defensively.
+ * @abstract
+ */
+Widget.prototype.render = function(name, value, kwargs) {
+  throw new Error('Constructors extending Widget must implement a render() method.')
+}
+
+/**
+ * Helper function for building an HTML attributes object.
+ */
+Widget.prototype.buildAttrs = function(kwargAttrs, renderAttrs) {
+  return object.extend({}, this.attrs, renderAttrs, kwargAttrs)
+}
+
+/**
+ * Retrieves a value for this widget from the given data.
+ * @param {Object} data form data.
+ * @param {Object} files file data.
+ * @param {string} name the field name to be used to retrieve data.
+ * @return a value for this widget, or null if no value was provided.
+ */
+Widget.prototype.valueFromData = function(data, files, name) {
+  return object.get(data, name, null)
+}
+
+/**
+ * Determines the HTML id attribute of this Widget for use by a
+ * <label>, given the id of the field.
+ * This hook is necessary because some widgets have multiple HTML elements and,
+ * thus, multiple ids. In that case, this method should return an ID value that
+ * corresponds to the first id in the widget's tags.
+ * @param {string} id a field id.
+ * @return {string} the id which should be used by a <label> for this Widget.
+ */
+Widget.prototype.idForLabel = function(id) {
+  return id
+}
+
+module.exports = Widget
+},{"./SubWidget":120,"Concur":1,"isomorph/object":56}],130:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  /** Default maximum number of forms in a formset, to prevent memory exhaustion. */
+  FORMSET_DEFAULT_MAX_NUM: 1000
+  /** Default minimum number of forms in a formset. */
+, FORMSET_DEFAULT_MIN_NUM: 0
+  /** Property under which non-field-specific errors are stored. */
+, NON_FIELD_ERRORS: '__all__'
+}
+},{}],131:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  browser: typeof window != 'undefined'
+}
+},{}],132:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+
+var locales = require('./locales')
+
+/**
+ * Standard input formats which will always be accepted.
+ */
+var ISO_INPUT_FORMATS = {
+  'DATE_INPUT_FORMATS': ['%Y-%m-%d']
+, 'TIME_INPUT_FORMATS': ['%H:%M:%S', '%H:%M']
+, 'DATETIME_INPUT_FORMATS': [
+    '%Y-%m-%d %H:%M:%S'
+  , '%Y-%m-%d %H:%M'
+  , '%Y-%m-%d'
+  ]
+}
+
+var formatCache = {}
+
+/**
+ * Gets all acceptable formats of a certain type (e.g. DATE_INPUT_FORMATS) for a
+ * particular language code. All date/time formats will have the applicable ISO
+ * formats added as lowest-precedence.
+ * If an unknown language code is given, the default locale's formats will be
+ * used instead.
+ * If the locale doesn't have configuration for the format type, only the ISO
+ * formats will be returned.
+ * @param {string} formatType
+ * @param {string=} lang language code - if not given, the default locale's
+ *   formats will be returned.
+ * @return {Array.<string>} a list of formats
+ */
+function getFormat(formatType, lang) {
+  if (!lang) {
+    lang = locales.getDefaultLocale()
+  }
+  var cacheKey = formatType + ':' + lang
+  if (!object.hasOwn(formatCache, cacheKey)) {
+    var langLocales = locales.getLocales(lang)
+    var localeFormats = []
+    for (var i = 0, l = langLocales.length; i < l; i++) {
+      var locale = langLocales[i]
+      if (object.hasOwn(locale, formatType)) {
+        // Copy locale-specific formats, as we may be adding to them
+        localeFormats = locale[formatType].slice()
+        break
+      }
+    }
+    if (object.hasOwn(ISO_INPUT_FORMATS, formatType)) {
+      var isoFormats = ISO_INPUT_FORMATS[formatType]
+      for (var j = 0, m = isoFormats.length; j < m; j++) {
+        var isoFormat = isoFormats[j]
+        if (localeFormats.indexOf(isoFormat) == -1) {
+          localeFormats.push(isoFormat)
+        }
+      }
+    }
+    formatCache[cacheKey] = localeFormats
+  }
+  return formatCache[cacheKey]
+}
+
+module.exports = {
+  getFormat: getFormat
+}
+
+},{"./locales":134,"isomorph/object":56}],133:[function(require,module,exports){
+'use strict';
+
+var is = require('isomorph/is')
+
+function isFormAsync(constructor) {
+  var proto = constructor.prototype
+  if (proto.clean.length == 1) { return true }
+  var fieldNames = Object.keys(proto.baseFields)
+  for (var i = 0, l = fieldNames.length; i < l ; i++) {
+    var customClean = proto._getCustomClean(fieldNames[i])
+    if (is.Function(customClean) && customClean.length == 1) {
+      return true
+    }
+  }
+  return false
+}
+
+module.exports = isFormAsync
+},{"isomorph/is":55}],134:[function(require,module,exports){
+'use strict';
+
+var object = require('isomorph/object')
+var time = require('isomorph/time')
+
+var defaultLocale = {lang: 'en'}
+
+var localeCache = {
+  en: {
+    DATE_INPUT_FORMATS: [
+      '%Y-%m-%d'                        // '2006-10-25'
+    , '%m/%d/%Y', '%m/%d/%y'            // '10/25/2006', '10/25/06'
+    , '%b %d %Y', '%b %d, %Y'           // 'Oct 25 2006', 'Oct 25, 2006'
+    , '%d %b %Y', '%d %b, %Y'           // '25 Oct 2006', '25 Oct, 2006'
+    , '%B %d %Y', '%B %d, %Y'           // 'October 25 2006', 'October 25, 2006'
+    , '%d %B %Y', '%d %B, %Y'           // '25 October 2006', '25 October, 2006'
+    ]
+  , DATETIME_INPUT_FORMATS: [
+      '%Y-%m-%d %H:%M:%S'               // '2006-10-25 14:30:59'
+    , '%Y-%m-%d %H:%M'                  // '2006-10-25 14:30'
+    , '%Y-%m-%d'                        // '2006-10-25'
+    , '%m/%d/%Y %H:%M:%S'               // '10/25/2006 14:30:59'
+    , '%m/%d/%Y %H:%M'                  // '10/25/2006 14:30'
+    , '%m/%d/%Y'                        // '10/25/2006'
+    , '%m/%d/%y %H:%M:%S'               // '10/25/06 14:30:59'
+    , '%m/%d/%y %H:%M'                  // '10/25/06 14:30'
+    , '%m/%d/%y'                        // '10/25/06'
+    ]
+  }
+, en_GB: {
+    DATE_INPUT_FORMATS: [
+      '%d/%m/%Y', '%d/%m/%y'            // '25/10/2006', '25/10/06'
+    , '%b %d %Y', '%b %d, %Y'           // 'Oct 25 2006', 'Oct 25, 2006'
+    , '%d %b %Y', '%d %b, %Y'           // '25 Oct 2006', '25 Oct, 2006'
+    , '%B %d %Y', '%B %d, %Y'           // 'October 25 2006', 'October 25, 2006'
+    , '%d %B %Y', '%d %B, %Y'           // '25 October 2006', '25 October, 2006'
+    ]
+  , DATETIME_INPUT_FORMATS: [
+      '%Y-%m-%d %H:%M:%S'               // '2006-10-25 14:30:59'
+    , '%Y-%m-%d %H:%M'                  // '2006-10-25 14:30'
+    , '%Y-%m-%d'                        // '2006-10-25'
+    , '%d/%m/%Y %H:%M:%S'               // '25/10/2006 14:30:59'
+    , '%d/%m/%Y %H:%M'                  // '25/10/2006 14:30'
+    , '%d/%m/%Y'                        // '25/10/2006'
+    , '%d/%m/%y %H:%M:%S'               // '25/10/06 14:30:59'
+    , '%d/%m/%y %H:%M'                  // '25/10/06 14:30'
+    , '%d/%m/%y'                        // '25/10/06'
+    ]
+  }
+}
+
+/**
+ * Adds a locale object to our own cache (for formats) and isomorph.time's cache
+ * (for time parsing/formatting).
+ * @param {string} lang
+ * @param {string=} locale
+ */
+function addLocale(lang, locale) {
+  localeCache[lang] = locale
+  time.locales[lang] = locale
+}
+
+/**
+ * Gets the most applicable locale, falling back to the language code if
+ * necessary and to the default locale if no matching locale was found.
+ * @param {string=} lang
+ */
+function getLocale(lang) {
+  if (lang) {
+    if (object.hasOwn(localeCache, lang)) {
+      return localeCache[lang]
+    }
+    if (lang.indexOf('_') != -1) {
+      lang = lang.split('_')[0]
+      if (object.hasOwn(localeCache, lang)) {
+        return localeCache[lang]
+      }
+    }
+  }
+  return localeCache[defaultLocale.lang]
+}
+
+/**
+ * Gets all applicable locales, with the most specific first, falling back to
+ * the default locale if necessary.
+ * @param {string=} lang
+ * @return {Array.<Object>}
+ */
+function getLocales(lang) {
+  if (lang) {
+    var locales = []
+    if (object.hasOwn(localeCache, lang)) {
+       locales.push(localeCache[lang])
+    }
+    if (lang.indexOf('_') != -1) {
+      lang = lang.split('_')[0]
+      if (object.hasOwn(localeCache, lang)) {
+        locales.push(localeCache[lang])
+      }
+    }
+    if (locales.length) {
+      return locales
+    }
+  }
+  return [localeCache[defaultLocale.lang]]
+}
+
+/**
+ * Sets the language code for the default locale.
+ * @param {string} lang
+ */
+function setDefaultLocale(lang) {
+  if (!object.hasOwn(localeCache, lang)) {
+    throw new Error('Unknown locale: ' + lang)
+  }
+  defaultLocale.lang = lang
+}
+
+/**
+ * @return {string} the language code for the default locale.
+ */
+function getDefaultLocale() {
+  return defaultLocale.lang
+}
+
+module.exports = {
+  addLocale: addLocale
+, getDefaultLocale: getDefaultLocale
+, getLocale: getLocale
+, getLocales: getLocales
+, setDefaultLocale: setDefaultLocale
+}
+
+},{"isomorph/object":56,"isomorph/time":57}],135:[function(require,module,exports){
+(function (process){
+'use strict';
+
+var getFormData = require('get-form-data')
+
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+/**
+ * Replaces String {placeholders} with properties of a given object, but
+ * interpolates into and returns an Array instead of a String.
+ * By default, any resulting empty strings are stripped out of the Array. To
+ * disable this, pass an options object with a 'strip' property which is false.
+ */
+function formatToArray(str, obj, options) {
+  var parts = str.split(/\{(\w+)\}/g)
+  for (var i = 1, l = parts.length; i < l; i += 2) {
+    parts[i] = (object.hasOwn(obj, parts[i])
+                ? obj[parts[i]]
+                : '{' + parts[i] + '}')
+  }
+  if (!options || (options && options.strip !== false)) {
+    parts = parts.filter(function(p) { return p !== ''})
+  }
+  return parts
+}
+
+/**
+ * Get named properties from an object.
+ * @param src {Object}
+ * @param props {Array.<string>}
+ * @return {Object}
+ */
+function getProps(src, props) {
+  var result = {}
+  for (var i = 0, l = props.length; i < l ; i++) {
+    var prop = props[i]
+    if (object.hasOwn(src, prop)) {
+      result[prop] = src[prop]
+    }
+  }
+  return result
+}
+
+/**
+ * Get a named property from an object, calling it and returning its result if
+ * it's a function.
+ */
+function maybeCall(obj, prop) {
+  var value = obj[prop]
+  if (is.Function(value)) {
+    value = value.call(obj)
+  }
+  return value
+}
+
+/**
+ * Creates a list of choice pairs from a list of objects using the given named
+ * properties for the value and label.
+ */
+function makeChoices(list, valueProp, labelProp) {
+  return list.map(function(item) {
+    return [maybeCall(item, valueProp), maybeCall(item, labelProp)]
+  })
+}
+
+/**
+ * Validates choice input and normalises lazy, non-Array choices to be
+ * [value, label] pairs
+ * @return {Array} a normalised version of the given choices.
+ * @throws if an Array with length != 2 was found where a choice pair was expected.
+ */
+function normaliseChoices(choices) {
+  if (!choices.length) { return choices }
+
+  var normalisedChoices = []
+  for (var i = 0, l = choices.length, choice; i < l; i++) {
+    choice = choices[i]
+    if (!is.Array(choice)) {
+      // TODO In the development build, emit a warning about a choice being
+      //      automatically converted from 'blah' to ['blah', 'blah'] in case it
+      //      wasn't intentional
+      choice = [choice, choice]
+    }
+    if (choice.length != 2) {
+      throw new Error('Choices in a choice list must contain exactly 2 values, ' +
+                      'but got ' + JSON.stringify(choice))
+    }
+    if (is.Array(choice[1])) {
+      var normalisedOptgroupChoices = []
+      // This is an optgroup, so look inside the group for options
+      var optgroupChoices = choice[1]
+      for (var j = 0, m = optgroupChoices.length, optgroupChoice; j < m; j++) {
+        optgroupChoice = optgroupChoices[j]
+        if (!is.Array(optgroupChoice)) {
+          optgroupChoice = [optgroupChoice, optgroupChoice]
+        }
+        if (optgroupChoice.length != 2) {
+          throw new Error('Choices in an optgroup choice list must contain ' +
+                          'exactly 2 values, but got ' +
+                          JSON.stringify(optgroupChoice))
+        }
+        normalisedOptgroupChoices.push(optgroupChoice)
+      }
+      normalisedChoices.push([choice[0], normalisedOptgroupChoices])
+    }
+    else {
+      normalisedChoices.push(choice)
+    }
+  }
+  return normalisedChoices
+}
+
+/**
+ * @param {Array.<string>} events
+ */
+function normaliseValidationEvents(events) {
+  events = events.map(function(event) {
+    if (event.indexOf('on') === 0) { return event }
+    return 'on' + event.charAt(0).toUpperCase() + event.substr(1)
+  })
+  var onChangeIndex = events.indexOf('onChange')
+  if (onChangeIndex != -1) {
+    events.splice(onChangeIndex, 1)
+  }
+  return {events: events, onChange: (onChangeIndex != -1)}
+}
+
+/**
+ * @param {string} events
+ */
+function normaliseValidationString(events) {
+  return normaliseValidationEvents(strip(events).split(/ +/g))
+}
+
+/**
+ * @param {(string|Object)} validation
+ */
+function normaliseValidation(validation) {
+  if (!validation || validation === 'manual') {
+    return validation
+  }
+  else if (validation === 'auto') {
+    return {events: ['onBlur'], onChange: true, onChangeDelay: 369}
+  }
+  else if (is.String(validation)) {
+    return normaliseValidationString(validation)
+  }
+  else if (is.Object(validation)) {
+    var normalised
+    if (is.String(validation.on)) {
+      normalised = normaliseValidationString(validation.on)
+    }
+    else if (is.Array(validation.on)) {
+      normalised = normaliseValidationEvents(validation.on)
+    }
+    else {
+      throw new Error("Validation config Objects must have an 'on' String or Array")
+    }
+    normalised.onChangeDelay = object.get(validation, 'onChangeDelay', validation.delay)
+    return normalised
+  }
+  throw new Error('Unexpected validation config: ' + validation)
+}
+
+/**
+ * Converts 'firstName' and 'first_name' to 'First name', and
+ * 'SHOUTING_LIKE_THIS' to 'SHOUTING LIKE THIS'.
+ */
+var prettyName = (function() {
+  var capsRE = /([A-Z]+)/g
+  var splitRE = /[ _]+/
+  var allCapsRE = /^[A-Z][A-Z0-9]+$/
+
+  return function(name) {
+    // Prefix sequences of caps with spaces and split on all space
+    // characters.
+    var parts = name.replace(capsRE, ' $1').split(splitRE)
+
+    // If we had an initial cap...
+    if (parts[0] === '') {
+      parts.splice(0, 1)
+    }
+
+    // Give the first word an initial cap and all subsequent words an
+    // initial lowercase if not all caps.
+    for (var i = 0, l = parts.length; i < l; i++) {
+      if (i === 0) {
+        parts[0] = parts[0].charAt(0).toUpperCase() +
+                   parts[0].substr(1)
+      }
+      else if (!allCapsRE.test(parts[i])) {
+        parts[i] = parts[i].charAt(0).toLowerCase() +
+                   parts[i].substr(1)
+      }
+    }
+
+    return parts.join(' ')
+  }
+})()
+
+/**
+ * Coerces to string and strips leading and trailing spaces.
+ */
+var strip = function() {
+  var stripRE =/(^\s+|\s+$)/g
+  return function strip(s) {
+    return (''+s).replace(stripRE, '')
+  }
+}()
+
+/**
+ * From Underscore.js 1.5.2
+ * http://underscorejs.org
+ * (c) 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ * Returns a function, that, as long as it continues to be invoked, will not
+ * be triggered. The function will be called after it stops being called for
+ * N milliseconds. If `immediate` is passed, trigger the function on the
+ * leading edge, instead of the trailing.
+ *
+ * Modified to give the returned function:
+ * - a .cancel() method which prevents the debounced function being called.
+ * - a .trigger() method which calls the debounced function immediately.
+ */
+function debounce(func, wait, immediate) {
+  var timeout, args, context, timestamp, result
+  var debounced = function() {
+    context = this
+    args = arguments
+    timestamp = new Date()
+    var later = function() {
+      var last = (new Date()) - timestamp
+      if (last < wait) {
+        timeout = setTimeout(later, wait - last)
+      } else {
+        timeout = null
+        if (!immediate) { result = func.apply(context, args) }
+      }
+    };
+    var callNow = immediate && !timeout
+    if (!timeout) {
+      timeout = setTimeout(later, wait)
+    }
+    if (callNow) { result = func.apply(context, args) }
+    return result
+  }
+
+  // Clear any pending timeout
+  debounced.cancel = function() {
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+  }
+
+  // Clear any pending timeout and execute the function immediately
+  debounced.trigger = function() {
+    debounced.cancel()
+    return func.apply(context, args)
+  }
+
+  return debounced
+}
+
+/**
+ * Returns a function with a .cancel() function which can be used to prevent the
+ * given function from being called. If the given function has an onCancel(),
+ * it will be called when it's being cancelled.
+ *
+ * Use case: triggering an asynchronous function with new data while an existing
+ * function for the same task but with old data is still pending a callback, so
+ * the callback only gets called for the last one to run.
+ */
+function cancellable(func) {
+  var cancelled = false
+
+  var cancellabled = function() {
+    if (!cancelled) {
+      func.apply(null, arguments)
+    }
+  }
+
+  cancellabled.cancel = function() {
+    cancelled = true
+    if (is.Function(func.onCancel)) {
+      func.onCancel()
+    }
+  }
+
+  return cancellabled
+}
+
+/**
+ * Wrapper for getFormData which allows you to pass a React form ref.
+ * @param {HTMLFormElement|ReactElement} form a form element.
+ * @return {Object.<string,(string|Array.<string>)>} an object containing the
+ *    submittable value(s) held in each of the form's elements.
+ */
+function getMaybeReactFormData(form) {
+  if (typeof form.getDOMNode == 'function') {
+    form = form.getDOMNode()
+  }
+  return getFormData(form)
+}
+
+/**
+ * Extracts data from a <form> and validates it with a list of forms and/or
+ * formsets.
+ * @param form the <form> into which any given forms and formsets have been
+ *   rendered - this can be a React <form> component or a real <form> DOM node.
+ * @param {Array.<(Form|FormSet)>} formsAndFormsets a list of forms and/or
+ *   formsets to be used to validate the <form>'s input data.
+ * @return {boolean} true if the <form>'s input data are valid according to all
+ *   given forms and formsets.
+ */
+function validateAll(form, formsAndFormsets) {
+  var data = getMaybeReactFormData(form)
+  var isValid = true
+  for (var i = 0, l = formsAndFormsets.length; i < l; i++) {
+    if (!formsAndFormsets[i].setFormData(data)) {
+      isValid = false
+    }
+  }
+  return isValid
+}
+
+/**
+ * Returns true if every form/formset is valid.
+ */
+function allValid(formsOrFormsets) {
+  var valid = true
+  for (var i = 0, l = formsOrFormsets.length; i < l; i++) {
+    if (!formsOrFormsets[i].isValid()) {
+      valid = false
+    }
+  }
+  return valid
+}
+
+var info = function() {}
+var warning = function() {}
+
+if ('production' !== process.env.NODE_ENV) {
+  info = function(message) {
+    console.warn('[newforms] ' + message)
+  }
+  warning = function(message) {
+    console.warn('[newforms] Warning: ' + message)
+  }
+}
+
+function autoIdChecker(props, propName, componentName, location) {
+  var autoId = props.autoId
+  if (props.autoId && !(is.String(autoId) && autoId.indexOf('{name}') != -1)) {
+    return new Error(
+      'Invalid `autoId` ' + location + ' supplied to ' +
+      '`' + componentName + '`. Must be falsy or a String containing a ' +
+      '`{name}` placeholder'
+    )
+  }
+}
+
+module.exports = {
+  allValid: allValid
+, autoIdChecker: autoIdChecker
+, cancellable: cancellable
+, debounce: debounce
+, info: info
+, formatToArray: formatToArray
+, getFormData: getMaybeReactFormData
+, getProps: getProps
+, makeChoices: makeChoices
+, normaliseChoices: normaliseChoices
+, normaliseValidation: normaliseValidation
+, prettyName: prettyName
+, strip: strip
+, validateAll: validateAll
+, warning: warning
+}
+
+}).call(this,require('_process'))
+},{"_process":292,"get-form-data":29,"isomorph/is":55,"isomorph/object":56}],136:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
@@ -2037,7 +11975,7 @@ function mapAsync(array, work, callback) {
     });
   });
 }
-},{}],26:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -2061,7 +11999,7 @@ var History = {
 
 exports['default'] = History;
 module.exports = exports['default'];
-},{"./PropTypes":33}],27:[function(require,module,exports){
+},{"./PropTypes":144}],138:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -2104,7 +12042,7 @@ var IndexLink = (function (_Component) {
 
 exports['default'] = IndexLink;
 module.exports = exports['default'];
-},{"./Link":31,"react":"react"}],28:[function(require,module,exports){
+},{"./Link":142,"react":"react"}],139:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2186,7 +12124,7 @@ var IndexRedirect = (function (_Component) {
 exports['default'] = IndexRedirect;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./PropTypes":33,"./Redirect":34,"_process":205,"invariant":48,"react":"react","warning":49}],29:[function(require,module,exports){
+},{"./PropTypes":144,"./Redirect":145,"_process":292,"invariant":52,"react":"react","warning":291}],140:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2265,7 +12203,7 @@ var IndexRoute = (function (_Component) {
 exports['default'] = IndexRoute;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./PropTypes":33,"./RouteUtils":37,"_process":205,"invariant":48,"react":"react","warning":49}],30:[function(require,module,exports){
+},{"./PropTypes":144,"./RouteUtils":148,"_process":292,"invariant":52,"react":"react","warning":291}],141:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2332,7 +12270,7 @@ var Lifecycle = {
 exports['default'] = Lifecycle;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"_process":205,"invariant":48,"react":"react"}],31:[function(require,module,exports){
+},{"_process":292,"invariant":52,"react":"react"}],142:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -2506,7 +12444,7 @@ var Link = (function (_Component) {
 
 exports['default'] = Link;
 module.exports = exports['default'];
-},{"react":"react"}],32:[function(require,module,exports){
+},{"react":"react"}],143:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2736,7 +12674,7 @@ function formatPattern(pattern, params) {
   return pathname.replace(/\/+/g, '/');
 }
 }).call(this,require('_process'))
-},{"_process":205,"invariant":48}],33:[function(require,module,exports){
+},{"_process":292,"invariant":52}],144:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -2790,7 +12728,7 @@ exports['default'] = {
   components: components,
   route: route
 };
-},{"react":"react"}],34:[function(require,module,exports){
+},{"react":"react"}],145:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2906,7 +12844,7 @@ var Redirect = (function (_Component) {
 exports['default'] = Redirect;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./PatternUtils":32,"./PropTypes":33,"./RouteUtils":37,"_process":205,"invariant":48,"react":"react"}],35:[function(require,module,exports){
+},{"./PatternUtils":143,"./PropTypes":144,"./RouteUtils":148,"_process":292,"invariant":52,"react":"react"}],146:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -2984,7 +12922,7 @@ var Route = (function (_Component) {
 exports['default'] = Route;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./PropTypes":33,"./RouteUtils":37,"_process":205,"invariant":48,"react":"react"}],36:[function(require,module,exports){
+},{"./PropTypes":144,"./RouteUtils":148,"_process":292,"invariant":52,"react":"react"}],147:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3023,7 +12961,7 @@ var RouteContext = {
 
 exports['default'] = RouteContext;
 module.exports = exports['default'];
-},{"react":"react"}],37:[function(require,module,exports){
+},{"react":"react"}],148:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -3140,7 +13078,7 @@ function createRoutes(routes) {
   return routes;
 }
 }).call(this,require('_process'))
-},{"_process":205,"react":"react","warning":49}],38:[function(require,module,exports){
+},{"_process":292,"react":"react","warning":291}],149:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -3314,7 +13252,7 @@ var Router = (function (_Component) {
 exports['default'] = Router;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./PropTypes":33,"./RouteUtils":37,"./RoutingContext":39,"./useRoutes":47,"_process":205,"history/lib/createHashHistory":7,"react":"react","warning":49}],39:[function(require,module,exports){
+},{"./PropTypes":144,"./RouteUtils":148,"./RoutingContext":150,"./useRoutes":158,"_process":292,"history/lib/createHashHistory":36,"react":"react","warning":291}],150:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -3457,7 +13395,7 @@ var RoutingContext = (function (_Component) {
 exports['default'] = RoutingContext;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./RouteUtils":37,"./getRouteParams":43,"_process":205,"invariant":48,"react":"react"}],40:[function(require,module,exports){
+},{"./RouteUtils":148,"./getRouteParams":154,"_process":292,"invariant":52,"react":"react"}],151:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3530,7 +13468,7 @@ function runLeaveHooks(routes) {
     if (routes[i].onLeave) routes[i].onLeave.call(routes[i]);
   }
 }
-},{"./AsyncUtils":25}],41:[function(require,module,exports){
+},{"./AsyncUtils":136}],152:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3587,7 +13525,7 @@ function computeChangedRoutes(prevState, nextState) {
 
 exports['default'] = computeChangedRoutes;
 module.exports = exports['default'];
-},{"./PatternUtils":32}],42:[function(require,module,exports){
+},{"./PatternUtils":143}],153:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3621,7 +13559,7 @@ function getComponents(nextState, callback) {
 
 exports['default'] = getComponents;
 module.exports = exports['default'];
-},{"./AsyncUtils":25}],43:[function(require,module,exports){
+},{"./AsyncUtils":136}],154:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3646,7 +13584,7 @@ function getRouteParams(route, params) {
 
 exports['default'] = getRouteParams;
 module.exports = exports['default'];
-},{"./PatternUtils":32}],44:[function(require,module,exports){
+},{"./PatternUtils":143}],155:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3770,7 +13708,7 @@ function isActive(pathname, query, indexOnly, location, routes, params) {
 
 exports['default'] = isActive;
 module.exports = exports['default'];
-},{"./PatternUtils":32}],45:[function(require,module,exports){
+},{"./PatternUtils":143}],156:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -3836,7 +13774,7 @@ function match(_ref, callback) {
 exports['default'] = match;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./RouteUtils":37,"./useRoutes":47,"_process":205,"history/lib/createMemoryHistory":10,"history/lib/useBasename":14,"invariant":48}],46:[function(require,module,exports){
+},{"./RouteUtils":148,"./useRoutes":158,"_process":292,"history/lib/createMemoryHistory":39,"history/lib/useBasename":43,"invariant":52}],157:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -4027,7 +13965,7 @@ function matchRoutes(routes, location, callback) {
 exports['default'] = matchRoutes;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./AsyncUtils":25,"./PatternUtils":32,"./RouteUtils":37,"_process":205,"warning":49}],47:[function(require,module,exports){
+},{"./AsyncUtils":136,"./PatternUtils":143,"./RouteUtils":148,"_process":292,"warning":291}],158:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -4321,11 +14259,7 @@ function useRoutes(createHistory) {
 exports['default'] = useRoutes;
 module.exports = exports['default'];
 }).call(this,require('_process'))
-},{"./TransitionUtils":40,"./computeChangedRoutes":41,"./getComponents":42,"./isActive":44,"./matchRoutes":46,"_process":205,"history/lib/Actions":1,"history/lib/useQueries":15,"warning":49}],48:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"_process":205,"dup":19}],49:[function(require,module,exports){
-arguments[4][24][0].apply(exports,arguments)
-},{"_process":205,"dup":24}],50:[function(require,module,exports){
+},{"./TransitionUtils":151,"./computeChangedRoutes":152,"./getComponents":153,"./isActive":155,"./matchRoutes":157,"_process":292,"history/lib/Actions":30,"history/lib/useQueries":44,"warning":291}],159:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -4362,7 +14296,7 @@ var AutoFocusUtils = {
 };
 
 module.exports = AutoFocusUtils;
-},{"./ReactMount":114,"./findDOMNode":157,"fbjs/lib/focusNode":187}],51:[function(require,module,exports){
+},{"./ReactMount":223,"./findDOMNode":266,"fbjs/lib/focusNode":11}],160:[function(require,module,exports){
 /**
  * Copyright 2013-2015 Facebook, Inc.
  * All rights reserved.
@@ -4768,7 +14702,7 @@ var BeforeInputEventPlugin = {
 };
 
 module.exports = BeforeInputEventPlugin;
-},{"./EventConstants":63,"./EventPropagators":67,"./FallbackCompositionState":68,"./SyntheticCompositionEvent":139,"./SyntheticInputEvent":143,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/keyOf":197}],52:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPropagators":176,"./FallbackCompositionState":177,"./SyntheticCompositionEvent":248,"./SyntheticInputEvent":252,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/keyOf":21}],161:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -4908,7 +14842,7 @@ var CSSProperty = {
 };
 
 module.exports = CSSProperty;
-},{}],53:[function(require,module,exports){
+},{}],162:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -5086,7 +15020,7 @@ ReactPerf.measureMethods(CSSPropertyOperations, 'CSSPropertyOperations', {
 
 module.exports = CSSPropertyOperations;
 }).call(this,require('_process'))
-},{"./CSSProperty":52,"./ReactPerf":120,"./dangerousStyleValue":154,"_process":205,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/camelizeStyleName":181,"fbjs/lib/hyphenateStyleName":192,"fbjs/lib/memoizeStringOnly":199,"fbjs/lib/warning":204}],54:[function(require,module,exports){
+},{"./CSSProperty":161,"./ReactPerf":229,"./dangerousStyleValue":263,"_process":292,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/camelizeStyleName":5,"fbjs/lib/hyphenateStyleName":16,"fbjs/lib/memoizeStringOnly":23,"fbjs/lib/warning":28}],163:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -5182,7 +15116,7 @@ PooledClass.addPoolingTo(CallbackQueue);
 
 module.exports = CallbackQueue;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./PooledClass":72,"_process":205,"fbjs/lib/invariant":193}],55:[function(require,module,exports){
+},{"./Object.assign":180,"./PooledClass":181,"_process":292,"fbjs/lib/invariant":17}],164:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -5504,7 +15438,7 @@ var ChangeEventPlugin = {
 };
 
 module.exports = ChangeEventPlugin;
-},{"./EventConstants":63,"./EventPluginHub":64,"./EventPropagators":67,"./ReactUpdates":132,"./SyntheticEvent":141,"./getEventTarget":163,"./isEventSupported":168,"./isTextInputElement":169,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/keyOf":197}],56:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPluginHub":173,"./EventPropagators":176,"./ReactUpdates":241,"./SyntheticEvent":250,"./getEventTarget":272,"./isEventSupported":277,"./isTextInputElement":278,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/keyOf":21}],165:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -5528,7 +15462,7 @@ var ClientReactRootIndex = {
 };
 
 module.exports = ClientReactRootIndex;
-},{}],57:[function(require,module,exports){
+},{}],166:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -5660,7 +15594,7 @@ ReactPerf.measureMethods(DOMChildrenOperations, 'DOMChildrenOperations', {
 
 module.exports = DOMChildrenOperations;
 }).call(this,require('_process'))
-},{"./Danger":60,"./ReactMultiChildUpdateTypes":116,"./ReactPerf":120,"./setInnerHTML":173,"./setTextContent":174,"_process":205,"fbjs/lib/invariant":193}],58:[function(require,module,exports){
+},{"./Danger":169,"./ReactMultiChildUpdateTypes":225,"./ReactPerf":229,"./setInnerHTML":282,"./setTextContent":283,"_process":292,"fbjs/lib/invariant":17}],167:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -5897,7 +15831,7 @@ var DOMProperty = {
 
 module.exports = DOMProperty;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],59:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],168:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -6125,7 +16059,7 @@ ReactPerf.measureMethods(DOMPropertyOperations, 'DOMPropertyOperations', {
 
 module.exports = DOMPropertyOperations;
 }).call(this,require('_process'))
-},{"./DOMProperty":58,"./ReactPerf":120,"./quoteAttributeValueForBrowser":171,"_process":205,"fbjs/lib/warning":204}],60:[function(require,module,exports){
+},{"./DOMProperty":167,"./ReactPerf":229,"./quoteAttributeValueForBrowser":280,"_process":292,"fbjs/lib/warning":28}],169:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -6273,7 +16207,7 @@ var Danger = {
 
 module.exports = Danger;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/createNodesFromMarkup":184,"fbjs/lib/emptyFunction":185,"fbjs/lib/getMarkupWrap":189,"fbjs/lib/invariant":193}],61:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/createNodesFromMarkup":8,"fbjs/lib/emptyFunction":9,"fbjs/lib/getMarkupWrap":13,"fbjs/lib/invariant":17}],170:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -6301,7 +16235,7 @@ var keyOf = require('fbjs/lib/keyOf');
 var DefaultEventPluginOrder = [keyOf({ ResponderEventPlugin: null }), keyOf({ SimpleEventPlugin: null }), keyOf({ TapEventPlugin: null }), keyOf({ EnterLeaveEventPlugin: null }), keyOf({ ChangeEventPlugin: null }), keyOf({ SelectEventPlugin: null }), keyOf({ BeforeInputEventPlugin: null })];
 
 module.exports = DefaultEventPluginOrder;
-},{"fbjs/lib/keyOf":197}],62:[function(require,module,exports){
+},{"fbjs/lib/keyOf":21}],171:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -6426,7 +16360,7 @@ var EnterLeaveEventPlugin = {
 };
 
 module.exports = EnterLeaveEventPlugin;
-},{"./EventConstants":63,"./EventPropagators":67,"./ReactMount":114,"./SyntheticMouseEvent":145,"fbjs/lib/keyOf":197}],63:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPropagators":176,"./ReactMount":223,"./SyntheticMouseEvent":254,"fbjs/lib/keyOf":21}],172:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -6519,7 +16453,7 @@ var EventConstants = {
 };
 
 module.exports = EventConstants;
-},{"fbjs/lib/keyMirror":196}],64:[function(require,module,exports){
+},{"fbjs/lib/keyMirror":20}],173:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -6801,7 +16735,7 @@ var EventPluginHub = {
 
 module.exports = EventPluginHub;
 }).call(this,require('_process'))
-},{"./EventPluginRegistry":65,"./EventPluginUtils":66,"./ReactErrorUtils":105,"./accumulateInto":151,"./forEachAccumulated":159,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],65:[function(require,module,exports){
+},{"./EventPluginRegistry":174,"./EventPluginUtils":175,"./ReactErrorUtils":214,"./accumulateInto":260,"./forEachAccumulated":268,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],174:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7024,7 +16958,7 @@ var EventPluginRegistry = {
 
 module.exports = EventPluginRegistry;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],66:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],175:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7229,7 +17163,7 @@ var EventPluginUtils = {
 
 module.exports = EventPluginUtils;
 }).call(this,require('_process'))
-},{"./EventConstants":63,"./ReactErrorUtils":105,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],67:[function(require,module,exports){
+},{"./EventConstants":172,"./ReactErrorUtils":214,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],176:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7367,7 +17301,7 @@ var EventPropagators = {
 
 module.exports = EventPropagators;
 }).call(this,require('_process'))
-},{"./EventConstants":63,"./EventPluginHub":64,"./accumulateInto":151,"./forEachAccumulated":159,"_process":205,"fbjs/lib/warning":204}],68:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPluginHub":173,"./accumulateInto":260,"./forEachAccumulated":268,"_process":292,"fbjs/lib/warning":28}],177:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -7463,7 +17397,7 @@ assign(FallbackCompositionState.prototype, {
 PooledClass.addPoolingTo(FallbackCompositionState);
 
 module.exports = FallbackCompositionState;
-},{"./Object.assign":71,"./PooledClass":72,"./getTextContentAccessor":166}],69:[function(require,module,exports){
+},{"./Object.assign":180,"./PooledClass":181,"./getTextContentAccessor":275}],178:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -7694,7 +17628,7 @@ var HTMLDOMPropertyConfig = {
 };
 
 module.exports = HTMLDOMPropertyConfig;
-},{"./DOMProperty":58,"fbjs/lib/ExecutionEnvironment":179}],70:[function(require,module,exports){
+},{"./DOMProperty":167,"fbjs/lib/ExecutionEnvironment":3}],179:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7831,7 +17765,7 @@ var LinkedValueUtils = {
 
 module.exports = LinkedValueUtils;
 }).call(this,require('_process'))
-},{"./ReactPropTypeLocations":122,"./ReactPropTypes":123,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],71:[function(require,module,exports){
+},{"./ReactPropTypeLocations":231,"./ReactPropTypes":232,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],180:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -7879,7 +17813,7 @@ function assign(target, sources) {
 }
 
 module.exports = assign;
-},{}],72:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8001,7 +17935,7 @@ var PooledClass = {
 
 module.exports = PooledClass;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],73:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],182:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8041,7 +17975,7 @@ assign(React, {
 React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM;
 
 module.exports = React;
-},{"./Object.assign":71,"./ReactDOM":84,"./ReactDOMServer":94,"./ReactIsomorphic":112,"./deprecated":155}],74:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactDOM":193,"./ReactDOMServer":203,"./ReactIsomorphic":221,"./deprecated":264}],183:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8080,7 +18014,7 @@ var ReactBrowserComponentMixin = {
 
 module.exports = ReactBrowserComponentMixin;
 }).call(this,require('_process'))
-},{"./ReactInstanceMap":111,"./findDOMNode":157,"_process":205,"fbjs/lib/warning":204}],75:[function(require,module,exports){
+},{"./ReactInstanceMap":220,"./findDOMNode":266,"_process":292,"fbjs/lib/warning":28}],184:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8405,7 +18339,7 @@ ReactPerf.measureMethods(ReactBrowserEventEmitter, 'ReactBrowserEventEmitter', {
 });
 
 module.exports = ReactBrowserEventEmitter;
-},{"./EventConstants":63,"./EventPluginHub":64,"./EventPluginRegistry":65,"./Object.assign":71,"./ReactEventEmitterMixin":106,"./ReactPerf":120,"./ViewportMetrics":150,"./isEventSupported":168}],76:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPluginHub":173,"./EventPluginRegistry":174,"./Object.assign":180,"./ReactEventEmitterMixin":215,"./ReactPerf":229,"./ViewportMetrics":259,"./isEventSupported":277}],185:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -8530,7 +18464,7 @@ var ReactChildReconciler = {
 
 module.exports = ReactChildReconciler;
 }).call(this,require('_process'))
-},{"./ReactReconciler":125,"./instantiateReactComponent":167,"./shouldUpdateReactComponent":175,"./traverseAllChildren":176,"_process":205,"fbjs/lib/warning":204}],77:[function(require,module,exports){
+},{"./ReactReconciler":234,"./instantiateReactComponent":276,"./shouldUpdateReactComponent":284,"./traverseAllChildren":285,"_process":292,"fbjs/lib/warning":28}],186:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8713,7 +18647,7 @@ var ReactChildren = {
 };
 
 module.exports = ReactChildren;
-},{"./PooledClass":72,"./ReactElement":101,"./traverseAllChildren":176,"fbjs/lib/emptyFunction":185}],78:[function(require,module,exports){
+},{"./PooledClass":181,"./ReactElement":210,"./traverseAllChildren":285,"fbjs/lib/emptyFunction":9}],187:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -9487,7 +19421,7 @@ var ReactClass = {
 
 module.exports = ReactClass;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactComponent":79,"./ReactElement":101,"./ReactNoopUpdateQueue":118,"./ReactPropTypeLocationNames":121,"./ReactPropTypeLocations":122,"_process":205,"fbjs/lib/emptyObject":186,"fbjs/lib/invariant":193,"fbjs/lib/keyMirror":196,"fbjs/lib/keyOf":197,"fbjs/lib/warning":204}],79:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactComponent":188,"./ReactElement":210,"./ReactNoopUpdateQueue":227,"./ReactPropTypeLocationNames":230,"./ReactPropTypeLocations":231,"_process":292,"fbjs/lib/emptyObject":10,"fbjs/lib/invariant":17,"fbjs/lib/keyMirror":20,"fbjs/lib/keyOf":21,"fbjs/lib/warning":28}],188:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -9612,7 +19546,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = ReactComponent;
 }).call(this,require('_process'))
-},{"./ReactNoopUpdateQueue":118,"./canDefineProperty":153,"_process":205,"fbjs/lib/emptyObject":186,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],80:[function(require,module,exports){
+},{"./ReactNoopUpdateQueue":227,"./canDefineProperty":262,"_process":292,"fbjs/lib/emptyObject":10,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],189:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9654,7 +19588,7 @@ var ReactComponentBrowserEnvironment = {
 };
 
 module.exports = ReactComponentBrowserEnvironment;
-},{"./ReactDOMIDOperations":89,"./ReactMount":114}],81:[function(require,module,exports){
+},{"./ReactDOMIDOperations":198,"./ReactMount":223}],190:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -9708,7 +19642,7 @@ var ReactComponentEnvironment = {
 
 module.exports = ReactComponentEnvironment;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],82:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],191:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -10405,7 +20339,7 @@ var ReactCompositeComponent = {
 
 module.exports = ReactCompositeComponent;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactComponentEnvironment":81,"./ReactCurrentOwner":83,"./ReactElement":101,"./ReactInstanceMap":111,"./ReactPerf":120,"./ReactPropTypeLocationNames":121,"./ReactPropTypeLocations":122,"./ReactReconciler":125,"./ReactUpdateQueue":131,"./shouldUpdateReactComponent":175,"_process":205,"fbjs/lib/emptyObject":186,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],83:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactComponentEnvironment":190,"./ReactCurrentOwner":192,"./ReactElement":210,"./ReactInstanceMap":220,"./ReactPerf":229,"./ReactPropTypeLocationNames":230,"./ReactPropTypeLocations":231,"./ReactReconciler":234,"./ReactUpdateQueue":240,"./shouldUpdateReactComponent":284,"_process":292,"fbjs/lib/emptyObject":10,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],192:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -10436,7 +20370,7 @@ var ReactCurrentOwner = {
 };
 
 module.exports = ReactCurrentOwner;
-},{}],84:[function(require,module,exports){
+},{}],193:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -10531,7 +20465,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = React;
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":83,"./ReactDOMTextComponent":95,"./ReactDefaultInjection":98,"./ReactInstanceHandles":110,"./ReactMount":114,"./ReactPerf":120,"./ReactReconciler":125,"./ReactUpdates":132,"./ReactVersion":133,"./findDOMNode":157,"./renderSubtreeIntoContainer":172,"_process":205,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/warning":204}],85:[function(require,module,exports){
+},{"./ReactCurrentOwner":192,"./ReactDOMTextComponent":204,"./ReactDefaultInjection":207,"./ReactInstanceHandles":219,"./ReactMount":223,"./ReactPerf":229,"./ReactReconciler":234,"./ReactUpdates":241,"./ReactVersion":242,"./findDOMNode":266,"./renderSubtreeIntoContainer":281,"_process":292,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/warning":28}],194:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -10582,7 +20516,7 @@ var ReactDOMButton = {
 };
 
 module.exports = ReactDOMButton;
-},{}],86:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -11547,7 +21481,7 @@ assign(ReactDOMComponent.prototype, ReactDOMComponent.Mixin, ReactMultiChild.Mix
 
 module.exports = ReactDOMComponent;
 }).call(this,require('_process'))
-},{"./AutoFocusUtils":50,"./CSSPropertyOperations":53,"./DOMProperty":58,"./DOMPropertyOperations":59,"./EventConstants":63,"./Object.assign":71,"./ReactBrowserEventEmitter":75,"./ReactComponentBrowserEnvironment":80,"./ReactDOMButton":85,"./ReactDOMInput":90,"./ReactDOMOption":91,"./ReactDOMSelect":92,"./ReactDOMTextarea":96,"./ReactMount":114,"./ReactMultiChild":115,"./ReactPerf":120,"./ReactUpdateQueue":131,"./canDefineProperty":153,"./escapeTextContentForBrowser":156,"./isEventSupported":168,"./setInnerHTML":173,"./setTextContent":174,"./validateDOMNesting":177,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/keyOf":197,"fbjs/lib/shallowEqual":202,"fbjs/lib/warning":204}],87:[function(require,module,exports){
+},{"./AutoFocusUtils":159,"./CSSPropertyOperations":162,"./DOMProperty":167,"./DOMPropertyOperations":168,"./EventConstants":172,"./Object.assign":180,"./ReactBrowserEventEmitter":184,"./ReactComponentBrowserEnvironment":189,"./ReactDOMButton":194,"./ReactDOMInput":199,"./ReactDOMOption":200,"./ReactDOMSelect":201,"./ReactDOMTextarea":205,"./ReactMount":223,"./ReactMultiChild":224,"./ReactPerf":229,"./ReactUpdateQueue":240,"./canDefineProperty":262,"./escapeTextContentForBrowser":265,"./isEventSupported":277,"./setInnerHTML":282,"./setTextContent":283,"./validateDOMNesting":286,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/keyOf":21,"fbjs/lib/shallowEqual":26,"fbjs/lib/warning":28}],196:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -11727,7 +21661,7 @@ var ReactDOMFactories = mapObject({
 
 module.exports = ReactDOMFactories;
 }).call(this,require('_process'))
-},{"./ReactElement":101,"./ReactElementValidator":102,"_process":205,"fbjs/lib/mapObject":198}],88:[function(require,module,exports){
+},{"./ReactElement":210,"./ReactElementValidator":211,"_process":292,"fbjs/lib/mapObject":22}],197:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11746,7 +21680,7 @@ var ReactDOMFeatureFlags = {
 };
 
 module.exports = ReactDOMFeatureFlags;
-},{}],89:[function(require,module,exports){
+},{}],198:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -11843,7 +21777,7 @@ ReactPerf.measureMethods(ReactDOMIDOperations, 'ReactDOMIDOperations', {
 
 module.exports = ReactDOMIDOperations;
 }).call(this,require('_process'))
-},{"./DOMChildrenOperations":57,"./DOMPropertyOperations":59,"./ReactMount":114,"./ReactPerf":120,"_process":205,"fbjs/lib/invariant":193}],90:[function(require,module,exports){
+},{"./DOMChildrenOperations":166,"./DOMPropertyOperations":168,"./ReactMount":223,"./ReactPerf":229,"_process":292,"fbjs/lib/invariant":17}],199:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -11999,7 +21933,7 @@ function _handleChange(event) {
 
 module.exports = ReactDOMInput;
 }).call(this,require('_process'))
-},{"./LinkedValueUtils":70,"./Object.assign":71,"./ReactDOMIDOperations":89,"./ReactMount":114,"./ReactUpdates":132,"_process":205,"fbjs/lib/invariant":193}],91:[function(require,module,exports){
+},{"./LinkedValueUtils":179,"./Object.assign":180,"./ReactDOMIDOperations":198,"./ReactMount":223,"./ReactUpdates":241,"_process":292,"fbjs/lib/invariant":17}],200:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12088,7 +22022,7 @@ var ReactDOMOption = {
 
 module.exports = ReactDOMOption;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactChildren":77,"./ReactDOMSelect":92,"_process":205,"fbjs/lib/warning":204}],92:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactChildren":186,"./ReactDOMSelect":201,"_process":292,"fbjs/lib/warning":28}],201:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12279,7 +22213,7 @@ function _handleChange(event) {
 
 module.exports = ReactDOMSelect;
 }).call(this,require('_process'))
-},{"./LinkedValueUtils":70,"./Object.assign":71,"./ReactMount":114,"./ReactUpdates":132,"_process":205,"fbjs/lib/warning":204}],93:[function(require,module,exports){
+},{"./LinkedValueUtils":179,"./Object.assign":180,"./ReactMount":223,"./ReactUpdates":241,"_process":292,"fbjs/lib/warning":28}],202:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12492,7 +22426,7 @@ var ReactDOMSelection = {
 };
 
 module.exports = ReactDOMSelection;
-},{"./getNodeForCharacterOffset":165,"./getTextContentAccessor":166,"fbjs/lib/ExecutionEnvironment":179}],94:[function(require,module,exports){
+},{"./getNodeForCharacterOffset":274,"./getTextContentAccessor":275,"fbjs/lib/ExecutionEnvironment":3}],203:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12519,7 +22453,7 @@ var ReactDOMServer = {
 };
 
 module.exports = ReactDOMServer;
-},{"./ReactDefaultInjection":98,"./ReactServerRendering":129,"./ReactVersion":133}],95:[function(require,module,exports){
+},{"./ReactDefaultInjection":207,"./ReactServerRendering":238,"./ReactVersion":242}],204:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12649,7 +22583,7 @@ assign(ReactDOMTextComponent.prototype, {
 
 module.exports = ReactDOMTextComponent;
 }).call(this,require('_process'))
-},{"./DOMChildrenOperations":57,"./DOMPropertyOperations":59,"./Object.assign":71,"./ReactComponentBrowserEnvironment":80,"./ReactMount":114,"./escapeTextContentForBrowser":156,"./setTextContent":174,"./validateDOMNesting":177,"_process":205}],96:[function(require,module,exports){
+},{"./DOMChildrenOperations":166,"./DOMPropertyOperations":168,"./Object.assign":180,"./ReactComponentBrowserEnvironment":189,"./ReactMount":223,"./escapeTextContentForBrowser":265,"./setTextContent":283,"./validateDOMNesting":286,"_process":292}],205:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12765,7 +22699,7 @@ function _handleChange(event) {
 
 module.exports = ReactDOMTextarea;
 }).call(this,require('_process'))
-},{"./LinkedValueUtils":70,"./Object.assign":71,"./ReactDOMIDOperations":89,"./ReactUpdates":132,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],97:[function(require,module,exports){
+},{"./LinkedValueUtils":179,"./Object.assign":180,"./ReactDOMIDOperations":198,"./ReactUpdates":241,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],206:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12833,7 +22767,7 @@ var ReactDefaultBatchingStrategy = {
 };
 
 module.exports = ReactDefaultBatchingStrategy;
-},{"./Object.assign":71,"./ReactUpdates":132,"./Transaction":149,"fbjs/lib/emptyFunction":185}],98:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactUpdates":241,"./Transaction":258,"fbjs/lib/emptyFunction":9}],207:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12933,7 +22867,7 @@ module.exports = {
   inject: inject
 };
 }).call(this,require('_process'))
-},{"./BeforeInputEventPlugin":51,"./ChangeEventPlugin":55,"./ClientReactRootIndex":56,"./DefaultEventPluginOrder":61,"./EnterLeaveEventPlugin":62,"./HTMLDOMPropertyConfig":69,"./ReactBrowserComponentMixin":74,"./ReactComponentBrowserEnvironment":80,"./ReactDOMComponent":86,"./ReactDOMTextComponent":95,"./ReactDefaultBatchingStrategy":97,"./ReactDefaultPerf":99,"./ReactEventListener":107,"./ReactInjection":108,"./ReactInstanceHandles":110,"./ReactMount":114,"./ReactReconcileTransaction":124,"./SVGDOMPropertyConfig":134,"./SelectEventPlugin":135,"./ServerReactRootIndex":136,"./SimpleEventPlugin":137,"_process":205,"fbjs/lib/ExecutionEnvironment":179}],99:[function(require,module,exports){
+},{"./BeforeInputEventPlugin":160,"./ChangeEventPlugin":164,"./ClientReactRootIndex":165,"./DefaultEventPluginOrder":170,"./EnterLeaveEventPlugin":171,"./HTMLDOMPropertyConfig":178,"./ReactBrowserComponentMixin":183,"./ReactComponentBrowserEnvironment":189,"./ReactDOMComponent":195,"./ReactDOMTextComponent":204,"./ReactDefaultBatchingStrategy":206,"./ReactDefaultPerf":208,"./ReactEventListener":216,"./ReactInjection":217,"./ReactInstanceHandles":219,"./ReactMount":223,"./ReactReconcileTransaction":233,"./SVGDOMPropertyConfig":243,"./SelectEventPlugin":244,"./ServerReactRootIndex":245,"./SimpleEventPlugin":246,"_process":292,"fbjs/lib/ExecutionEnvironment":3}],208:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13171,7 +23105,7 @@ var ReactDefaultPerf = {
 };
 
 module.exports = ReactDefaultPerf;
-},{"./DOMProperty":58,"./ReactDefaultPerfAnalysis":100,"./ReactMount":114,"./ReactPerf":120,"fbjs/lib/performanceNow":201}],100:[function(require,module,exports){
+},{"./DOMProperty":167,"./ReactDefaultPerfAnalysis":209,"./ReactMount":223,"./ReactPerf":229,"fbjs/lib/performanceNow":25}],209:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13371,7 +23305,7 @@ var ReactDefaultPerfAnalysis = {
 };
 
 module.exports = ReactDefaultPerfAnalysis;
-},{"./Object.assign":71}],101:[function(require,module,exports){
+},{"./Object.assign":180}],210:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -13621,7 +23555,7 @@ ReactElement.isValidElement = function (object) {
 
 module.exports = ReactElement;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactCurrentOwner":83,"./canDefineProperty":153,"_process":205}],102:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactCurrentOwner":192,"./canDefineProperty":262,"_process":292}],211:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -13905,7 +23839,7 @@ var ReactElementValidator = {
 
 module.exports = ReactElementValidator;
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":83,"./ReactElement":101,"./ReactPropTypeLocationNames":121,"./ReactPropTypeLocations":122,"./canDefineProperty":153,"./getIteratorFn":164,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],103:[function(require,module,exports){
+},{"./ReactCurrentOwner":192,"./ReactElement":210,"./ReactPropTypeLocationNames":230,"./ReactPropTypeLocations":231,"./canDefineProperty":262,"./getIteratorFn":273,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],212:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -13957,7 +23891,7 @@ assign(ReactEmptyComponent.prototype, {
 ReactEmptyComponent.injection = ReactEmptyComponentInjection;
 
 module.exports = ReactEmptyComponent;
-},{"./Object.assign":71,"./ReactElement":101,"./ReactEmptyComponentRegistry":104,"./ReactReconciler":125}],104:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactElement":210,"./ReactEmptyComponentRegistry":213,"./ReactReconciler":234}],213:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -14006,7 +23940,7 @@ var ReactEmptyComponentRegistry = {
 };
 
 module.exports = ReactEmptyComponentRegistry;
-},{}],105:[function(require,module,exports){
+},{}],214:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -14086,7 +24020,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = ReactErrorUtils;
 }).call(this,require('_process'))
-},{"_process":205}],106:[function(require,module,exports){
+},{"_process":292}],215:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14125,7 +24059,7 @@ var ReactEventEmitterMixin = {
 };
 
 module.exports = ReactEventEmitterMixin;
-},{"./EventPluginHub":64}],107:[function(require,module,exports){
+},{"./EventPluginHub":173}],216:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14337,7 +24271,7 @@ var ReactEventListener = {
 };
 
 module.exports = ReactEventListener;
-},{"./Object.assign":71,"./PooledClass":72,"./ReactInstanceHandles":110,"./ReactMount":114,"./ReactUpdates":132,"./getEventTarget":163,"fbjs/lib/EventListener":178,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/getUnboundedScrollPosition":190}],108:[function(require,module,exports){
+},{"./Object.assign":180,"./PooledClass":181,"./ReactInstanceHandles":219,"./ReactMount":223,"./ReactUpdates":241,"./getEventTarget":272,"fbjs/lib/EventListener":2,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/getUnboundedScrollPosition":14}],217:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14376,7 +24310,7 @@ var ReactInjection = {
 };
 
 module.exports = ReactInjection;
-},{"./DOMProperty":58,"./EventPluginHub":64,"./ReactBrowserEventEmitter":75,"./ReactClass":78,"./ReactComponentEnvironment":81,"./ReactEmptyComponent":103,"./ReactNativeComponent":117,"./ReactPerf":120,"./ReactRootIndex":127,"./ReactUpdates":132}],109:[function(require,module,exports){
+},{"./DOMProperty":167,"./EventPluginHub":173,"./ReactBrowserEventEmitter":184,"./ReactClass":187,"./ReactComponentEnvironment":190,"./ReactEmptyComponent":212,"./ReactNativeComponent":226,"./ReactPerf":229,"./ReactRootIndex":236,"./ReactUpdates":241}],218:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14501,7 +24435,7 @@ var ReactInputSelection = {
 };
 
 module.exports = ReactInputSelection;
-},{"./ReactDOMSelection":93,"fbjs/lib/containsNode":182,"fbjs/lib/focusNode":187,"fbjs/lib/getActiveElement":188}],110:[function(require,module,exports){
+},{"./ReactDOMSelection":202,"fbjs/lib/containsNode":6,"fbjs/lib/focusNode":11,"fbjs/lib/getActiveElement":12}],219:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -14806,7 +24740,7 @@ var ReactInstanceHandles = {
 
 module.exports = ReactInstanceHandles;
 }).call(this,require('_process'))
-},{"./ReactRootIndex":127,"_process":205,"fbjs/lib/invariant":193}],111:[function(require,module,exports){
+},{"./ReactRootIndex":236,"_process":292,"fbjs/lib/invariant":17}],220:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14854,7 +24788,7 @@ var ReactInstanceMap = {
 };
 
 module.exports = ReactInstanceMap;
-},{}],112:[function(require,module,exports){
+},{}],221:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -14931,7 +24865,7 @@ var React = {
 
 module.exports = React;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactChildren":77,"./ReactClass":78,"./ReactComponent":79,"./ReactDOMFactories":87,"./ReactElement":101,"./ReactElementValidator":102,"./ReactPropTypes":123,"./ReactVersion":133,"./onlyChild":170,"_process":205}],113:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactChildren":186,"./ReactClass":187,"./ReactComponent":188,"./ReactDOMFactories":196,"./ReactElement":210,"./ReactElementValidator":211,"./ReactPropTypes":232,"./ReactVersion":242,"./onlyChild":279,"_process":292}],222:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14977,7 +24911,7 @@ var ReactMarkupChecksum = {
 };
 
 module.exports = ReactMarkupChecksum;
-},{"./adler32":152}],114:[function(require,module,exports){
+},{"./adler32":261}],223:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -15830,7 +25764,7 @@ ReactPerf.measureMethods(ReactMount, 'ReactMount', {
 
 module.exports = ReactMount;
 }).call(this,require('_process'))
-},{"./DOMProperty":58,"./Object.assign":71,"./ReactBrowserEventEmitter":75,"./ReactCurrentOwner":83,"./ReactDOMFeatureFlags":88,"./ReactElement":101,"./ReactEmptyComponentRegistry":104,"./ReactInstanceHandles":110,"./ReactInstanceMap":111,"./ReactMarkupChecksum":113,"./ReactPerf":120,"./ReactReconciler":125,"./ReactUpdateQueue":131,"./ReactUpdates":132,"./instantiateReactComponent":167,"./setInnerHTML":173,"./shouldUpdateReactComponent":175,"./validateDOMNesting":177,"_process":205,"fbjs/lib/containsNode":182,"fbjs/lib/emptyObject":186,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],115:[function(require,module,exports){
+},{"./DOMProperty":167,"./Object.assign":180,"./ReactBrowserEventEmitter":184,"./ReactCurrentOwner":192,"./ReactDOMFeatureFlags":197,"./ReactElement":210,"./ReactEmptyComponentRegistry":213,"./ReactInstanceHandles":219,"./ReactInstanceMap":220,"./ReactMarkupChecksum":222,"./ReactPerf":229,"./ReactReconciler":234,"./ReactUpdateQueue":240,"./ReactUpdates":241,"./instantiateReactComponent":276,"./setInnerHTML":282,"./shouldUpdateReactComponent":284,"./validateDOMNesting":286,"_process":292,"fbjs/lib/containsNode":6,"fbjs/lib/emptyObject":10,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],224:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -16329,7 +26263,7 @@ var ReactMultiChild = {
 
 module.exports = ReactMultiChild;
 }).call(this,require('_process'))
-},{"./ReactChildReconciler":76,"./ReactComponentEnvironment":81,"./ReactCurrentOwner":83,"./ReactMultiChildUpdateTypes":116,"./ReactReconciler":125,"./flattenChildren":158,"_process":205}],116:[function(require,module,exports){
+},{"./ReactChildReconciler":185,"./ReactComponentEnvironment":190,"./ReactCurrentOwner":192,"./ReactMultiChildUpdateTypes":225,"./ReactReconciler":234,"./flattenChildren":267,"_process":292}],225:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16362,7 +26296,7 @@ var ReactMultiChildUpdateTypes = keyMirror({
 });
 
 module.exports = ReactMultiChildUpdateTypes;
-},{"fbjs/lib/keyMirror":196}],117:[function(require,module,exports){
+},{"fbjs/lib/keyMirror":20}],226:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -16459,7 +26393,7 @@ var ReactNativeComponent = {
 
 module.exports = ReactNativeComponent;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"_process":205,"fbjs/lib/invariant":193}],118:[function(require,module,exports){
+},{"./Object.assign":180,"_process":292,"fbjs/lib/invariant":17}],227:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2015, Facebook, Inc.
@@ -16580,7 +26514,7 @@ var ReactNoopUpdateQueue = {
 
 module.exports = ReactNoopUpdateQueue;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/warning":204}],119:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/warning":28}],228:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -16674,7 +26608,7 @@ var ReactOwner = {
 
 module.exports = ReactOwner;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],120:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],229:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -16773,7 +26707,7 @@ function _noMeasure(objName, fnName, func) {
 
 module.exports = ReactPerf;
 }).call(this,require('_process'))
-},{"_process":205}],121:[function(require,module,exports){
+},{"_process":292}],230:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -16800,7 +26734,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = ReactPropTypeLocationNames;
 }).call(this,require('_process'))
-},{"_process":205}],122:[function(require,module,exports){
+},{"_process":292}],231:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16823,7 +26757,7 @@ var ReactPropTypeLocations = keyMirror({
 });
 
 module.exports = ReactPropTypeLocations;
-},{"fbjs/lib/keyMirror":196}],123:[function(require,module,exports){
+},{"fbjs/lib/keyMirror":20}],232:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17180,7 +27114,7 @@ function getClassName(propValue) {
 }
 
 module.exports = ReactPropTypes;
-},{"./ReactElement":101,"./ReactPropTypeLocationNames":121,"./getIteratorFn":164,"fbjs/lib/emptyFunction":185}],124:[function(require,module,exports){
+},{"./ReactElement":210,"./ReactPropTypeLocationNames":230,"./getIteratorFn":273,"fbjs/lib/emptyFunction":9}],233:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17332,7 +27266,7 @@ assign(ReactReconcileTransaction.prototype, Transaction.Mixin, Mixin);
 PooledClass.addPoolingTo(ReactReconcileTransaction);
 
 module.exports = ReactReconcileTransaction;
-},{"./CallbackQueue":54,"./Object.assign":71,"./PooledClass":72,"./ReactBrowserEventEmitter":75,"./ReactDOMFeatureFlags":88,"./ReactInputSelection":109,"./Transaction":149}],125:[function(require,module,exports){
+},{"./CallbackQueue":163,"./Object.assign":180,"./PooledClass":181,"./ReactBrowserEventEmitter":184,"./ReactDOMFeatureFlags":197,"./ReactInputSelection":218,"./Transaction":258}],234:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17440,7 +27374,7 @@ var ReactReconciler = {
 };
 
 module.exports = ReactReconciler;
-},{"./ReactRef":126}],126:[function(require,module,exports){
+},{"./ReactRef":235}],235:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17519,7 +27453,7 @@ ReactRef.detachRefs = function (instance, element) {
 };
 
 module.exports = ReactRef;
-},{"./ReactOwner":119}],127:[function(require,module,exports){
+},{"./ReactOwner":228}],236:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17549,7 +27483,7 @@ var ReactRootIndex = {
 };
 
 module.exports = ReactRootIndex;
-},{}],128:[function(require,module,exports){
+},{}],237:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -17573,7 +27507,7 @@ var ReactServerBatchingStrategy = {
 };
 
 module.exports = ReactServerBatchingStrategy;
-},{}],129:[function(require,module,exports){
+},{}],238:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17659,7 +27593,7 @@ module.exports = {
   renderToStaticMarkup: renderToStaticMarkup
 };
 }).call(this,require('_process'))
-},{"./ReactDefaultBatchingStrategy":97,"./ReactElement":101,"./ReactInstanceHandles":110,"./ReactMarkupChecksum":113,"./ReactServerBatchingStrategy":128,"./ReactServerRenderingTransaction":130,"./ReactUpdates":132,"./instantiateReactComponent":167,"_process":205,"fbjs/lib/emptyObject":186,"fbjs/lib/invariant":193}],130:[function(require,module,exports){
+},{"./ReactDefaultBatchingStrategy":206,"./ReactElement":210,"./ReactInstanceHandles":219,"./ReactMarkupChecksum":222,"./ReactServerBatchingStrategy":237,"./ReactServerRenderingTransaction":239,"./ReactUpdates":241,"./instantiateReactComponent":276,"_process":292,"fbjs/lib/emptyObject":10,"fbjs/lib/invariant":17}],239:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -17747,7 +27681,7 @@ assign(ReactServerRenderingTransaction.prototype, Transaction.Mixin, Mixin);
 PooledClass.addPoolingTo(ReactServerRenderingTransaction);
 
 module.exports = ReactServerRenderingTransaction;
-},{"./CallbackQueue":54,"./Object.assign":71,"./PooledClass":72,"./Transaction":149,"fbjs/lib/emptyFunction":185}],131:[function(require,module,exports){
+},{"./CallbackQueue":163,"./Object.assign":180,"./PooledClass":181,"./Transaction":258,"fbjs/lib/emptyFunction":9}],240:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2015, Facebook, Inc.
@@ -18007,7 +27941,7 @@ var ReactUpdateQueue = {
 
 module.exports = ReactUpdateQueue;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactCurrentOwner":83,"./ReactElement":101,"./ReactInstanceMap":111,"./ReactUpdates":132,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],132:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactCurrentOwner":192,"./ReactElement":210,"./ReactInstanceMap":220,"./ReactUpdates":241,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],241:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -18233,7 +28167,7 @@ var ReactUpdates = {
 
 module.exports = ReactUpdates;
 }).call(this,require('_process'))
-},{"./CallbackQueue":54,"./Object.assign":71,"./PooledClass":72,"./ReactPerf":120,"./ReactReconciler":125,"./Transaction":149,"_process":205,"fbjs/lib/invariant":193}],133:[function(require,module,exports){
+},{"./CallbackQueue":163,"./Object.assign":180,"./PooledClass":181,"./ReactPerf":229,"./ReactReconciler":234,"./Transaction":258,"_process":292,"fbjs/lib/invariant":17}],242:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18248,7 +28182,7 @@ module.exports = ReactUpdates;
 'use strict';
 
 module.exports = '0.14.2';
-},{}],134:[function(require,module,exports){
+},{}],243:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18376,7 +28310,7 @@ var SVGDOMPropertyConfig = {
 };
 
 module.exports = SVGDOMPropertyConfig;
-},{"./DOMProperty":58}],135:[function(require,module,exports){
+},{"./DOMProperty":167}],244:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18578,7 +28512,7 @@ var SelectEventPlugin = {
 };
 
 module.exports = SelectEventPlugin;
-},{"./EventConstants":63,"./EventPropagators":67,"./ReactInputSelection":109,"./SyntheticEvent":141,"./isTextInputElement":169,"fbjs/lib/ExecutionEnvironment":179,"fbjs/lib/getActiveElement":188,"fbjs/lib/keyOf":197,"fbjs/lib/shallowEqual":202}],136:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPropagators":176,"./ReactInputSelection":218,"./SyntheticEvent":250,"./isTextInputElement":278,"fbjs/lib/ExecutionEnvironment":3,"fbjs/lib/getActiveElement":12,"fbjs/lib/keyOf":21,"fbjs/lib/shallowEqual":26}],245:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18608,7 +28542,7 @@ var ServerReactRootIndex = {
 };
 
 module.exports = ServerReactRootIndex;
-},{}],137:[function(require,module,exports){
+},{}],246:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19198,7 +29132,7 @@ var SimpleEventPlugin = {
 
 module.exports = SimpleEventPlugin;
 }).call(this,require('_process'))
-},{"./EventConstants":63,"./EventPropagators":67,"./ReactMount":114,"./SyntheticClipboardEvent":138,"./SyntheticDragEvent":140,"./SyntheticEvent":141,"./SyntheticFocusEvent":142,"./SyntheticKeyboardEvent":144,"./SyntheticMouseEvent":145,"./SyntheticTouchEvent":146,"./SyntheticUIEvent":147,"./SyntheticWheelEvent":148,"./getEventCharCode":160,"_process":205,"fbjs/lib/EventListener":178,"fbjs/lib/emptyFunction":185,"fbjs/lib/invariant":193,"fbjs/lib/keyOf":197}],138:[function(require,module,exports){
+},{"./EventConstants":172,"./EventPropagators":176,"./ReactMount":223,"./SyntheticClipboardEvent":247,"./SyntheticDragEvent":249,"./SyntheticEvent":250,"./SyntheticFocusEvent":251,"./SyntheticKeyboardEvent":253,"./SyntheticMouseEvent":254,"./SyntheticTouchEvent":255,"./SyntheticUIEvent":256,"./SyntheticWheelEvent":257,"./getEventCharCode":269,"_process":292,"fbjs/lib/EventListener":2,"fbjs/lib/emptyFunction":9,"fbjs/lib/invariant":17,"fbjs/lib/keyOf":21}],247:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19238,7 +29172,7 @@ function SyntheticClipboardEvent(dispatchConfig, dispatchMarker, nativeEvent, na
 SyntheticEvent.augmentClass(SyntheticClipboardEvent, ClipboardEventInterface);
 
 module.exports = SyntheticClipboardEvent;
-},{"./SyntheticEvent":141}],139:[function(require,module,exports){
+},{"./SyntheticEvent":250}],248:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19276,7 +29210,7 @@ function SyntheticCompositionEvent(dispatchConfig, dispatchMarker, nativeEvent, 
 SyntheticEvent.augmentClass(SyntheticCompositionEvent, CompositionEventInterface);
 
 module.exports = SyntheticCompositionEvent;
-},{"./SyntheticEvent":141}],140:[function(require,module,exports){
+},{"./SyntheticEvent":250}],249:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19314,7 +29248,7 @@ function SyntheticDragEvent(dispatchConfig, dispatchMarker, nativeEvent, nativeE
 SyntheticMouseEvent.augmentClass(SyntheticDragEvent, DragEventInterface);
 
 module.exports = SyntheticDragEvent;
-},{"./SyntheticMouseEvent":145}],141:[function(require,module,exports){
+},{"./SyntheticMouseEvent":254}],250:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19494,7 +29428,7 @@ PooledClass.addPoolingTo(SyntheticEvent, PooledClass.fourArgumentPooler);
 
 module.exports = SyntheticEvent;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./PooledClass":72,"_process":205,"fbjs/lib/emptyFunction":185,"fbjs/lib/warning":204}],142:[function(require,module,exports){
+},{"./Object.assign":180,"./PooledClass":181,"_process":292,"fbjs/lib/emptyFunction":9,"fbjs/lib/warning":28}],251:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19532,7 +29466,7 @@ function SyntheticFocusEvent(dispatchConfig, dispatchMarker, nativeEvent, native
 SyntheticUIEvent.augmentClass(SyntheticFocusEvent, FocusEventInterface);
 
 module.exports = SyntheticFocusEvent;
-},{"./SyntheticUIEvent":147}],143:[function(require,module,exports){
+},{"./SyntheticUIEvent":256}],252:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19571,7 +29505,7 @@ function SyntheticInputEvent(dispatchConfig, dispatchMarker, nativeEvent, native
 SyntheticEvent.augmentClass(SyntheticInputEvent, InputEventInterface);
 
 module.exports = SyntheticInputEvent;
-},{"./SyntheticEvent":141}],144:[function(require,module,exports){
+},{"./SyntheticEvent":250}],253:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19657,7 +29591,7 @@ function SyntheticKeyboardEvent(dispatchConfig, dispatchMarker, nativeEvent, nat
 SyntheticUIEvent.augmentClass(SyntheticKeyboardEvent, KeyboardEventInterface);
 
 module.exports = SyntheticKeyboardEvent;
-},{"./SyntheticUIEvent":147,"./getEventCharCode":160,"./getEventKey":161,"./getEventModifierState":162}],145:[function(require,module,exports){
+},{"./SyntheticUIEvent":256,"./getEventCharCode":269,"./getEventKey":270,"./getEventModifierState":271}],254:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19731,7 +29665,7 @@ function SyntheticMouseEvent(dispatchConfig, dispatchMarker, nativeEvent, native
 SyntheticUIEvent.augmentClass(SyntheticMouseEvent, MouseEventInterface);
 
 module.exports = SyntheticMouseEvent;
-},{"./SyntheticUIEvent":147,"./ViewportMetrics":150,"./getEventModifierState":162}],146:[function(require,module,exports){
+},{"./SyntheticUIEvent":256,"./ViewportMetrics":259,"./getEventModifierState":271}],255:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19778,7 +29712,7 @@ function SyntheticTouchEvent(dispatchConfig, dispatchMarker, nativeEvent, native
 SyntheticUIEvent.augmentClass(SyntheticTouchEvent, TouchEventInterface);
 
 module.exports = SyntheticTouchEvent;
-},{"./SyntheticUIEvent":147,"./getEventModifierState":162}],147:[function(require,module,exports){
+},{"./SyntheticUIEvent":256,"./getEventModifierState":271}],256:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19839,7 +29773,7 @@ function SyntheticUIEvent(dispatchConfig, dispatchMarker, nativeEvent, nativeEve
 SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 
 module.exports = SyntheticUIEvent;
-},{"./SyntheticEvent":141,"./getEventTarget":163}],148:[function(require,module,exports){
+},{"./SyntheticEvent":250,"./getEventTarget":272}],257:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19895,7 +29829,7 @@ function SyntheticWheelEvent(dispatchConfig, dispatchMarker, nativeEvent, native
 SyntheticMouseEvent.augmentClass(SyntheticWheelEvent, WheelEventInterface);
 
 module.exports = SyntheticWheelEvent;
-},{"./SyntheticMouseEvent":145}],149:[function(require,module,exports){
+},{"./SyntheticMouseEvent":254}],258:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -20129,7 +30063,7 @@ var Transaction = {
 
 module.exports = Transaction;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],150:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],259:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20157,7 +30091,7 @@ var ViewportMetrics = {
 };
 
 module.exports = ViewportMetrics;
-},{}],151:[function(require,module,exports){
+},{}],260:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -20219,7 +30153,7 @@ function accumulateInto(current, next) {
 
 module.exports = accumulateInto;
 }).call(this,require('_process'))
-},{"_process":205,"fbjs/lib/invariant":193}],152:[function(require,module,exports){
+},{"_process":292,"fbjs/lib/invariant":17}],261:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20262,7 +30196,7 @@ function adler32(data) {
 }
 
 module.exports = adler32;
-},{}],153:[function(require,module,exports){
+},{}],262:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -20289,7 +30223,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = canDefineProperty;
 }).call(this,require('_process'))
-},{"_process":205}],154:[function(require,module,exports){
+},{"_process":292}],263:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20345,7 +30279,7 @@ function dangerousStyleValue(name, value) {
 }
 
 module.exports = dangerousStyleValue;
-},{"./CSSProperty":52}],155:[function(require,module,exports){
+},{"./CSSProperty":161}],264:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -20396,7 +30330,7 @@ function deprecated(fnName, newModule, newPackage, ctx, fn) {
 
 module.exports = deprecated;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"_process":205,"fbjs/lib/warning":204}],156:[function(require,module,exports){
+},{"./Object.assign":180,"_process":292,"fbjs/lib/warning":28}],265:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20435,7 +30369,7 @@ function escapeTextContentForBrowser(text) {
 }
 
 module.exports = escapeTextContentForBrowser;
-},{}],157:[function(require,module,exports){
+},{}],266:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -20487,7 +30421,7 @@ function findDOMNode(componentOrElement) {
 
 module.exports = findDOMNode;
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":83,"./ReactInstanceMap":111,"./ReactMount":114,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],158:[function(require,module,exports){
+},{"./ReactCurrentOwner":192,"./ReactInstanceMap":220,"./ReactMount":223,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],267:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -20538,7 +30472,7 @@ function flattenChildren(children) {
 
 module.exports = flattenChildren;
 }).call(this,require('_process'))
-},{"./traverseAllChildren":176,"_process":205,"fbjs/lib/warning":204}],159:[function(require,module,exports){
+},{"./traverseAllChildren":285,"_process":292,"fbjs/lib/warning":28}],268:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20568,7 +30502,7 @@ var forEachAccumulated = function (arr, cb, scope) {
 };
 
 module.exports = forEachAccumulated;
-},{}],160:[function(require,module,exports){
+},{}],269:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20619,7 +30553,7 @@ function getEventCharCode(nativeEvent) {
 }
 
 module.exports = getEventCharCode;
-},{}],161:[function(require,module,exports){
+},{}],270:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20723,7 +30657,7 @@ function getEventKey(nativeEvent) {
 }
 
 module.exports = getEventKey;
-},{"./getEventCharCode":160}],162:[function(require,module,exports){
+},{"./getEventCharCode":269}],271:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20768,7 +30702,7 @@ function getEventModifierState(nativeEvent) {
 }
 
 module.exports = getEventModifierState;
-},{}],163:[function(require,module,exports){
+},{}],272:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20798,7 +30732,7 @@ function getEventTarget(nativeEvent) {
 }
 
 module.exports = getEventTarget;
-},{}],164:[function(require,module,exports){
+},{}],273:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20839,7 +30773,7 @@ function getIteratorFn(maybeIterable) {
 }
 
 module.exports = getIteratorFn;
-},{}],165:[function(require,module,exports){
+},{}],274:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20913,7 +30847,7 @@ function getNodeForCharacterOffset(root, offset) {
 }
 
 module.exports = getNodeForCharacterOffset;
-},{}],166:[function(require,module,exports){
+},{}],275:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -20947,7 +30881,7 @@ function getTextContentAccessor() {
 }
 
 module.exports = getTextContentAccessor;
-},{"fbjs/lib/ExecutionEnvironment":179}],167:[function(require,module,exports){
+},{"fbjs/lib/ExecutionEnvironment":3}],276:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -21062,7 +30996,7 @@ function instantiateReactComponent(node) {
 
 module.exports = instantiateReactComponent;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"./ReactCompositeComponent":82,"./ReactEmptyComponent":103,"./ReactNativeComponent":117,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],168:[function(require,module,exports){
+},{"./Object.assign":180,"./ReactCompositeComponent":191,"./ReactEmptyComponent":212,"./ReactNativeComponent":226,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],277:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21123,7 +31057,7 @@ function isEventSupported(eventNameSuffix, capture) {
 }
 
 module.exports = isEventSupported;
-},{"fbjs/lib/ExecutionEnvironment":179}],169:[function(require,module,exports){
+},{"fbjs/lib/ExecutionEnvironment":3}],278:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21164,7 +31098,7 @@ function isTextInputElement(elem) {
 }
 
 module.exports = isTextInputElement;
-},{}],170:[function(require,module,exports){
+},{}],279:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -21200,7 +31134,7 @@ function onlyChild(children) {
 
 module.exports = onlyChild;
 }).call(this,require('_process'))
-},{"./ReactElement":101,"_process":205,"fbjs/lib/invariant":193}],171:[function(require,module,exports){
+},{"./ReactElement":210,"_process":292,"fbjs/lib/invariant":17}],280:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21227,7 +31161,7 @@ function quoteAttributeValueForBrowser(value) {
 }
 
 module.exports = quoteAttributeValueForBrowser;
-},{"./escapeTextContentForBrowser":156}],172:[function(require,module,exports){
+},{"./escapeTextContentForBrowser":265}],281:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21244,7 +31178,7 @@ module.exports = quoteAttributeValueForBrowser;
 var ReactMount = require('./ReactMount');
 
 module.exports = ReactMount.renderSubtreeIntoContainer;
-},{"./ReactMount":114}],173:[function(require,module,exports){
+},{"./ReactMount":223}],282:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21335,7 +31269,7 @@ if (ExecutionEnvironment.canUseDOM) {
 }
 
 module.exports = setInnerHTML;
-},{"fbjs/lib/ExecutionEnvironment":179}],174:[function(require,module,exports){
+},{"fbjs/lib/ExecutionEnvironment":3}],283:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21376,7 +31310,7 @@ if (ExecutionEnvironment.canUseDOM) {
 }
 
 module.exports = setTextContent;
-},{"./escapeTextContentForBrowser":156,"./setInnerHTML":173,"fbjs/lib/ExecutionEnvironment":179}],175:[function(require,module,exports){
+},{"./escapeTextContentForBrowser":265,"./setInnerHTML":282,"fbjs/lib/ExecutionEnvironment":3}],284:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -21420,7 +31354,7 @@ function shouldUpdateReactComponent(prevElement, nextElement) {
 }
 
 module.exports = shouldUpdateReactComponent;
-},{}],176:[function(require,module,exports){
+},{}],285:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -21612,7 +31546,7 @@ function traverseAllChildren(children, callback, traverseContext) {
 
 module.exports = traverseAllChildren;
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":83,"./ReactElement":101,"./ReactInstanceHandles":110,"./getIteratorFn":164,"_process":205,"fbjs/lib/invariant":193,"fbjs/lib/warning":204}],177:[function(require,module,exports){
+},{"./ReactCurrentOwner":192,"./ReactElement":210,"./ReactInstanceHandles":219,"./getIteratorFn":273,"_process":292,"fbjs/lib/invariant":17,"fbjs/lib/warning":28}],286:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2015, Facebook, Inc.
@@ -21978,1206 +31912,806 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = validateDOMNesting;
 }).call(this,require('_process'))
-},{"./Object.assign":71,"_process":205,"fbjs/lib/emptyFunction":185,"fbjs/lib/warning":204}],178:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @providesModule EventListener
- * @typechecks
- */
-
+},{"./Object.assign":180,"_process":292,"fbjs/lib/emptyFunction":9,"fbjs/lib/warning":28}],287:[function(require,module,exports){
 'use strict';
 
-var emptyFunction = require('./emptyFunction');
+var Concur = require('Concur')
+var format = require('isomorph/format').formatObj
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+
+var NON_FIELD_ERRORS = '__all__'
 
 /**
- * Upstream version of event listener. Does not take into account specific
- * nature of platform.
+ * A validation error, containing a list of messages. Single messages (e.g.
+ * those produced by validators) may have an associated error code and
+ * parameters to allow customisation by fields.
+ *
+ * The message argument can be a single error, a list of errors, or an object
+ * that maps field names to lists of errors. What we define as an "error" can
+ * be either a simple string or an instance of ValidationError with its message
+ * attribute set, and what we define as list or object can be an actual list or
+ * object or an instance of ValidationError with its errorList or errorObj
+ * property set.
  */
-var EventListener = {
-  /**
-   * Listen to DOM events during the bubble phase.
-   *
-   * @param {DOMEventTarget} target DOM element to register listener on.
-   * @param {string} eventType Event type, e.g. 'click' or 'mouseover'.
-   * @param {function} callback Callback function.
-   * @return {object} Object with a `remove` method.
-   */
-  listen: function (target, eventType, callback) {
-    if (target.addEventListener) {
-      target.addEventListener(eventType, callback, false);
-      return {
-        remove: function () {
-          target.removeEventListener(eventType, callback, false);
-        }
-      };
-    } else if (target.attachEvent) {
-      target.attachEvent('on' + eventType, callback);
-      return {
-        remove: function () {
-          target.detachEvent('on' + eventType, callback);
-        }
-      };
-    }
-  },
+var ValidationError = Concur.extend({
+  constructor: function ValidationError(message, kwargs) {
+    if (!(this instanceof ValidationError)) { return new ValidationError(message, kwargs) }
+    kwargs = object.extend({code: null, params: null}, kwargs)
 
-  /**
-   * Listen to DOM events during the capture phase.
-   *
-   * @param {DOMEventTarget} target DOM element to register listener on.
-   * @param {string} eventType Event type, e.g. 'click' or 'mouseover'.
-   * @param {function} callback Callback function.
-   * @return {object} Object with a `remove` method.
-   */
-  capture: function (target, eventType, callback) {
-    if (target.addEventListener) {
-      target.addEventListener(eventType, callback, true);
-      return {
-        remove: function () {
-          target.removeEventListener(eventType, callback, true);
-        }
-      };
-    } else {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Attempted to listen to events during the capture phase on a ' + 'browser that does not support the capture phase. Your application ' + 'will not receive some events.');
+    var code = kwargs.code
+    var params = kwargs.params
+
+    if (message instanceof ValidationError) {
+      if (object.hasOwn(message, 'errorObj')) {
+        message = message.errorObj
       }
-      return {
-        remove: emptyFunction
-      };
+      else if (object.hasOwn(message, 'message')) {
+        message = message.errorList
+      }
+      else {
+        code = message.code
+        params = message.params
+        message = message.message
+      }
     }
-  },
 
-  registerDefault: function () {}
-};
-
-module.exports = EventListener;
-}).call(this,require('_process'))
-},{"./emptyFunction":185,"_process":205}],179:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule ExecutionEnvironment
- */
-
-'use strict';
-
-var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
-
-/**
- * Simple, lightweight module assisting with the detection and context of
- * Worker. Helps avoid circular dependencies and allows code to reason about
- * whether or not they are in a Worker, even if they never include the main
- * `ReactWorker` dependency.
- */
-var ExecutionEnvironment = {
-
-  canUseDOM: canUseDOM,
-
-  canUseWorkers: typeof Worker !== 'undefined',
-
-  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
-
-  canUseViewport: canUseDOM && !!window.screen,
-
-  isInWorker: !canUseDOM // For now, this is true - might change in the future.
-
-};
-
-module.exports = ExecutionEnvironment;
-},{}],180:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule camelize
- * @typechecks
- */
-
-"use strict";
-
-var _hyphenPattern = /-(.)/g;
-
-/**
- * Camelcases a hyphenated string, for example:
- *
- *   > camelize('background-color')
- *   < "backgroundColor"
- *
- * @param {string} string
- * @return {string}
- */
-function camelize(string) {
-  return string.replace(_hyphenPattern, function (_, character) {
-    return character.toUpperCase();
-  });
-}
-
-module.exports = camelize;
-},{}],181:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule camelizeStyleName
- * @typechecks
- */
-
-'use strict';
-
-var camelize = require('./camelize');
-
-var msPattern = /^-ms-/;
-
-/**
- * Camelcases a hyphenated CSS property name, for example:
- *
- *   > camelizeStyleName('background-color')
- *   < "backgroundColor"
- *   > camelizeStyleName('-moz-transition')
- *   < "MozTransition"
- *   > camelizeStyleName('-ms-transition')
- *   < "msTransition"
- *
- * As Andi Smith suggests
- * (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
- * is converted to lowercase `ms`.
- *
- * @param {string} string
- * @return {string}
- */
-function camelizeStyleName(string) {
-  return camelize(string.replace(msPattern, 'ms-'));
-}
-
-module.exports = camelizeStyleName;
-},{"./camelize":180}],182:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule containsNode
- * @typechecks
- */
-
-'use strict';
-
-var isTextNode = require('./isTextNode');
-
-/*eslint-disable no-bitwise */
-
-/**
- * Checks if a given DOM node contains or is another DOM node.
- *
- * @param {?DOMNode} outerNode Outer DOM node.
- * @param {?DOMNode} innerNode Inner DOM node.
- * @return {boolean} True if `outerNode` contains or is `innerNode`.
- */
-function containsNode(_x, _x2) {
-  var _again = true;
-
-  _function: while (_again) {
-    var outerNode = _x,
-        innerNode = _x2;
-    _again = false;
-
-    if (!outerNode || !innerNode) {
-      return false;
-    } else if (outerNode === innerNode) {
-      return true;
-    } else if (isTextNode(outerNode)) {
-      return false;
-    } else if (isTextNode(innerNode)) {
-      _x = outerNode;
-      _x2 = innerNode.parentNode;
-      _again = true;
-      continue _function;
-    } else if (outerNode.contains) {
-      return outerNode.contains(innerNode);
-    } else if (outerNode.compareDocumentPosition) {
-      return !!(outerNode.compareDocumentPosition(innerNode) & 16);
-    } else {
-      return false;
+    if (is.Object(message)) {
+      this.errorObj = {}
+      Object.keys(message).forEach(function(field) {
+        var messages = message[field]
+        if (!(messages instanceof ValidationError)) {
+          messages = ValidationError(messages)
+        }
+        this.errorObj[field] = messages.errorList
+      }.bind(this))
+    }
+    else if (is.Array(message)) {
+      this.errorList = []
+      message.forEach(function(message) {
+        // Normalize strings to instances of ValidationError
+        if (!(message instanceof ValidationError)) {
+          message = ValidationError(message)
+        }
+        this.errorList.push.apply(this.errorList, message.errorList)
+      }.bind(this))
+    }
+    else {
+      this.message = message
+      this.code = code
+      this.params = params
+      this.errorList = [this]
     }
   }
-}
-
-module.exports = containsNode;
-},{"./isTextNode":195}],183:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule createArrayFromMixed
- * @typechecks
- */
-
-'use strict';
-
-var toArray = require('./toArray');
+})
 
 /**
- * Perform a heuristic test to determine if an object is "array-like".
- *
- *   A monk asked Joshu, a Zen master, "Has a dog Buddha nature?"
- *   Joshu replied: "Mu."
- *
- * This function determines if its argument has "array nature": it returns
- * true if the argument is an actual array, an `arguments' object, or an
- * HTMLCollection (e.g. node.childNodes or node.getElementsByTagName()).
- *
- * It will return false for other array-like objects like Filelist.
- *
- * @param {*} obj
- * @return {boolean}
+ * Returns validation messages as an object with field names as properties.
+ * Throws an error if this validation error was not created with a field error
+ * object.
  */
-function hasArrayNature(obj) {
-  return(
-    // not null/false
-    !!obj && (
-    // arrays are objects, NodeLists are functions in Safari
-    typeof obj == 'object' || typeof obj == 'function') &&
-    // quacks like an array
-    'length' in obj &&
-    // not window
-    !('setInterval' in obj) &&
-    // no DOM node should be considered an array-like
-    // a 'select' element has 'length' and 'item' properties on IE8
-    typeof obj.nodeType != 'number' && (
-    // a real array
-    Array.isArray(obj) ||
-    // arguments
-    'callee' in obj ||
-    // HTMLCollection/NodeList
-    'item' in obj)
-  );
+ValidationError.prototype.messageObj = function() {
+  if (!object.hasOwn(this, 'errorObj')) {
+    throw new Error('ValidationError has no errorObj')
+  }
+  return this.__iter__()
 }
 
 /**
- * Ensure that the argument is an array by wrapping it in an array if it is not.
- * Creates a copy of the argument if it is already an array.
- *
- * This is mostly useful idiomatically:
- *
- *   var createArrayFromMixed = require('createArrayFromMixed');
- *
- *   function takesOneOrMoreThings(things) {
- *     things = createArrayFromMixed(things);
- *     ...
- *   }
- *
- * This allows you to treat `things' as an array, but accept scalars in the API.
- *
- * If you need to convert an array-like object, like `arguments`, into an array
- * use toArray instead.
- *
- * @param {*} obj
- * @return {array}
+ * Returns validation messages as a list.
  */
-function createArrayFromMixed(obj) {
-  if (!hasArrayNature(obj)) {
-    return [obj];
-  } else if (Array.isArray(obj)) {
-    return obj.slice();
-  } else {
-    return toArray(obj);
+ValidationError.prototype.messages = function() {
+  if (object.hasOwn(this, 'errorObj')) {
+    var messages = []
+    Object.keys(this.errorObj).forEach(function(field) {
+      var errors = this.errorObj[field]
+      messages.push.apply(messages, ValidationError(errors).__iter__())
+    }.bind(this))
+    return messages
+  }
+  else {
+    return this.__iter__()
   }
 }
 
-module.exports = createArrayFromMixed;
-},{"./toArray":203}],184:[function(require,module,exports){
-(function (process){
 /**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule createNodesFromMarkup
- * @typechecks
+ * Generates an object of field error messags or a list of error messages
+ * depending on how this ValidationError has been constructed.
  */
-
-/*eslint-disable fb-www/unsafe-html*/
-
-'use strict';
-
-var ExecutionEnvironment = require('./ExecutionEnvironment');
-
-var createArrayFromMixed = require('./createArrayFromMixed');
-var getMarkupWrap = require('./getMarkupWrap');
-var invariant = require('./invariant');
-
-/**
- * Dummy container used to render all markup.
- */
-var dummyNode = ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
-
-/**
- * Pattern used by `getNodeName`.
- */
-var nodeNamePattern = /^\s*<(\w+)/;
-
-/**
- * Extracts the `nodeName` of the first element in a string of markup.
- *
- * @param {string} markup String of markup.
- * @return {?string} Node name of the supplied markup.
- */
-function getNodeName(markup) {
-  var nodeNameMatch = markup.match(nodeNamePattern);
-  return nodeNameMatch && nodeNameMatch[1].toLowerCase();
+ValidationError.prototype.__iter__ = function() {
+  if (object.hasOwn(this, 'errorObj')) {
+    var messageObj = {}
+    Object.keys(this.errorObj).forEach(function(field) {
+      var errors = this.errorObj[field]
+      messageObj[field] = ValidationError(errors).__iter__()
+    }.bind(this))
+    return messageObj
+  }
+  else {
+    return this.errorList.map(function(error) {
+      var message = error.message
+      if (error.params) {
+        message = format(message, error.params)
+      }
+      return message
+    })
+  }
 }
 
 /**
- * Creates an array containing the nodes rendered from the supplied markup. The
- * optionally supplied `handleScript` function will be invoked once for each
- * <script> element that is rendered. If no `handleScript` function is supplied,
- * an exception is thrown if any <script> elements are rendered.
- *
- * @param {string} markup A string of valid HTML markup.
- * @param {?function} handleScript Invoked once for each rendered <script>.
- * @return {array<DOMElement|DOMTextNode>} An array of rendered nodes.
+ * Passes this error's messages on to the given error object, adding to a
+ * particular field's error messages if already present.
  */
-function createNodesFromMarkup(markup, handleScript) {
-  var node = dummyNode;
-  !!!dummyNode ? process.env.NODE_ENV !== 'production' ? invariant(false, 'createNodesFromMarkup dummy not initialized') : invariant(false) : undefined;
-  var nodeName = getNodeName(markup);
-
-  var wrap = nodeName && getMarkupWrap(nodeName);
-  if (wrap) {
-    node.innerHTML = wrap[1] + markup + wrap[2];
-
-    var wrapDepth = wrap[0];
-    while (wrapDepth--) {
-      node = node.lastChild;
+ValidationError.prototype.updateErrorObj = function(errorObj) {
+  if (object.hasOwn(this, 'errorObj')) {
+    if (errorObj) {
+      Object.keys(this.errorObj).forEach(function(field) {
+        if (!object.hasOwn(errorObj, field)) {
+          errorObj[field] = []
+        }
+        var errors = errorObj[field]
+        errors.push.apply(errors, this.errorObj[field])
+      }.bind(this))
     }
-  } else {
-    node.innerHTML = markup;
-  }
-
-  var scripts = node.getElementsByTagName('script');
-  if (scripts.length) {
-    !handleScript ? process.env.NODE_ENV !== 'production' ? invariant(false, 'createNodesFromMarkup(...): Unexpected <script> element rendered.') : invariant(false) : undefined;
-    createArrayFromMixed(scripts).forEach(handleScript);
-  }
-
-  var nodes = createArrayFromMixed(node.childNodes);
-  while (node.lastChild) {
-    node.removeChild(node.lastChild);
-  }
-  return nodes;
-}
-
-module.exports = createNodesFromMarkup;
-}).call(this,require('_process'))
-},{"./ExecutionEnvironment":179,"./createArrayFromMixed":183,"./getMarkupWrap":189,"./invariant":193,"_process":205}],185:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule emptyFunction
- */
-
-"use strict";
-
-function makeEmptyFunction(arg) {
-  return function () {
-    return arg;
-  };
-}
-
-/**
- * This function accepts and discards inputs; it has no side effects. This is
- * primarily useful idiomatically for overridable function endpoints which
- * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
- */
-function emptyFunction() {}
-
-emptyFunction.thatReturns = makeEmptyFunction;
-emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
-emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
-emptyFunction.thatReturnsNull = makeEmptyFunction(null);
-emptyFunction.thatReturnsThis = function () {
-  return this;
-};
-emptyFunction.thatReturnsArgument = function (arg) {
-  return arg;
-};
-
-module.exports = emptyFunction;
-},{}],186:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule emptyObject
- */
-
-'use strict';
-
-var emptyObject = {};
-
-if (process.env.NODE_ENV !== 'production') {
-  Object.freeze(emptyObject);
-}
-
-module.exports = emptyObject;
-}).call(this,require('_process'))
-},{"_process":205}],187:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule focusNode
- */
-
-'use strict';
-
-/**
- * @param {DOMElement} node input/textarea to focus
- */
-function focusNode(node) {
-  // IE8 can throw "Can't move focus to the control because it is invisible,
-  // not enabled, or of a type that does not accept the focus." for all kinds of
-  // reasons that are too expensive and fragile to test.
-  try {
-    node.focus();
-  } catch (e) {}
-}
-
-module.exports = focusNode;
-},{}],188:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule getActiveElement
- * @typechecks
- */
-
-/**
- * Same as document.activeElement but wraps in a try-catch block. In IE it is
- * not safe to call document.activeElement if there is nothing focused.
- *
- * The activeElement will be null only if the document or document body is not yet defined.
- */
-'use strict';
-
-function getActiveElement() /*?DOMElement*/{
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  try {
-    return document.activeElement || document.body;
-  } catch (e) {
-    return document.body;
-  }
-}
-
-module.exports = getActiveElement;
-},{}],189:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule getMarkupWrap
- */
-
-/*eslint-disable fb-www/unsafe-html */
-
-'use strict';
-
-var ExecutionEnvironment = require('./ExecutionEnvironment');
-
-var invariant = require('./invariant');
-
-/**
- * Dummy container used to detect which wraps are necessary.
- */
-var dummyNode = ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
-
-/**
- * Some browsers cannot use `innerHTML` to render certain elements standalone,
- * so we wrap them, render the wrapped nodes, then extract the desired node.
- *
- * In IE8, certain elements cannot render alone, so wrap all elements ('*').
- */
-
-var shouldWrap = {};
-
-var selectWrap = [1, '<select multiple="true">', '</select>'];
-var tableWrap = [1, '<table>', '</table>'];
-var trWrap = [3, '<table><tbody><tr>', '</tr></tbody></table>'];
-
-var svgWrap = [1, '<svg xmlns="http://www.w3.org/2000/svg">', '</svg>'];
-
-var markupWrap = {
-  '*': [1, '?<div>', '</div>'],
-
-  'area': [1, '<map>', '</map>'],
-  'col': [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
-  'legend': [1, '<fieldset>', '</fieldset>'],
-  'param': [1, '<object>', '</object>'],
-  'tr': [2, '<table><tbody>', '</tbody></table>'],
-
-  'optgroup': selectWrap,
-  'option': selectWrap,
-
-  'caption': tableWrap,
-  'colgroup': tableWrap,
-  'tbody': tableWrap,
-  'tfoot': tableWrap,
-  'thead': tableWrap,
-
-  'td': trWrap,
-  'th': trWrap
-};
-
-// Initialize the SVG elements since we know they'll always need to be wrapped
-// consistently. If they are created inside a <div> they will be initialized in
-// the wrong namespace (and will not display).
-var svgElements = ['circle', 'clipPath', 'defs', 'ellipse', 'g', 'image', 'line', 'linearGradient', 'mask', 'path', 'pattern', 'polygon', 'polyline', 'radialGradient', 'rect', 'stop', 'text', 'tspan'];
-svgElements.forEach(function (nodeName) {
-  markupWrap[nodeName] = svgWrap;
-  shouldWrap[nodeName] = true;
-});
-
-/**
- * Gets the markup wrap configuration for the supplied `nodeName`.
- *
- * NOTE: This lazily detects which wraps are necessary for the current browser.
- *
- * @param {string} nodeName Lowercase `nodeName`.
- * @return {?array} Markup wrap configuration, if applicable.
- */
-function getMarkupWrap(nodeName) {
-  !!!dummyNode ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Markup wrapping node not initialized') : invariant(false) : undefined;
-  if (!markupWrap.hasOwnProperty(nodeName)) {
-    nodeName = '*';
-  }
-  if (!shouldWrap.hasOwnProperty(nodeName)) {
-    if (nodeName === '*') {
-      dummyNode.innerHTML = '<link />';
-    } else {
-      dummyNode.innerHTML = '<' + nodeName + '></' + nodeName + '>';
+    else {
+      errorObj = this.errorObj
     }
-    shouldWrap[nodeName] = !dummyNode.firstChild;
   }
-  return shouldWrap[nodeName] ? markupWrap[nodeName] : null;
-}
-
-module.exports = getMarkupWrap;
-}).call(this,require('_process'))
-},{"./ExecutionEnvironment":179,"./invariant":193,"_process":205}],190:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule getUnboundedScrollPosition
- * @typechecks
- */
-
-'use strict';
-
-/**
- * Gets the scroll position of the supplied element or window.
- *
- * The return values are unbounded, unlike `getScrollPosition`. This means they
- * may be negative or exceed the element boundaries (which is possible using
- * inertial scrolling).
- *
- * @param {DOMWindow|DOMElement} scrollable
- * @return {object} Map with `x` and `y` keys.
- */
-function getUnboundedScrollPosition(scrollable) {
-  if (scrollable === window) {
-    return {
-      x: window.pageXOffset || document.documentElement.scrollLeft,
-      y: window.pageYOffset || document.documentElement.scrollTop
-    };
+  else {
+    if (!object.hasOwn(errorObj, NON_FIELD_ERRORS)) {
+      errorObj[NON_FIELD_ERRORS] = []
+    }
+    var nonFieldErrors = errorObj[NON_FIELD_ERRORS]
+    nonFieldErrors.push.apply(nonFieldErrors, this.errorList)
   }
-  return {
-    x: scrollable.scrollLeft,
-    y: scrollable.scrollTop
-  };
+  return errorObj
 }
 
-module.exports = getUnboundedScrollPosition;
-},{}],191:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule hyphenate
- * @typechecks
- */
-
-'use strict';
-
-var _uppercasePattern = /([A-Z])/g;
-
-/**
- * Hyphenates a camelcased string, for example:
- *
- *   > hyphenate('backgroundColor')
- *   < "background-color"
- *
- * For CSS style names, use `hyphenateStyleName` instead which works properly
- * with all vendor prefixes, including `ms`.
- *
- * @param {string} string
- * @return {string}
- */
-function hyphenate(string) {
-  return string.replace(_uppercasePattern, '-$1').toLowerCase();
+ValidationError.prototype.toString = function() {
+  return ('ValidationError(' + JSON.stringify(this.__iter__()) + ')')
 }
 
-module.exports = hyphenate;
-},{}],192:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule hyphenateStyleName
- * @typechecks
- */
-
-'use strict';
-
-var hyphenate = require('./hyphenate');
-
-var msPattern = /^ms-/;
-
-/**
- * Hyphenates a camelcased CSS property name, for example:
- *
- *   > hyphenateStyleName('backgroundColor')
- *   < "background-color"
- *   > hyphenateStyleName('MozTransition')
- *   < "-moz-transition"
- *   > hyphenateStyleName('msTransition')
- *   < "-ms-transition"
- *
- * As Modernizr suggests (http://modernizr.com/docs/#prefixed), an `ms` prefix
- * is converted to `-ms-`.
- *
- * @param {string} string
- * @return {string}
- */
-function hyphenateStyleName(string) {
-  return hyphenate(string).replace(msPattern, '-ms-');
+module.exports = {
+  ValidationError: ValidationError
 }
 
-module.exports = hyphenateStyleName;
-},{"./hyphenate":191}],193:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule invariant
- */
-
+},{"Concur":1,"isomorph/format":54,"isomorph/is":55,"isomorph/object":56}],288:[function(require,module,exports){
 'use strict';
 
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
+// HACK: requiring './validators' here makes the circular import in ipv6.js work
+//       after browserification.
+module.exports = require('./validators')
+},{"./validators":290}],289:[function(require,module,exports){
+'use strict';
 
-var invariant = function (condition, format, a, b, c, d, e, f) {
-  if (process.env.NODE_ENV !== 'production') {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
+var object = require('isomorph/object')
+
+var errors = require('./errors')
+
+var ValidationError = errors.ValidationError
+
+var hexRE = /^[0-9a-f]+$/
+
+/**
+ * Cleans a IPv6 address string.
+ *
+ * Validity is checked by calling isValidIPv6Address() - if an invalid address
+ * is passed, a ValidationError is thrown.
+ *
+ * Replaces the longest continious zero-sequence with '::' and removes leading
+ * zeroes and makes sure all hextets are lowercase.
+ */
+function cleanIPv6Address(ipStr, kwargs) {
+  kwargs = object.extend({
+    unpackIPv4: false, errorMessage: 'This is not a valid IPv6 address.'
+  }, kwargs)
+
+  var bestDoublecolonStart = -1
+  var bestDoublecolonLen = 0
+  var doublecolonStart = -1
+  var doublecolonLen = 0
+
+  if (!isValidIPv6Address(ipStr)) {
+    throw ValidationError(kwargs.errorMessage, {code: 'invalid'})
+  }
+
+  // This algorithm can only handle fully exploded IP strings
+  ipStr = _explodeShorthandIPstring(ipStr)
+  ipStr = _sanitiseIPv4Mapping(ipStr)
+
+  // If needed, unpack the IPv4 and return straight away
+  if (kwargs.unpackIPv4) {
+    var ipv4Unpacked = _unpackIPv4(ipStr)
+    if (ipv4Unpacked) {
+      return ipv4Unpacked
     }
   }
 
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
-        return args[argIndex++];
-      }));
+  var hextets = ipStr.split(':')
+
+  for (var i = 0, l = hextets.length; i < l; i++) {
+    // Remove leading zeroes
+    hextets[i] = hextets[i].replace(/^0+/, '')
+    if (hextets[i] === '') {
+      hextets[i] = '0'
     }
 
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-};
-
-module.exports = invariant;
-}).call(this,require('_process'))
-},{"_process":205}],194:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule isNode
- * @typechecks
- */
-
-/**
- * @param {*} object The object to check.
- * @return {boolean} Whether or not the object is a DOM node.
- */
-'use strict';
-
-function isNode(object) {
-  return !!(object && (typeof Node === 'function' ? object instanceof Node : typeof object === 'object' && typeof object.nodeType === 'number' && typeof object.nodeName === 'string'));
-}
-
-module.exports = isNode;
-},{}],195:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule isTextNode
- * @typechecks
- */
-
-'use strict';
-
-var isNode = require('./isNode');
-
-/**
- * @param {*} object The object to check.
- * @return {boolean} Whether or not the object is a DOM text node.
- */
-function isTextNode(object) {
-  return isNode(object) && object.nodeType == 3;
-}
-
-module.exports = isTextNode;
-},{"./isNode":194}],196:[function(require,module,exports){
-(function (process){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule keyMirror
- * @typechecks static-only
- */
-
-'use strict';
-
-var invariant = require('./invariant');
-
-/**
- * Constructs an enumeration with keys equal to their value.
- *
- * For example:
- *
- *   var COLORS = keyMirror({blue: null, red: null});
- *   var myColor = COLORS.blue;
- *   var isColorValid = !!COLORS[myColor];
- *
- * The last line could not be performed if the values of the generated enum were
- * not equal to their keys.
- *
- *   Input:  {key1: val1, key2: val2}
- *   Output: {key1: key1, key2: key2}
- *
- * @param {object} obj
- * @return {object}
- */
-var keyMirror = function (obj) {
-  var ret = {};
-  var key;
-  !(obj instanceof Object && !Array.isArray(obj)) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'keyMirror(...): Argument must be an object.') : invariant(false) : undefined;
-  for (key in obj) {
-    if (!obj.hasOwnProperty(key)) {
-      continue;
+    // Determine best hextet to compress
+    if (hextets[i] == '0') {
+      doublecolonLen += 1
+      if (doublecolonStart == -1) {
+        // Start a sequence of zeros
+        doublecolonStart = i
+      }
+      if (doublecolonLen > bestDoublecolonLen) {
+        // This is the longest sequence so far
+        bestDoublecolonLen = doublecolonLen
+        bestDoublecolonStart = doublecolonStart
+      }
     }
-    ret[key] = key;
-  }
-  return ret;
-};
-
-module.exports = keyMirror;
-}).call(this,require('_process'))
-},{"./invariant":193,"_process":205}],197:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule keyOf
- */
-
-/**
- * Allows extraction of a minified key. Let's the build system minify keys
- * without losing the ability to dynamically use key strings as values
- * themselves. Pass in an object with a single key/val pair and it will return
- * you the string key of that single record. Suppose you want to grab the
- * value for a key 'className' inside of an object. Key/val minification may
- * have aliased that key to be 'xa12'. keyOf({className: null}) will return
- * 'xa12' in that case. Resolve keys you want to use once at startup time, then
- * reuse those resolutions.
- */
-"use strict";
-
-var keyOf = function (oneKeyObj) {
-  var key;
-  for (key in oneKeyObj) {
-    if (!oneKeyObj.hasOwnProperty(key)) {
-      continue;
-    }
-    return key;
-  }
-  return null;
-};
-
-module.exports = keyOf;
-},{}],198:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule mapObject
- */
-
-'use strict';
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-/**
- * Executes the provided `callback` once for each enumerable own property in the
- * object and constructs a new object from the results. The `callback` is
- * invoked with three arguments:
- *
- *  - the property value
- *  - the property name
- *  - the object being traversed
- *
- * Properties that are added after the call to `mapObject` will not be visited
- * by `callback`. If the values of existing properties are changed, the value
- * passed to `callback` will be the value at the time `mapObject` visits them.
- * Properties that are deleted before being visited are not visited.
- *
- * @grep function objectMap()
- * @grep function objMap()
- *
- * @param {?object} object
- * @param {function} callback
- * @param {*} context
- * @return {?object}
- */
-function mapObject(object, callback, context) {
-  if (!object) {
-    return null;
-  }
-  var result = {};
-  for (var name in object) {
-    if (hasOwnProperty.call(object, name)) {
-      result[name] = callback.call(context, object[name], name, object);
-    }
-  }
-  return result;
-}
-
-module.exports = mapObject;
-},{}],199:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule memoizeStringOnly
- * @typechecks static-only
- */
-
-'use strict';
-
-/**
- * Memoizes the return value of a function that accepts one string argument.
- *
- * @param {function} callback
- * @return {function}
- */
-function memoizeStringOnly(callback) {
-  var cache = {};
-  return function (string) {
-    if (!cache.hasOwnProperty(string)) {
-      cache[string] = callback.call(this, string);
-    }
-    return cache[string];
-  };
-}
-
-module.exports = memoizeStringOnly;
-},{}],200:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule performance
- * @typechecks
- */
-
-'use strict';
-
-var ExecutionEnvironment = require('./ExecutionEnvironment');
-
-var performance;
-
-if (ExecutionEnvironment.canUseDOM) {
-  performance = window.performance || window.msPerformance || window.webkitPerformance;
-}
-
-module.exports = performance || {};
-},{"./ExecutionEnvironment":179}],201:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule performanceNow
- * @typechecks
- */
-
-'use strict';
-
-var performance = require('./performance');
-var curPerformance = performance;
-
-/**
- * Detect if we can use `window.performance.now()` and gracefully fallback to
- * `Date.now()` if it doesn't exist. We need to support Firefox < 15 for now
- * because of Facebook's testing infrastructure.
- */
-if (!curPerformance || !curPerformance.now) {
-  curPerformance = Date;
-}
-
-var performanceNow = curPerformance.now.bind(curPerformance);
-
-module.exports = performanceNow;
-},{"./performance":200}],202:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule shallowEqual
- * @typechecks
- * 
- */
-
-'use strict';
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-/**
- * Performs equality by iterating through keys on an object and returning false
- * when any key has values which are not strictly equal between the arguments.
- * Returns true when the values of all keys are strictly equal.
- */
-function shallowEqual(objA, objB) {
-  if (objA === objB) {
-    return true;
-  }
-
-  if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
-    return false;
-  }
-
-  var keysA = Object.keys(objA);
-  var keysB = Object.keys(objB);
-
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-
-  // Test for A's keys different from B.
-  var bHasOwnProperty = hasOwnProperty.bind(objB);
-  for (var i = 0; i < keysA.length; i++) {
-    if (!bHasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) {
-      return false;
+    else {
+      doublecolonLen = 0
+      doublecolonStart = -1
     }
   }
 
-  return true;
+  // Compress the most suitable hextet
+  if (bestDoublecolonLen > 1) {
+    var bestDoublecolonEnd = bestDoublecolonStart + bestDoublecolonLen
+    // For zeros at the end of the address
+    if (bestDoublecolonEnd == hextets.length) {
+      hextets.push('')
+    }
+    hextets.splice(bestDoublecolonStart, bestDoublecolonLen, '')
+    // For zeros at the beginning of the address
+    if (bestDoublecolonStart === 0) {
+      hextets.unshift('')
+    }
+  }
+
+  return hextets.join(':').toLowerCase()
 }
 
-module.exports = shallowEqual;
-},{}],203:[function(require,module,exports){
-(function (process){
 /**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
+ * Sanitises IPv4 mapping in a expanded IPv6 address.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule toArray
- * @typechecks
+ * This converts ::ffff:0a0a:0a0a to ::ffff:10.10.10.10.
+ * If there is nothing to sanitise, returns an unchanged string.
  */
+function _sanitiseIPv4Mapping(ipStr) {
+  if (ipStr.toLowerCase().indexOf('0000:0000:0000:0000:0000:ffff:') !== 0) {
+    // Not an ipv4 mapping
+    return ipStr
+  }
 
+  var hextets = ipStr.split(':')
+
+  if (hextets[hextets.length - 1].indexOf('.') != -1) {
+    // Already sanitized
+    return ipStr
+  }
+
+  var ipv4Address = [
+    parseInt(hextets[6].substring(0, 2), 16)
+  , parseInt(hextets[6].substring(2, 4), 16)
+  , parseInt(hextets[7].substring(0, 2), 16)
+  , parseInt(hextets[7].substring(2, 4), 16)
+  ].join('.')
+
+  return hextets.slice(0, 6).join(':') +  ':' + ipv4Address
+}
+
+/**
+ * Unpacks an IPv4 address that was mapped in a compressed IPv6 address.
+ *
+ * This converts 0000:0000:0000:0000:0000:ffff:10.10.10.10 to 10.10.10.10.
+ * If there is nothing to sanitize, returns null.
+ */
+function _unpackIPv4(ipStr) {
+  if (ipStr.toLowerCase().indexOf('0000:0000:0000:0000:0000:ffff:') !== 0) {
+    return null
+  }
+
+  var hextets = ipStr.split(':')
+  return hextets.pop()
+}
+
+/**
+ * Determines if we have a valid IPv6 address.
+ */
+function isValidIPv6Address(ipStr) {
+  var validateIPv4Address = require('./validators').validateIPv4Address
+
+  // We need to have at least one ':'
+  if (ipStr.indexOf(':') == -1) {
+    return false
+  }
+
+  // We can only have one '::' shortener
+  if (String_count(ipStr, '::') > 1) {
+    return false
+  }
+
+  // '::' should be encompassed by start, digits or end
+  if (ipStr.indexOf(':::') != -1) {
+    return false
+  }
+
+  // A single colon can neither start nor end an address
+  if ((ipStr.charAt(0) == ':' && ipStr.charAt(1) != ':') ||
+      (ipStr.charAt(ipStr.length - 1) == ':' &&
+       ipStr.charAt(ipStr.length - 2) != ':')) {
+    return false
+  }
+
+  // We can never have more than 7 ':' (1::2:3:4:5:6:7:8 is invalid)
+  if (String_count(ipStr, ':') > 7) {
+    return false
+  }
+
+  // If we have no concatenation, we need to have 8 fields with 7 ':'
+  if (ipStr.indexOf('::') == -1 && String_count(ipStr, ':') != 7) {
+    // We might have an IPv4 mapped address
+    if (String_count(ipStr, '.') != 3) {
+      return false
+    }
+  }
+
+  ipStr = _explodeShorthandIPstring(ipStr)
+
+  // Now that we have that all squared away, let's check that each of the
+  // hextets are between 0x0 and 0xFFFF.
+  var hextets = ipStr.split(':')
+  for (var i = 0, l = hextets.length, hextet; i < l; i++) {
+    hextet = hextets[i]
+    if (String_count(hextet, '.') == 3) {
+      // If we have an IPv4 mapped address, the IPv4 portion has to
+      // be at the end of the IPv6 portion.
+      if (ipStr.split(':').pop() != hextet) {
+        return false
+      }
+      try {
+        validateIPv4Address(hextet)
+      }
+      catch (e) {
+        if (!(e instanceof ValidationError)) {
+          throw e
+        }
+        return false
+      }
+    }
+    else {
+      if (!hexRE.test(hextet)) {
+        return false
+      }
+      var intValue = parseInt(hextet, 16)
+      if (isNaN(intValue) || intValue < 0x0 || intValue > 0xFFFF) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+/**
+ * Expands a shortened IPv6 address.
+ */
+function _explodeShorthandIPstring(ipStr) {
+  if (!_isShortHand(ipStr)) {
+    // We've already got a longhand ipStr
+    return ipStr
+  }
+
+  var newIp = []
+  var hextets = ipStr.split('::')
+
+  // If there is a ::, we need to expand it with zeroes to get to 8 hextets -
+  // unless there is a dot in the last hextet, meaning we're doing v4-mapping
+  var fillTo = (ipStr.split(':').pop().indexOf('.') != -1) ? 7 : 8
+
+  if (hextets.length > 1) {
+    var sep = hextets[0].split(':').length + hextets[1].split(':').length
+    newIp = hextets[0].split(':')
+    for (var i = 0, l = fillTo - sep; i < l; i++) {
+      newIp.push('0000')
+    }
+    newIp = newIp.concat(hextets[1].split(':'))
+  }
+  else {
+    newIp = ipStr.split(':')
+  }
+
+  // Now need to make sure every hextet is 4 lower case characters.
+  // If a hextet is < 4 characters, we've got missing leading 0's.
+  var retIp = []
+  for (i = 0, l = newIp.length; i < l; i++) {
+    retIp.push(zeroPadding(newIp[i], 4) + newIp[i].toLowerCase())
+  }
+  return retIp.join(':')
+}
+
+/**
+ * Determines if the address is shortened.
+ */
+function _isShortHand(ipStr) {
+  if (String_count(ipStr, '::') == 1) {
+    return true
+  }
+  var parts = ipStr.split(':')
+  for (var i = 0, l = parts.length; i < l; i++) {
+    if (parts[i].length < 4) {
+      return true
+    }
+  }
+  return false
+}
+
+// Utilities
+
+function zeroPadding(str, length) {
+  if (str.length >= length) {
+    return ''
+  }
+  return new Array(length - str.length + 1).join('0')
+}
+
+function String_count(str, subStr) {
+  return str.split(subStr).length - 1
+}
+
+module.exports = {
+  cleanIPv6Address: cleanIPv6Address
+, isValidIPv6Address: isValidIPv6Address
+}
+
+},{"./errors":287,"./validators":290,"isomorph/object":56}],290:[function(require,module,exports){
 'use strict';
 
-var invariant = require('./invariant');
+var Concur = require('Concur')
+var is = require('isomorph/is')
+var object = require('isomorph/object')
+var punycode = require('punycode')
+var url = require('isomorph/url')
+
+var errors = require('./errors')
+var ipv6 = require('./ipv6')
+
+var ValidationError = errors.ValidationError
+var isValidIPv6Address = ipv6.isValidIPv6Address
+
+var EMPTY_VALUES = [null, undefined, '']
+
+function String_rsplit(str, sep, maxsplit) {
+  var split = str.split(sep)
+  return maxsplit ? [split.slice(0, -maxsplit).join(sep)].concat(split.slice(-maxsplit)) : split
+}
 
 /**
- * Convert array-like objects to arrays.
- *
- * This API assumes the caller knows the contents of the data type. For less
- * well defined inputs use createArrayFromMixed.
- *
- * @param {object|function|filelist} obj
- * @return {array}
+ * Validates that input matches a regular expression.
  */
-function toArray(obj) {
-  var length = obj.length;
+var RegexValidator = Concur.extend({
+  constructor: function(kwargs) {
+    if (!(this instanceof RegexValidator)) { return new RegexValidator(kwargs) }
+    kwargs = object.extend({
+      regex: null, message: null, code: null, inverseMatch: null
+    }, kwargs)
+    if (kwargs.regex) {
+      this.regex = kwargs.regex
+    }
+    if (kwargs.message) {
+      this.message = kwargs.message
+    }
+    if (kwargs.code) {
+      this.code = kwargs.code
+    }
+    if (kwargs.inverseMatch) {
+      this.inverseMatch = kwargs.inverseMatch
+    }
+    // Compile the regex if it was not passed pre-compiled
+    if (is.String(this.regex)) {
+      this.regex = new RegExp(this.regex)
+    }
+    return this.__call__.bind(this)
+  }
+, regex: ''
+, message: 'Enter a valid value.'
+, code: 'invalid'
+, inverseMatch: false
+, __call__: function(value) {
+    if (this.inverseMatch === this.regex.test(''+value)) {
+      throw ValidationError(this.message, {code: this.code})
+    }
+  }
+})
 
-  // Some browse builtin objects can report typeof 'function' (e.g. NodeList in
-  // old versions of Safari).
-  !(!Array.isArray(obj) && (typeof obj === 'object' || typeof obj === 'function')) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Array-like object expected') : invariant(false) : undefined;
+/**
+ * Validates that input looks like a valid URL.
+ */
+var URLValidator = RegexValidator.extend({
+  regex: new RegExp(
+    '^(?:[a-z0-9\\.\\-]*)://'                         // schema is validated separately
+  + '(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\\.)+(?:[A-Z]{2,6}\\.?|[A-Z0-9-]{2,}\\.?)|' // Domain...
+  + 'localhost|'                                      // localhost...
+  + '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|'      // ...or IPv4
+  + '\\[?[A-F0-9]*:[A-F0-9:]+\\]?)'                   // ...or IPv6
+  + '(?::\\d+)?'                                      // Optional port
+  + '(?:/?|[/?]\\S+)$'
+  , 'i'
+  )
+, message: 'Enter a valid URL.'
+, schemes: ['http', 'https', 'ftp', 'ftps']
 
-  !(typeof length === 'number') ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Object needs a length property') : invariant(false) : undefined;
+, constructor:function(kwargs) {
+    if (!(this instanceof URLValidator)) { return new URLValidator(kwargs) }
+    kwargs = object.extend({schemes: null}, kwargs)
+    RegexValidator.call(this, kwargs)
+    if (kwargs.schemes !== null) {
+      this.schemes = kwargs.schemes
+    }
+    return this.__call__.bind(this)
+  }
 
-  !(length === 0 || length - 1 in obj) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'toArray: Object should have keys for indices') : invariant(false) : undefined;
+, __call__: function(value) {
+    value = ''+value
+    // Check if the scheme is valid first
+    var scheme = value.split('://')[0].toLowerCase()
+    if (this.schemes.indexOf(scheme) === -1) {
+      throw ValidationError(this.message, {code: this.code})
+    }
 
-  // Old IE doesn't give collections access to hasOwnProperty. Assume inputs
-  // without method will throw during the slice call and skip straight to the
-  // fallback.
-  if (obj.hasOwnProperty) {
+    // Check the full URL
     try {
-      return Array.prototype.slice.call(obj);
-    } catch (e) {
-      // IE < 9 does not support Array#slice on collections objects
+      RegexValidator.prototype.__call__.call(this, value)
+    }
+    catch (e) {
+      if (!(e instanceof ValidationError)) { throw e }
+
+      // Trivial case failed - try for possible IDN domain
+      var urlFields = url.parseUri(value)
+      try {
+        urlFields.host = punycode.toASCII(urlFields.host)
+      }
+      catch (unicodeError) {
+        throw e
+      }
+      value = url.makeUri(urlFields)
+      RegexValidator.prototype.__call__.call(this, value)
     }
   }
+})
 
-  // Fall back to copying key by key. This assumes all keys have a value,
-  // so will not preserve sparsely populated inputs.
-  var ret = Array(length);
-  for (var ii = 0; ii < length; ii++) {
-    ret[ii] = obj[ii];
+/** Validates that input looks like a valid e-mail address. */
+var EmailValidator = Concur.extend({
+  message: 'Enter a valid email address.'
+, code: 'invalid'
+, userRegex: new RegExp(
+    "(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$"                                 // Dot-atom
+  + '|^"([\\001-\\010\\013\\014\\016-\\037!#-\\[\\]-\\177]|\\\\[\\001-\\011\\013\\014\\016-\\177])*"$)' // Quoted-string
+  , 'i')
+, domainRegex: new RegExp(
+    '^(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,})$'          // Domain
+  + '|^\\[(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)(\\.(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)){3}\\]$' // Literal form, ipv4 address (SMTP 4.1.3)
+  , 'i')
+, domainWhitelist: ['localhost']
+
+, constructor: function(kwargs) {
+    if (!(this instanceof EmailValidator)) { return new EmailValidator(kwargs) }
+    kwargs = object.extend({message: null, code: null, whitelist: null}, kwargs)
+    if (kwargs.message !== null) {
+      this.message = kwargs.message
+    }
+    if (kwargs.code !== null) {
+      this.code = kwargs.code
+    }
+    if (kwargs.whitelist !== null) {
+      this.domainWhitelist = kwargs.whitelist
+    }
+    return this.__call__.bind(this)
   }
-  return ret;
+
+, __call__ : function(value) {
+    value = ''+value
+
+    if (!value || value.indexOf('@') == -1) {
+      throw ValidationError(this.message, {code: this.code})
+    }
+
+    var parts = String_rsplit(value, '@', 1)
+    var userPart = parts[0]
+    var domainPart = parts[1]
+
+    if (!this.userRegex.test(userPart)) {
+      throw ValidationError(this.message, {code: this.code})
+    }
+
+    if (this.domainWhitelist.indexOf(domainPart) == -1 &&
+        !this.domainRegex.test(domainPart)) {
+      // Try for possible IDN domain-part
+      try {
+        domainPart = punycode.toASCII(domainPart)
+        if (this.domainRegex.test(domainPart)) {
+          return
+        }
+      }
+      catch (unicodeError) {
+        // Pass through to throw the ValidationError
+      }
+      throw ValidationError(this.message, {code: this.code})
+    }
+  }
+})
+
+var validateEmail = EmailValidator()
+
+var SLUG_RE = /^[-a-zA-Z0-9_]+$/
+/** Validates that input is a valid slug. */
+var validateSlug = RegexValidator({
+  regex: SLUG_RE
+, message: 'Enter a valid "slug" consisting of letters, numbers, underscores or hyphens.'
+, code: 'invalid'
+})
+
+var IPV4_RE = /^(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}$/
+/** Validates that input is a valid IPv4 address. */
+var validateIPv4Address = RegexValidator({
+  regex: IPV4_RE
+, message: 'Enter a valid IPv4 address.'
+, code: 'invalid'
+})
+
+/** Validates that input is a valid IPv6 address. */
+function validateIPv6Address(value) {
+  if (!isValidIPv6Address(value)) {
+    throw ValidationError('Enter a valid IPv6 address.', {code: 'invalid'})
+  }
 }
 
-module.exports = toArray;
-}).call(this,require('_process'))
-},{"./invariant":193,"_process":205}],204:[function(require,module,exports){
+/** Validates that input is a valid IPv4 or IPv6 address. */
+function validateIPv46Address(value) {
+  try {
+    validateIPv4Address(value)
+  }
+  catch (e) {
+    if (!(e instanceof ValidationError)) { throw e }
+    try {
+      validateIPv6Address(value)
+    }
+    catch (e) {
+      if (!(e instanceof ValidationError)) { throw e }
+      throw ValidationError('Enter a valid IPv4 or IPv6 address.',
+                            {code: 'invalid'})
+    }
+  }
+}
+
+var ipAddressValidatorLookup = {
+  both: {validators: [validateIPv46Address], message: 'Enter a valid IPv4 or IPv6 address.'}
+, ipv4: {validators: [validateIPv4Address], message: 'Enter a valid IPv4 address.'}
+, ipv6: {validators: [validateIPv6Address], message: 'Enter a valid IPv6 address.'}
+}
+
+/**
+ * Depending on the given parameters returns the appropriate validators for
+ * a GenericIPAddressField.
+ */
+function ipAddressValidators(protocol, unpackIPv4) {
+  if (protocol != 'both' && unpackIPv4) {
+    throw new Error('You can only use unpackIPv4 if protocol is set to "both"')
+  }
+  protocol = protocol.toLowerCase()
+  if (typeof ipAddressValidatorLookup[protocol] == 'undefined') {
+    throw new Error('The protocol "' + protocol +'" is unknown')
+  }
+  return ipAddressValidatorLookup[protocol]
+}
+
+var COMMA_SEPARATED_INT_LIST_RE = /^[\d,]+$/
+/** Validates that input is a comma-separated list of integers. */
+var validateCommaSeparatedIntegerList = RegexValidator({
+  regex: COMMA_SEPARATED_INT_LIST_RE
+, message: 'Enter only digits separated by commas.'
+, code: 'invalid'
+})
+
+/**
+ * Base for validators which compare input against a given value.
+ */
+var BaseValidator = Concur.extend({
+  constructor: function(limitValue) {
+    if (!(this instanceof BaseValidator)) { return new BaseValidator(limitValue) }
+    this.limitValue = limitValue
+    return this.__call__.bind(this)
+  }
+, compare: function(a, b) { return a !== b }
+, clean: function(x) { return x }
+, message: 'Ensure this value is {limitValue} (it is {showValue}).'
+, code: 'limitValue'
+, __call__: function(value) {
+    var cleaned = this.clean(value)
+    var params = {limitValue: this.limitValue, showValue: cleaned}
+    if (this.compare(cleaned, this.limitValue)) {
+      throw ValidationError(this.message, {code: this.code, params: params})
+    }
+  }
+})
+
+/**
+ * Validates that input is less than or equal to a given value.
+ */
+var MaxValueValidator = BaseValidator.extend({
+  constructor: function(limitValue) {
+    if (!(this instanceof MaxValueValidator)) { return new MaxValueValidator(limitValue) }
+    return BaseValidator.call(this, limitValue)
+  }
+, compare: function(a, b) { return a > b }
+, message: 'Ensure this value is less than or equal to {limitValue}.'
+, code: 'maxValue'
+})
+
+/**
+ * Validates that input is greater than or equal to a given value.
+ */
+var MinValueValidator = BaseValidator.extend({
+  constructor: function(limitValue) {
+    if (!(this instanceof MinValueValidator)) { return new MinValueValidator(limitValue) }
+    return BaseValidator.call(this, limitValue)
+  }
+, compare: function(a, b) { return a < b }
+, message: 'Ensure this value is greater than or equal to {limitValue}.'
+, code: 'minValue'
+})
+
+/**
+ * Validates that input is at least a given length.
+ */
+var MinLengthValidator = BaseValidator.extend({
+  constructor: function(limitValue) {
+    if (!(this instanceof MinLengthValidator)) { return new MinLengthValidator(limitValue) }
+    return BaseValidator.call(this, limitValue)
+  }
+, compare: function(a, b) { return a < b }
+, clean: function(x) { return x.length }
+, message: 'Ensure this value has at least {limitValue} characters (it has {showValue}).'
+, code: 'minLength'
+})
+
+/**
+ * Validates that input is at most a given length.
+ */
+var MaxLengthValidator = BaseValidator.extend({
+  constructor: function(limitValue) {
+    if (!(this instanceof MaxLengthValidator)) { return new MaxLengthValidator(limitValue) }
+    return BaseValidator.call(this, limitValue)
+  }
+, compare: function(a, b) { return a > b }
+, clean: function(x) { return x.length }
+, message: 'Ensure this value has at most {limitValue} characters (it has {showValue}).'
+, code: 'maxLength'
+})
+
+module.exports = {
+  EMPTY_VALUES: EMPTY_VALUES
+, RegexValidator: RegexValidator
+, URLValidator: URLValidator
+, EmailValidator: EmailValidator
+, validateEmail: validateEmail
+, validateSlug: validateSlug
+, validateIPv4Address: validateIPv4Address
+, validateIPv6Address: validateIPv6Address
+, validateIPv46Address: validateIPv46Address
+, ipAddressValidators: ipAddressValidators
+, validateCommaSeparatedIntegerList: validateCommaSeparatedIntegerList
+, BaseValidator: BaseValidator
+, MaxValueValidator: MaxValueValidator
+, MinValueValidator: MinValueValidator
+, MaxLengthValidator: MaxLengthValidator
+, MinLengthValidator: MinLengthValidator
+, ValidationError: ValidationError
+, ipv6: ipv6
+}
+
+},{"./errors":287,"./ipv6":289,"Concur":1,"isomorph/is":55,"isomorph/object":56,"isomorph/url":58,"punycode":293}],291:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -23186,13 +32720,9 @@ module.exports = toArray;
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @providesModule warning
  */
 
 'use strict';
-
-var emptyFunction = require('./emptyFunction');
 
 /**
  * Similar to invariant but only logs a warning if the condition is not met.
@@ -23201,43 +32731,51 @@ var emptyFunction = require('./emptyFunction');
  * same logic and follow the same code paths.
  */
 
-var warning = emptyFunction;
+var warning = function() {};
 
 if (process.env.NODE_ENV !== 'production') {
-  warning = function (condition, format) {
-    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-      args[_key - 2] = arguments[_key];
+  warning = function(condition, format, args) {
+    var len = arguments.length;
+    args = new Array(len > 2 ? len - 2 : 0);
+    for (var key = 2; key < len; key++) {
+      args[key - 2] = arguments[key];
     }
-
     if (format === undefined) {
-      throw new Error('`warning(condition, format, ...args)` requires a warning ' + 'message argument');
+      throw new Error(
+        '`warning(condition, format, ...args)` requires a warning ' +
+        'message argument'
+      );
     }
 
-    if (format.indexOf('Failed Composite propType: ') === 0) {
-      return; // Ignore CompositeComponent proptype check.
+    if (format.length < 10 || (/^[s\W]*$/).test(format)) {
+      throw new Error(
+        'The warning format should be able to uniquely identify this ' +
+        'warning. Please, use a more descriptive format than: ' + format
+      );
     }
 
     if (!condition) {
       var argIndex = 0;
-      var message = 'Warning: ' + format.replace(/%s/g, function () {
-        return args[argIndex++];
-      });
+      var message = 'Warning: ' +
+        format.replace(/%s/g, function() {
+          return args[argIndex++];
+        });
       if (typeof console !== 'undefined') {
         console.error(message);
       }
       try {
-        // --- Welcome to debugging React ---
         // This error was thrown as a convenience so that you can use this stack
         // to find the callsite that caused this warning to fire.
         throw new Error(message);
-      } catch (x) {}
+      } catch(x) {}
     }
   };
 }
 
 module.exports = warning;
+
 }).call(this,require('_process'))
-},{"./emptyFunction":185,"_process":205}],205:[function(require,module,exports){
+},{"_process":292}],292:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -23329,7 +32867,1150 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],"react-router":[function(require,module,exports){
+},{}],293:[function(require,module,exports){
+(function (global){
+/*! https://mths.be/punycode v1.3.2 by @mathias */
+;(function(root) {
+
+	/** Detect free variables */
+	var freeExports = typeof exports == 'object' && exports &&
+		!exports.nodeType && exports;
+	var freeModule = typeof module == 'object' && module &&
+		!module.nodeType && module;
+	var freeGlobal = typeof global == 'object' && global;
+	if (
+		freeGlobal.global === freeGlobal ||
+		freeGlobal.window === freeGlobal ||
+		freeGlobal.self === freeGlobal
+	) {
+		root = freeGlobal;
+	}
+
+	/**
+	 * The `punycode` object.
+	 * @name punycode
+	 * @type Object
+	 */
+	var punycode,
+
+	/** Highest positive signed 32-bit float value */
+	maxInt = 2147483647, // aka. 0x7FFFFFFF or 2^31-1
+
+	/** Bootstring parameters */
+	base = 36,
+	tMin = 1,
+	tMax = 26,
+	skew = 38,
+	damp = 700,
+	initialBias = 72,
+	initialN = 128, // 0x80
+	delimiter = '-', // '\x2D'
+
+	/** Regular expressions */
+	regexPunycode = /^xn--/,
+	regexNonASCII = /[^\x20-\x7E]/, // unprintable ASCII chars + non-ASCII chars
+	regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g, // RFC 3490 separators
+
+	/** Error messages */
+	errors = {
+		'overflow': 'Overflow: input needs wider integers to process',
+		'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
+		'invalid-input': 'Invalid input'
+	},
+
+	/** Convenience shortcuts */
+	baseMinusTMin = base - tMin,
+	floor = Math.floor,
+	stringFromCharCode = String.fromCharCode,
+
+	/** Temporary variable */
+	key;
+
+	/*--------------------------------------------------------------------------*/
+
+	/**
+	 * A generic error utility function.
+	 * @private
+	 * @param {String} type The error type.
+	 * @returns {Error} Throws a `RangeError` with the applicable error message.
+	 */
+	function error(type) {
+		throw RangeError(errors[type]);
+	}
+
+	/**
+	 * A generic `Array#map` utility function.
+	 * @private
+	 * @param {Array} array The array to iterate over.
+	 * @param {Function} callback The function that gets called for every array
+	 * item.
+	 * @returns {Array} A new array of values returned by the callback function.
+	 */
+	function map(array, fn) {
+		var length = array.length;
+		var result = [];
+		while (length--) {
+			result[length] = fn(array[length]);
+		}
+		return result;
+	}
+
+	/**
+	 * A simple `Array#map`-like wrapper to work with domain name strings or email
+	 * addresses.
+	 * @private
+	 * @param {String} domain The domain name or email address.
+	 * @param {Function} callback The function that gets called for every
+	 * character.
+	 * @returns {Array} A new string of characters returned by the callback
+	 * function.
+	 */
+	function mapDomain(string, fn) {
+		var parts = string.split('@');
+		var result = '';
+		if (parts.length > 1) {
+			// In email addresses, only the domain name should be punycoded. Leave
+			// the local part (i.e. everything up to `@`) intact.
+			result = parts[0] + '@';
+			string = parts[1];
+		}
+		// Avoid `split(regex)` for IE8 compatibility. See #17.
+		string = string.replace(regexSeparators, '\x2E');
+		var labels = string.split('.');
+		var encoded = map(labels, fn).join('.');
+		return result + encoded;
+	}
+
+	/**
+	 * Creates an array containing the numeric code points of each Unicode
+	 * character in the string. While JavaScript uses UCS-2 internally,
+	 * this function will convert a pair of surrogate halves (each of which
+	 * UCS-2 exposes as separate characters) into a single code point,
+	 * matching UTF-16.
+	 * @see `punycode.ucs2.encode`
+	 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+	 * @memberOf punycode.ucs2
+	 * @name decode
+	 * @param {String} string The Unicode input string (UCS-2).
+	 * @returns {Array} The new array of code points.
+	 */
+	function ucs2decode(string) {
+		var output = [],
+		    counter = 0,
+		    length = string.length,
+		    value,
+		    extra;
+		while (counter < length) {
+			value = string.charCodeAt(counter++);
+			if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
+				// high surrogate, and there is a next character
+				extra = string.charCodeAt(counter++);
+				if ((extra & 0xFC00) == 0xDC00) { // low surrogate
+					output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
+				} else {
+					// unmatched surrogate; only append this code unit, in case the next
+					// code unit is the high surrogate of a surrogate pair
+					output.push(value);
+					counter--;
+				}
+			} else {
+				output.push(value);
+			}
+		}
+		return output;
+	}
+
+	/**
+	 * Creates a string based on an array of numeric code points.
+	 * @see `punycode.ucs2.decode`
+	 * @memberOf punycode.ucs2
+	 * @name encode
+	 * @param {Array} codePoints The array of numeric code points.
+	 * @returns {String} The new Unicode string (UCS-2).
+	 */
+	function ucs2encode(array) {
+		return map(array, function(value) {
+			var output = '';
+			if (value > 0xFFFF) {
+				value -= 0x10000;
+				output += stringFromCharCode(value >>> 10 & 0x3FF | 0xD800);
+				value = 0xDC00 | value & 0x3FF;
+			}
+			output += stringFromCharCode(value);
+			return output;
+		}).join('');
+	}
+
+	/**
+	 * Converts a basic code point into a digit/integer.
+	 * @see `digitToBasic()`
+	 * @private
+	 * @param {Number} codePoint The basic numeric code point value.
+	 * @returns {Number} The numeric value of a basic code point (for use in
+	 * representing integers) in the range `0` to `base - 1`, or `base` if
+	 * the code point does not represent a value.
+	 */
+	function basicToDigit(codePoint) {
+		if (codePoint - 48 < 10) {
+			return codePoint - 22;
+		}
+		if (codePoint - 65 < 26) {
+			return codePoint - 65;
+		}
+		if (codePoint - 97 < 26) {
+			return codePoint - 97;
+		}
+		return base;
+	}
+
+	/**
+	 * Converts a digit/integer into a basic code point.
+	 * @see `basicToDigit()`
+	 * @private
+	 * @param {Number} digit The numeric value of a basic code point.
+	 * @returns {Number} The basic code point whose value (when used for
+	 * representing integers) is `digit`, which needs to be in the range
+	 * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
+	 * used; else, the lowercase form is used. The behavior is undefined
+	 * if `flag` is non-zero and `digit` has no uppercase form.
+	 */
+	function digitToBasic(digit, flag) {
+		//  0..25 map to ASCII a..z or A..Z
+		// 26..35 map to ASCII 0..9
+		return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+	}
+
+	/**
+	 * Bias adaptation function as per section 3.4 of RFC 3492.
+	 * http://tools.ietf.org/html/rfc3492#section-3.4
+	 * @private
+	 */
+	function adapt(delta, numPoints, firstTime) {
+		var k = 0;
+		delta = firstTime ? floor(delta / damp) : delta >> 1;
+		delta += floor(delta / numPoints);
+		for (/* no initialization */; delta > baseMinusTMin * tMax >> 1; k += base) {
+			delta = floor(delta / baseMinusTMin);
+		}
+		return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+	}
+
+	/**
+	 * Converts a Punycode string of ASCII-only symbols to a string of Unicode
+	 * symbols.
+	 * @memberOf punycode
+	 * @param {String} input The Punycode string of ASCII-only symbols.
+	 * @returns {String} The resulting string of Unicode symbols.
+	 */
+	function decode(input) {
+		// Don't use UCS-2
+		var output = [],
+		    inputLength = input.length,
+		    out,
+		    i = 0,
+		    n = initialN,
+		    bias = initialBias,
+		    basic,
+		    j,
+		    index,
+		    oldi,
+		    w,
+		    k,
+		    digit,
+		    t,
+		    /** Cached calculation results */
+		    baseMinusT;
+
+		// Handle the basic code points: let `basic` be the number of input code
+		// points before the last delimiter, or `0` if there is none, then copy
+		// the first basic code points to the output.
+
+		basic = input.lastIndexOf(delimiter);
+		if (basic < 0) {
+			basic = 0;
+		}
+
+		for (j = 0; j < basic; ++j) {
+			// if it's not a basic code point
+			if (input.charCodeAt(j) >= 0x80) {
+				error('not-basic');
+			}
+			output.push(input.charCodeAt(j));
+		}
+
+		// Main decoding loop: start just after the last delimiter if any basic code
+		// points were copied; start at the beginning otherwise.
+
+		for (index = basic > 0 ? basic + 1 : 0; index < inputLength; /* no final expression */) {
+
+			// `index` is the index of the next character to be consumed.
+			// Decode a generalized variable-length integer into `delta`,
+			// which gets added to `i`. The overflow checking is easier
+			// if we increase `i` as we go, then subtract off its starting
+			// value at the end to obtain `delta`.
+			for (oldi = i, w = 1, k = base; /* no condition */; k += base) {
+
+				if (index >= inputLength) {
+					error('invalid-input');
+				}
+
+				digit = basicToDigit(input.charCodeAt(index++));
+
+				if (digit >= base || digit > floor((maxInt - i) / w)) {
+					error('overflow');
+				}
+
+				i += digit * w;
+				t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+
+				if (digit < t) {
+					break;
+				}
+
+				baseMinusT = base - t;
+				if (w > floor(maxInt / baseMinusT)) {
+					error('overflow');
+				}
+
+				w *= baseMinusT;
+
+			}
+
+			out = output.length + 1;
+			bias = adapt(i - oldi, out, oldi == 0);
+
+			// `i` was supposed to wrap around from `out` to `0`,
+			// incrementing `n` each time, so we'll fix that now:
+			if (floor(i / out) > maxInt - n) {
+				error('overflow');
+			}
+
+			n += floor(i / out);
+			i %= out;
+
+			// Insert `n` at position `i` of the output
+			output.splice(i++, 0, n);
+
+		}
+
+		return ucs2encode(output);
+	}
+
+	/**
+	 * Converts a string of Unicode symbols (e.g. a domain name label) to a
+	 * Punycode string of ASCII-only symbols.
+	 * @memberOf punycode
+	 * @param {String} input The string of Unicode symbols.
+	 * @returns {String} The resulting Punycode string of ASCII-only symbols.
+	 */
+	function encode(input) {
+		var n,
+		    delta,
+		    handledCPCount,
+		    basicLength,
+		    bias,
+		    j,
+		    m,
+		    q,
+		    k,
+		    t,
+		    currentValue,
+		    output = [],
+		    /** `inputLength` will hold the number of code points in `input`. */
+		    inputLength,
+		    /** Cached calculation results */
+		    handledCPCountPlusOne,
+		    baseMinusT,
+		    qMinusT;
+
+		// Convert the input in UCS-2 to Unicode
+		input = ucs2decode(input);
+
+		// Cache the length
+		inputLength = input.length;
+
+		// Initialize the state
+		n = initialN;
+		delta = 0;
+		bias = initialBias;
+
+		// Handle the basic code points
+		for (j = 0; j < inputLength; ++j) {
+			currentValue = input[j];
+			if (currentValue < 0x80) {
+				output.push(stringFromCharCode(currentValue));
+			}
+		}
+
+		handledCPCount = basicLength = output.length;
+
+		// `handledCPCount` is the number of code points that have been handled;
+		// `basicLength` is the number of basic code points.
+
+		// Finish the basic string - if it is not empty - with a delimiter
+		if (basicLength) {
+			output.push(delimiter);
+		}
+
+		// Main encoding loop:
+		while (handledCPCount < inputLength) {
+
+			// All non-basic code points < n have been handled already. Find the next
+			// larger one:
+			for (m = maxInt, j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+				if (currentValue >= n && currentValue < m) {
+					m = currentValue;
+				}
+			}
+
+			// Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
+			// but guard against overflow
+			handledCPCountPlusOne = handledCPCount + 1;
+			if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+				error('overflow');
+			}
+
+			delta += (m - n) * handledCPCountPlusOne;
+			n = m;
+
+			for (j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+
+				if (currentValue < n && ++delta > maxInt) {
+					error('overflow');
+				}
+
+				if (currentValue == n) {
+					// Represent delta as a generalized variable-length integer
+					for (q = delta, k = base; /* no condition */; k += base) {
+						t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+						if (q < t) {
+							break;
+						}
+						qMinusT = q - t;
+						baseMinusT = base - t;
+						output.push(
+							stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+						);
+						q = floor(qMinusT / baseMinusT);
+					}
+
+					output.push(stringFromCharCode(digitToBasic(q, 0)));
+					bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
+					delta = 0;
+					++handledCPCount;
+				}
+			}
+
+			++delta;
+			++n;
+
+		}
+		return output.join('');
+	}
+
+	/**
+	 * Converts a Punycode string representing a domain name or an email address
+	 * to Unicode. Only the Punycoded parts of the input will be converted, i.e.
+	 * it doesn't matter if you call it on a string that has already been
+	 * converted to Unicode.
+	 * @memberOf punycode
+	 * @param {String} input The Punycoded domain name or email address to
+	 * convert to Unicode.
+	 * @returns {String} The Unicode representation of the given Punycode
+	 * string.
+	 */
+	function toUnicode(input) {
+		return mapDomain(input, function(string) {
+			return regexPunycode.test(string)
+				? decode(string.slice(4).toLowerCase())
+				: string;
+		});
+	}
+
+	/**
+	 * Converts a Unicode string representing a domain name or an email address to
+	 * Punycode. Only the non-ASCII parts of the domain name will be converted,
+	 * i.e. it doesn't matter if you call it with a domain that's already in
+	 * ASCII.
+	 * @memberOf punycode
+	 * @param {String} input The domain name or email address to convert, as a
+	 * Unicode string.
+	 * @returns {String} The Punycode representation of the given domain name or
+	 * email address.
+	 */
+	function toASCII(input) {
+		return mapDomain(input, function(string) {
+			return regexNonASCII.test(string)
+				? 'xn--' + encode(string)
+				: string;
+		});
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	/** Define the public API */
+	punycode = {
+		/**
+		 * A string representing the current Punycode.js version number.
+		 * @memberOf punycode
+		 * @type String
+		 */
+		'version': '1.3.2',
+		/**
+		 * An object of methods to convert from JavaScript's internal character
+		 * representation (UCS-2) to Unicode code points, and back.
+		 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+		 * @memberOf punycode
+		 * @type Object
+		 */
+		'ucs2': {
+			'decode': ucs2decode,
+			'encode': ucs2encode
+		},
+		'decode': decode,
+		'encode': encode,
+		'toASCII': toASCII,
+		'toUnicode': toUnicode
+	};
+
+	/** Expose `punycode` */
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define('punycode', function() {
+			return punycode;
+		});
+	} else if (freeExports && freeModule) {
+		if (module.exports == freeExports) { // in Node.js or RingoJS v0.8.0+
+			freeModule.exports = punycode;
+		} else { // in Narwhal or RingoJS v0.7.0-
+			for (key in punycode) {
+				punycode.hasOwnProperty(key) && (freeExports[key] = punycode[key]);
+			}
+		}
+	} else { // in Rhino or a web browser
+		root.punycode = punycode;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],"newforms-bootstrap":[function(require,module,exports){
+(function (process){
+'use strict';
+
+var React = require('react')
+
+var $__0=
+     
+     
+      
+  require('newforms'),BooleanField=$__0.BooleanField,BoundField=$__0.BoundField,CheckboxChoiceInput=$__0.CheckboxChoiceInput,CheckboxFieldRenderer=$__0.CheckboxFieldRenderer,CheckboxSelectMultiple=$__0.CheckboxSelectMultiple,ChoiceFieldRenderer=$__0.ChoiceFieldRenderer,FileField=$__0.FileField,Form=$__0.Form,MultiValueField=$__0.MultiValueField,MultiWidget=$__0.MultiWidget,RadioChoiceInput=$__0.RadioChoiceInput,RadioFieldRenderer=$__0.RadioFieldRenderer,RadioSelect=$__0.RadioSelect
+
+var SPINNER = 'data:image/gif;base64,R0lGODlhDgAOANU%2FAJ2rtf39%2FfL09a65wvX2993i5qq2v9Ta35CgrLjCyuTo6%2Bfq7aGvub3Hzs7V2vX3%2BI6eq9rf47rEzOvu8NLZ3ens7u7w8sDJ0ODl6MfP1aazvYqbqNDX3Pr7%2FLW%2Fx4iZpomap%2BPn6vHz9Y2dqqSxu%2FT19%2Bjr7tfd4dvg5KOwuvj5%2BeLm6ae0vd%2Fk5%2Fj5%2BvHz9Nbc4Nbc4Y2dqff4%2Bebp7NXb3%2FDy9Iqbp%2BXp7Pv8%2FL%2FIz%2Fn6%2B7nDy%2FDy84%2Bfq%2F%2F%2F%2FyH%2FC05FVFNDQVBFMi4wAwEAAAAh%2FwtYTVAgRGF0YVhNUDw%2FeHBhY2tldCBiZWdpbj0i77u%2FIiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8%2BIDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDoyNzA4MjZFM0EyRUExMUUzQjE2OUQwNUQ1MzZBQ0M2NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDoyNzA4MjZFNEEyRUExMUUzQjE2OUQwNUQ1MzZBQ0M2NyI%2BIDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjk2NDkzOTlDQTJBOTExRTNCMTY5RDA1RDUzNkFDQzY3IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjI3MDgyNkUyQTJFQTExRTNCMTY5RDA1RDUzNkFDQzY3Ii8%2BIDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY%2BIDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8%2BAf%2F%2B%2Ffz7%2Bvn49%2Fb19PPy8fDv7u3s6%2Brp6Ofm5eTj4uHg397d3Nva2djX1tXU09LR0M%2FOzczLysnIx8bFxMPCwcC%2Fvr28u7q5uLe2tbSzsrGwr66trKuqqainpqWko6KhoJ%2BenZybmpmYl5aVlJOSkZCPjo2Mi4qJiIeGhYSDgoGAf359fHt6eXh3dnV0c3JxcG9ubWxramloZ2ZlZGNiYWBfXl1cW1pZWFdWVVRTUlFQT05NTEtKSUhHRkVEQ0JBQD8%2BPTw7Ojk4NzY1NDMyMTAvLi0sKyopKCcmJSQjIiEgHx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQAAIfkEBQMAPwAsAAAAAA4ADgAABhTAn3BILBqPyKRyyWw6n9CodGoMAgAh%2BQQFAwA%2FACwHAAAAAQADAAAGBcCOrRMEACH5BAUDAD8ALAcAAAABAAMAAAYFwNKhFAQAIfkEBQMAPwAsBwAAAAEAAwAABgXABQkXBAAh%2BQQFAwA%2FACwHAAAAAgADAAAGB8DQ7FOLPYIAIfkEBQMAPwAsBwAAAAMAAwAABgrAX%2Bn3%2B0xOmV8QACH5BAUDAD8ALAcAAAAEAAMAAAYLQMxvOCSJfjpNIAgAIfkEBQMAPwAsBwAAAAUABAAABg%2FA0G9I%2FCmGDR%2BoMiRQfkEAIfkEBQMAPwAsBwAAAAYABQAABhNAzG9IHIaGNcnQQXwwPotm7RcEACH5BAUDAD8ALAcAAAAHAAYAAAYVwNVvSCwSTw3ExzgECYkEBMOYMXSCACH5BAUDAD8ALAcAAAAHAAgAAAYcwNBvSCQqij8fiFMkDIXIFPLyERRRn1axl1gEAQAh%2BQQFAwA%2FACwLAAcAAwADAAAGCsDIB3P5CFCeXxAAIfkEBQMAPwAsCgAHAAQABQAABhHAn7Al%2FIkeiNTP8An9MA5hEAAh%2BQQFAwA%2FACwIAAMABgAKAAAGHMCf8LcaGo9II%2BpXOL6MDCGBASrWEKBhjRQaBgEAIfkEBQMAPwAsBgAAAAgADgAABirA3%2BRHLP4YxJCxYGw6i4%2BndEpsPQVGwi%2F1VE5ODd%2BPQxx8Pj9FsRIqNYMAIfkECQMAPwAsAwAAAAkADgAABiLAn%2FA3Gxp%2FjuNw8kMgldAhIUqtWq%2FKC692DLA%2BHyhhdQwCACH5BAkDAD8ALAAAAAAOAA4AAAZGwJ9wKOwQj0QGKYQ8XnwgR5NIYHymxAeCgR1efqLuDyUWkstfYgBJQBAdgPCwCiLWQBAJ7NSAco4VBh%2BDHyQKUw8KISVHQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGUcCfcEgsGn%2BBQehItCBADubwwQCtpMIHgoEVXj6vLupTEH9aP1OE%2BRX8DCORkYBICU0bgHtIqC6FNRsQEicnDT4gHEULGh%2BOHyQKTA8hISVFQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGVsCfcEgsGoe9Y1EBciiHDwYI8xSWEIyqUPexBVQBZeRTWHwoStSn5QIllJeP4GeQvYwEREpY2QBERARSIUMwGyMSMScNPiAcRSYsH5MfJApKDwohJUVBACH5BAkDAD8ALAAAAAAOAA4AAAZRwJ9wSCwaj8ghLTl0gFbMHwGR%2Bs0GCuTlI8B9DkjUp7X4UMJjFyih5f4MspdxWv1VNgARkcAAhYYwGyMSMScNPiAcRSYsH44fJFlHDwohJUVBACH5BAkDAD8ALAAAAAAOAA4AAAZVwJ9wSCwaj8gjIZBk%2FlgaZCb1m30kSN3HhvvUkJFPYfGhIFGflguUQF4%2Bgp9B9jISENRfZQMQEQkMICFDMBsjEjEnDT4gHEUmLB%2BSHyQKSA8KISVFQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGUcCfcEgsGo%2FCCZJo2nCWQsNIBHWBeEvLjvY5IAuf1uJDQaLC1gTy8hH8DLKXkYBICSsbAHVIYIBCQzAbIxIxJw0%2BIE9MLB%2BOHyQKSA8KISVFQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGU8CfcEgsCnNGYw3gSg5NG0DJKWSNetTf7JPI%2FhQfincRdgoUOReom7x8BD%2BD7GV8IBjCSlREJDA%2BIUMwGyMSMScNPiAORSYsH5AfKYFJDwohU0RBACH5BAkDAD8ALAAAAAAOAA4AAAZPwJ9wSCwKFyhjsXYDKIemDUDwFLJG1Orsw6sKcZ%2BD97f4UMYuUGL8M8hexkemI6xIRcQHA7QawjYjEjE1Ej4gDkUmLB%2BMHyQhTw8KGCVFQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGSsCfcEgsChcajJFY20BOS6FpAxBEhYaR6PqbfXjcH%2B5zCC8%2BlLALlAj%2FDLJXuELdDh%2BBImwzksRODQgNRiYsH4cfJCFRDworJUVBACH5BAkDAD8ALAAAAAAOAA4AAAZGwJ9Q2BkajQsN4nisbUaSAFNougEE06FhJMoKZyCeV0j7HMa%2FxYeCdoES6J9B9kJXNoDuGPaUxGA2WSYsH4UZYw8KGARHQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGPMCfUPhQDY%2FDBetzQB5rN4hk4hRWNgBBdWgYibZCFYgHFtKY5d%2B5WRaT091v%2BQqQg6HSV1n5MaV%2FDwFVQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGPMCfUPiwDI%2FDBetjQB5rG4ik5RSaNgBRdWgYabc%2FF4gHFtI%2Bh%2FIP96GoZ5%2BE%2Bsca9dQLrEBdA6HmRnNqQQAh%2BQQJAwA%2FACwAAAAADgAOAAAGN8CfUPgwDY9DE%2BvjQx5jm5Ek4hSaNgBRdWiQvbZCF4gHFtI%2Bh%2FIPh1bPPmS1YURQmxzqvH4%2FDAIAIfkECQMAPwAsAAAAAA4ADgAABjXAn1D4UASGSKGJ9fmokkPYZiSJHaGmDUAERRpkr%2B7QBeKJh4sP5SzEfWrs38yziNvv%2BLw%2BCAAh%2BQQJAwA%2FACwAAAAADgAOAAAGL8CfUPhQBIZIoYn1%2BaiSQ9hmJIkdoaYNQARFGmTcrlAF4omHFhLqzG673%2FC4%2FBwEACH5BAkDAD8ALAAAAAAOAA4AAAYqwJ9Q%2BAgFhkjhQvP5qJLD2gYiOR2hpg1AAEUaRqIu8rESm8%2FotHrNbrODACH5BAkDAD8ALAAAAAAOAA4AAAYowJ9QSFgFhkghTfP5qJLD2g3Cqx2hOQDABk3uSt2weEwum8%2FotBoZBAAh%2BQQJAwA%2FACwAAAAADgAOAAAGI8CfUEgIBYZI4ULz%2BaiSwx1iJDkdoUKTCMvter%2FgsHhMLpeDACH5BAkDAD8ALAAAAAAOAA4AAAYgwJ9QSFgFhkihSvP5qJLJAe9whFqv2Kx2y%2B16v%2BDwMAgAIfkECQMAPwAsAAAAAA4ADgAABh7An1BICAWGyKHl81Eln5nT8UmtWq%2FYrHbL7Xq%2FwyAAIfkECQMAPwAsAAAAAA4ADgAABh3An1D4WAWGSCTno0o6S7Wjc0qtWq%2FYrHbL7XqHQQAh%2BQQFAwA%2FACwAAAAADgAOAAAGGsCfcIgLDI9IgArJ%2FBWb0Kh0Sq1ar9isVhoEACH5BAUDAD8ALAYAAAABAAMAAAYFQAFHEAQAIfkECQMAPwAsBgAAAAEAAwAABgXAnK0TBAAh%2BQQJAwA%2FACwAAAAADgAOAAAGFMCfcEgsGo%2FIpHLJbDqf0Kh0agwCACH5BAUDAD8ALAAAAAAOAA4AAAYUwJ9wSCwaj8ikcslsOp%2FQqHRqDAIAIfkEBQMAPwAsAAAAAAEAAQAABgPAXxAAIfkEBQMAPwAsAAAAAAEAAQAABgPAXxAAIfkEBQMAPwAsAAAAAAEAAQAABgPAXxAAIfkEBQMAPwAsAAAAAAEAAQAABgPAXxAAOw%3D%3D'
+
+var BOOTSTRAP_COLUMN_SIZES = ['xs', 'sm', 'md', 'lg']
+
+// =================================================================== Utils ===
+
+var noobj = {}
+
+var warn = function()  {}
+
+if ("production" !== process.env.NODE_ENV) {
+  warn = function(message ) {for (var args=[],$__0=1,$__1=arguments.length;$__0<$__1;$__0++) args.push(arguments[$__0]);
+    var index = 0
+    console.warn('[newforms-bootstrap] Warning: ' + message.replace(/%s/g, function()  {return args[index++];}))
+  }
+}
+
+var toString = Object.prototype.toString
+
+function cx(/*[...staticClasses: (string|falsy)[, conditionalClasses: Object.<string, booleanish>]]*/) {
+  var classNames = []
+  var staticClassCount = arguments.length
+  var conditionalClasses = null
+  if (toString.call(arguments[arguments.length - 1]) == '[object Object]') {
+    conditionalClasses = arguments[arguments.length - 1]
+    staticClassCount -= 1
+  }
+  for (var i = 0, l = staticClassCount; i < l; i++) {
+    if (arguments[i]) {
+      classNames.push(arguments[i])
+    }
+  }
+  if (conditionalClasses != null) {
+    Object.keys(conditionalClasses).forEach(function(className)  {
+      if (!!conditionalClasses[className]) {
+        classNames.push(className)
+      }
+    })
+  }
+  return classNames.join(' ')
+}
+
+function extend(dest, src) {
+  if (src) {
+    var props = Object.keys(src)
+    for (var i = 0, l = props.length; i < l ; i++) {
+      dest[props[i]] = src[props[i]]
+    }
+  }
+  return dest
+}
+
+function errorMessage(message) {
+  return React.createElement("span", {className: "help-block"}, 
+    React.createElement("span", {className: "glyphicon glyphicon-exclamation-sign"}), " ", message
+  )
+}
+
+// ============================================== Bootstrap Newforms Objects ===
+
+function patchForm(form) {
+  if (!form.__patchedByBootstrapForm) {
+    BootstrapForm.patchFields(form)
+    form.__patchedByBootstrapForm = true
+  }
+}
+
+var BootstrapChoiceFieldRenderer = ChoiceFieldRenderer.extend({
+  className: null,
+
+  constructor:function(name, value, attrs, controlled, choices) {
+    if (!(this instanceof BootstrapChoiceFieldRenderer)) {
+      return new BootstrapChoiceFieldRenderer(name, value, attrs, controlled, choices)
+    }
+    ChoiceFieldRenderer.call(this, name, value, attrs, controlled, choices)
+  },
+
+  render:function() {
+    var id = this.attrs.id || null
+    var key = this.attrs.key || null
+    if (key) {
+      delete this.attrs.key
+    }
+    var items = []
+    for (var i = 0, l = this.choices.length; i < l; i++) {
+      var choice = this.choices[i]
+      var $__0=   choice,choiceValue=$__0[0],choiceLabel=$__0[1]
+      if (Array.isArray(choiceLabel)) {
+        var attrsPlus = extend({}, this.attrs)
+        if (id) { attrsPlus.id +='_' + i }
+        if (key) { attrsPlus.key += '_' + i }
+        var subRenderer = BootstrapChoiceFieldRenderer(
+          this.name, this.value, attrsPlus, this.controlled, choiceLabel)
+        subRenderer.choiceInputConstructor = this.choiceInputConstructor
+        subRenderer.className = this.className
+        items.push(React.createElement("li", null, React.createElement("em", {className: "help-block"}, choiceValue), subRenderer.render()))
+      }
+      else {
+        var w = this.choiceInputConstructor(
+          this.name, this.value, extend({}, this.attrs), this.controlled, choice, i)
+        items.push(React.createElement("li", {className: this.className}, w.render()))
+      }
+    }
+    var listAttrs = {className: 'list-unstyled'}
+    if (id) {
+      listAttrs.id = id
+    }
+    return React.createElement("ul", React.__spread({},  listAttrs), items)
+  }
+})
+
+var BootstrapCheckboxRenderer = BootstrapChoiceFieldRenderer.extend({
+  choiceInputConstructor: CheckboxChoiceInput,
+  className: 'checkbox'
+})
+
+var BootstrapRadioRenderer = BootstrapChoiceFieldRenderer.extend({
+  choiceInputConstructor: RadioChoiceInput,
+  className: 'radio'
+})
+
+var BootstrapCheckboxInlineRenderer = CheckboxFieldRenderer.extend({
+  render:function() {
+    return React.createElement("div", {className: "checkbox"}, 
+      this.choiceInputs().map(function(input)  {return React.createElement("label", {className: "checkbox-inline"}, 
+        input.tag(), " ", input.choiceLabel
+      );})
+    )
+  }
+})
+
+var BootstrapRadioInlineRenderer = RadioFieldRenderer.extend({
+  render:function() {
+    return React.createElement("div", {className: "radio"}, 
+      this.choiceInputs().map(function(input)  {return React.createElement("label", {className: "radio-inline"}, 
+        input.tag(), " ", input.choiceLabel
+      );})
+    )
+  }
+})
+
+// ========================================================= Form Components ===
+
+var BootstrapForm = React.createClass({displayName: "BootstrapForm",
+  statics: {
+    patchFields:function(form) {
+      if (form.__patchedByBootstrapForm) { return }
+      var fieldNames = Object.keys(form.fields)
+      for (var i = 0, l = fieldNames.length; i < l ; i++) {
+        var field = form.fields[fieldNames[i]]
+        if (field.widget instanceof CheckboxSelectMultiple) {
+          if (field.widget.renderer === CheckboxFieldRenderer) {
+            field.widget.renderer = BootstrapCheckboxRenderer
+          }
+        }
+        else if (field.widget instanceof RadioSelect) {
+          if (field.widget.renderer === RadioFieldRenderer) {
+            field.widget.renderer = BootstrapRadioRenderer
+          }
+        }
+        else if (field instanceof MultiValueField) {
+          if (field.fields.length < 5 &&
+              field.widget.formatOutput === MultiWidget.prototype.formatOutput) {
+            var colClass = 'col-sm-' + (12 / field.fields.length)
+            field.widget.formatOutput = function(widgets) {
+              return React.createElement("div", {className: "row"}, 
+                widgets.map(function(widget)  {return React.createElement("div", {className: colClass}, widget);})
+              )
+            }
+          }
+        }
+      }
+    }
+  },
+
+  propTypes: {
+    form: React.PropTypes.instanceOf(Form).isRequired,
+    spinner: React.PropTypes.string
+  },
+
+  getDefaultProps:function() {
+    return {
+      spinner: SPINNER
+    }
+  },
+
+  render:function() {
+    patchForm(this.props.form)
+    return React.createElement("div", null, 
+      this.renderRows()
+    )
+  },
+
+  renderRows:function() {
+    var rows = []
+    var form = this.props.form
+    var formErrors = form.nonFieldErrors()
+    if (formErrors.isPopulated()) {
+      rows.push(React.createElement("div", {key: form.addPrefix('__all__'), className: "alert alert-danger has-error"}, 
+        formErrors.messages().map(errorMessage)
+      ))
+    }
+    rows.push.apply(rows, form.visibleFields().map(function(field) 
+      {return React.createElement(BootstrapField, {key: field.htmlName, field: field, spinner: this.props.spinner});}.bind(this)
+    ))
+    var hiddenFields = form.hiddenFields()
+    if (hiddenFields.length > 0) {
+      rows.push(React.createElement("div", {key: form.addPrefix('__hiddenFields__'), style: {display: 'none'}}, 
+        hiddenFields.map(function(field)  {return field.render();})
+      ))
+    }
+    if (form.nonFieldPending()) {
+      rows.push(React.createElement("span", {key: form.addPrefix('__pending__'), className: "help-block"}, 
+        React.createElement("img", {src: this.props.spinner}), " Validating…"
+      ))
+    }
+    return rows
+  }
+})
+
+var BootstrapField = React.createClass({displayName: "BootstrapField",
+  propTypes: {
+    field: React.PropTypes.instanceOf(BoundField).isRequired
+  , spinner: React.PropTypes.string
+  },
+
+  getDefaultProps:function() {
+    return {
+      spinner: SPINNER
+    }
+  },
+
+  render:function() {
+    var field = this.props.field
+    var status = field.status()
+    var isBooleanField = field.field.constructor === BooleanField
+    var isFileField = field.field instanceof FileField
+    var isSpecialCaseWidget = isBooleanField || isFileField
+    var containerClasses = cx({
+      'checkbox': isBooleanField
+    , 'form-group': !isBooleanField
+    , 'has-error': status == 'error'
+    , 'has-success': status == 'valid'
+    })
+    var widgetAttrs = {attrs: {className: cx({
+      'form-control': !isFileField  &&
+                      !(field.field.widget instanceof RadioSelect) &&
+                      !(field.field.widget instanceof CheckboxSelectMultiple)
+    })}}
+    // Always show help text for empty fields, regardless of status
+    var showHelpText = field.helpText && (field.isEmpty() || status == 'default')
+
+    return React.createElement("div", {className: containerClasses}, 
+      !isBooleanField && field.labelTag({attrs: {className: 'control-label'}}), 
+      !isSpecialCaseWidget && field.asWidget(widgetAttrs), 
+      isBooleanField && React.createElement("label", {htmlFor: field.idForLabel()}, 
+        field.asWidget(), " ", field.label
+      ), 
+      isFileField && React.createElement("div", null, 
+        field.asWidget(widgetAttrs)
+      ), 
+      showHelpText && field.helpTextTag({attrs: {className: 'help-block'}}), 
+      status == 'pending' && React.createElement("span", {className: "help-block"}, 
+        React.createElement("img", {src: this.props.spinner}), " Validating…"
+      ), 
+      status == 'error' && field.errors().messages().map(errorMessage)
+    )
+  }
+})
+
+// ========================================================= Grid Components ===
+
+/**
+ * Validates that a prop is a String or a Number with a value between 1 and 12.
+ */
+function colSizeChecker(props, propName, componentName, location) {
+  var originalValue = props[propName]
+  var value = props[propName]
+  var type = Object.prototype.toString.call(value).slice(8, -1).toLowerCase()
+  if (value != null) {
+    if (type == 'string') {
+      value = Number(value)
+      type = 'number'
+    }
+
+    if (type == 'number' && !isNaN(value)) {
+      if (value < 1 || value > 12) {
+        return new Error(
+          ("Invalid " + location + " `" + propName + "` of value `" + value + "` ") +
+          ("supplied to `" + componentName + "`, Bootstrap column sizes must be ") +
+          ("between 1 and 12.")
+        )
+      }
+    }
+    else {
+      return new Error(
+        ("Invalid " + location + " `" + propName + "` of value `" + originalValue + "` ") +
+        ("supplied to `" + componentName + "`, expected a String or a Number.")
+      )
+    }
+  }
+}
+
+function calculateColumnProps(childProps, options) {
+  // Final column sizing prop object for each child - existing props will be
+  // copied to this object and missing props will be calculated.
+  var colSizeProps = childProps.map(function()  {return {};})
+  var $__0=   options,colProp=$__0.colProp,rowNum=$__0.rowNum
+
+  var availableCols = 12
+  var needColSizeIndexes = []
+  var offsetProp = (colProp + "Offset")
+
+  childProps.forEach(function(props, index)  {
+    if (colProp in props) {
+      var colSize = Number(props.md)
+      availableCols -= colSize
+      colSizeProps[index][colProp] = colSize
+    }
+    else {
+      needColSizeIndexes.push(index)
+    }
+
+    if (offsetProp in props) {
+      var offsetSize = Number(props[offsetProp])
+      availableCols -= offsetSize
+      colSizeProps[index][offsetProp] = offsetSize
+    }
+  })
+
+  if (needColSizeIndexes.length === 0) {
+    ("production" !== process.env.NODE_ENV ? warn(
+      '[Row %s] All Cols/Fields already have %s column units specified, so ' +
+      'you don\'t need to use autoColumns.',
+      rowNum, colProp
+    ) : null)
+  }
+  else if (availableCols < 0) {
+    ("production" !== process.env.NODE_ENV ? warn(
+      '[Row %s] Too many %s column units specified - widths and offsets ' +
+      'added up to %s.',
+      rowNum, colProp, 12 - availableCols
+    ) : null)
+  }
+  else if (availableCols === 0) {
+    ("production" !== process.env.NODE_ENV ? warn(
+      '[Row %s] There are no %s column units left to distribute to the %s ' +
+      'Cols/Fields which needthem.',
+      rowNum, colProp, needColSizeIndexes.length
+    ) : null)
+  }
+  else if (availableCols < needColSizeIndexes.length) {
+    ("production" !== process.env.NODE_ENV ? warn(
+      '[Row %s] There are more Cols/Fields needing column widths ' +
+      '(%s) than there are %s column units remaining to distribute (%s).',
+      rowNum, needColSizeIndexes.length, colProp, availableCols
+    ) : null)
+  }
+  else {
+    // Distribute remaining columns equally if possible. Otherwise, leftover
+    // column width will be distributed among initial columns.
+    var baseColSize = Math.floor(availableCols / needColSizeIndexes.length)
+    var leftoverCols = availableCols % needColSizeIndexes.length
+    needColSizeIndexes.forEach(function(colIndex, index)  {
+      colSizeProps[colIndex][colProp] = baseColSize + (index < leftoverCols ? 1 : 0)
+    })
+  }
+
+  return colSizeProps
+}
+
+var ColMixin = {
+  propTypes: {
+    className: React.PropTypes.string
+  , xs: colSizeChecker
+  , sm: colSizeChecker
+  , md: colSizeChecker
+  , lg: colSizeChecker
+  , xsOffset: colSizeChecker
+  , smOffset: colSizeChecker
+  , mdOffset: colSizeChecker
+  , lgOffset: colSizeChecker
+  },
+
+  getColClassName:function() {
+    var props = this.props
+    var classNames = {}
+    classNames[("col-xs-" + props.xs)] = !!props.xs
+    classNames[("col-sm-" + props.sm)] = !!props.sm
+    classNames[("col-md-" + props.md)] = !!props.md
+    classNames[("col-lg-" + props.lg)] = !!props.lg
+    classNames[("col-xs-offset-" + props.xsOffset)] = !!props.xsOffset
+    classNames[("col-sm-offset-" + props.smOffset)] = !!props.smOffset
+    classNames[("col-md-offset-" + props.mdOffset)] = !!props.mdOffset
+    classNames[("col-lg-offset-" + props.lgOffset)] = !!props.lgOffset
+    return cx(props.className, classNames)
+  }
+}
+
+var Container = React.createClass({displayName: "Container",
+  propTypes: {
+    autoColumns: React.PropTypes.oneOf(BOOTSTRAP_COLUMN_SIZES)
+  , className: React.PropTypes.string
+  , fluid: React.PropTypes.bool
+  , spinner: React.PropTypes.string
+  },
+
+  getDefaultProps:function() {
+    return {
+      autoColumns: null
+    , fluid: false
+    , spinner: SPINNER
+    }
+  },
+
+  render:function() {
+    var $__0=  this.props,form=$__0.form
+    patchForm(form)
+    var formErrors = form.nonFieldErrors()
+    return React.createElement("div", {className: cx(this.props.className, {'container': !this.props.fluid, 'fluid': this.props.fluid})}, 
+      formErrors.isPopulated() && React.createElement("div", {key: form.addPrefix('__all__'), className: "alert alert-danger has-error"}, 
+        formErrors.messages().map(errorMessage)
+      ), 
+      React.Children.map(this.props.children, function(row, index)  {return React.cloneElement(row, {
+        autoColumns: this.props.autoColumns
+      , form: this.props.form
+      , index: index
+      , spinner: this.props.spinner
+      });}.bind(this)), 
+      form.nonFieldPending() && React.createElement("span", {key: form.addPrefix('__pending__'), className: "help-block"}, 
+        React.createElement("img", {src: this.props.spinner}), " Validating…"
+      )
+    )
+  }
+})
+
+var Row = React.createClass({displayName: "Row",
+  propTypes: {
+    autoColumns: React.PropTypes.oneOf(BOOTSTRAP_COLUMN_SIZES)
+  , className: React.PropTypes.string
+  },
+
+  render:function() {
+    var columnProps = noobj
+    if (this.props.autoColumns) {
+      var childProps = []
+      React.Children.forEach(this.props.children, function(child)  {
+        childProps.push(child.props)
+      })
+      columnProps = calculateColumnProps(childProps, {
+        colProp: this.props.autoColumns
+      , rowNum: this.props.index + 1
+      })
+    }
+    return React.createElement("div", {className: cx('row', this.props.className)}, 
+      React.Children.map(this.props.children, function(child, index)  {
+        return React.cloneElement(child, extend({
+          form: this.props.form
+        , spinner: this.props.spinner
+        }, columnProps[index]))
+      }.bind(this))
+    )
+  }
+})
+
+var Col = React.createClass({displayName: "Col",
+  mixins: [ColMixin],
+
+  render:function() {
+    return React.createElement("div", {className: this.getColClassName()}, 
+      this.props.children
+    )
+  }
+})
+
+var Field = React.createClass({displayName: "Field",
+  mixins: [ColMixin],
+
+  propTypes: {
+    name: React.PropTypes.string.isRequired
+  },
+
+  render:function() {
+    var field = this.props.form.boundField(this.props.name)
+    return React.createElement("div", {className: this.getColClassName()}, 
+      React.createElement(BootstrapField, {key: field.htmlName, field: field})
+    )
+  }
+})
+
+extend(BootstrapForm, {
+  calculateColumnProps:calculateColumnProps
+, CheckboxInlineRenderer: BootstrapCheckboxInlineRenderer
+, CheckboxRenderer: BootstrapCheckboxRenderer
+, Col:Col
+, Container:Container
+, Field:Field
+, PropTypes: {
+    colSize: colSizeChecker
+  }
+, RadioInlineRenderer: BootstrapRadioInlineRenderer
+, RadioRenderer: BootstrapRadioRenderer
+, Row:Row
+})
+
+module.exports = BootstrapForm
+}).call(this,require('_process'))
+},{"_process":292,"newforms":"newforms","react":"react"}],"newforms":[function(require,module,exports){
+'use strict';
+
+var validators = require('validators')
+
+var locales = require('./locales')
+var util = require('./util')
+
+module.exports = {
+  addLocale: locales.addLocale
+, allValid: util.allValid
+, BaseTemporalField: require('./BaseTemporalField')
+, BooleanField: require('./BooleanField')
+, BoundField: require('./BoundField')
+, CharField: require('./CharField')
+, CheckboxChoiceInput: require('./CheckboxChoiceInput')
+, CheckboxFieldRenderer: require('./CheckboxFieldRenderer')
+, CheckboxInput: require('./CheckboxInput')
+, CheckboxSelectMultiple: require('./CheckboxSelectMultiple')
+, ChoiceField: require('./ChoiceField')
+, ChoiceFieldRenderer: require('./ChoiceFieldRenderer')
+, ChoiceInput: require('./ChoiceInput')
+, ClearableFileInput: require('./ClearableFileInput')
+, ComboField: require('./ComboField')
+, DateField: require('./DateField')
+, DateInput: require('./DateInput')
+, DateTimeBaseInput: require('./DateTimeBaseInput')
+, DateTimeField: require('./DateTimeField')
+, DateTimeInput: require('./DateTimeInput')
+, DecimalField: require('./DecimalField')
+, EmailField: require('./EmailField')
+, EmailInput: require('./EmailInput')
+, env: require('./env')
+, ErrorList: require('./ErrorList')
+, ErrorObject: require('./ErrorObject')
+, Field: require('./Field')
+, FileField: require('./FileField')
+, FileInput: require('./FileInput')
+, FilePathField: require('./FilePathField')
+, FloatField: require('./FloatField')
+, Form: require('./Form')
+, formats: require('./formats')
+, FormRow: require('./FormRow')
+, FormSet: require('./FormSet')
+, GenericIPAddressField: require('./GenericIPAddressField')
+, getFormData: util.getFormData
+, HiddenInput: require('./HiddenInput')
+, ImageField: require('./ImageField')
+, Input: require('./Input')
+, IntegerField: require('./IntegerField')
+, IPAddressField: require('./IPAddressField')
+, isFormAsync: require('./isFormAsync')
+, locales: locales
+, MultipleChoiceField: require('./MultipleChoiceField')
+, MultipleFileField: require('./MultipleFileField')
+, MultipleHiddenInput: require('./MultipleHiddenInput')
+, MultiValueField: require('./MultiValueField')
+, MultiWidget: require('./MultiWidget')
+, NullBooleanField: require('./NullBooleanField')
+, NullBooleanSelect: require('./NullBooleanSelect')
+, NumberInput: require('./NumberInput')
+, PasswordInput: require('./PasswordInput')
+, RadioChoiceInput: require('./RadioChoiceInput')
+, RadioFieldRenderer: require('./RadioFieldRenderer')
+, RadioSelect: require('./RadioSelect')
+, RegexField: require('./RegexField')
+, RendererMixin: require('./RendererMixin')
+, RenderForm: require('./RenderForm')
+, RenderFormSet: require('./RenderFormSet')
+, Select: require('./Select')
+, SelectMultiple: require('./SelectMultiple')
+, setDefaultLocale: locales.setDefaultLocale
+, SlugField: require('./SlugField')
+, SplitDateTimeField: require('./SplitDateTimeField')
+, SplitDateTimeWidget: require('./SplitDateTimeWidget')
+, SplitHiddenDateTimeWidget: require('./SplitHiddenDateTimeWidget')
+, SubWidget: require('./SubWidget')
+, Textarea: require('./Textarea')
+, TextInput: require('./TextInput')
+, TimeField: require('./TimeField')
+, TimeInput: require('./TimeInput')
+, TypedChoiceField: require('./TypedChoiceField')
+, TypedMultipleChoiceField: require('./TypedMultipleChoiceField')
+, URLField: require('./URLField')
+, util: util
+, validateAll: util.validateAll
+, ValidationError: validators.ValidationError
+, validators: validators
+, Widget: require('./Widget')
+}
+},{"./BaseTemporalField":59,"./BooleanField":60,"./BoundField":61,"./CharField":62,"./CheckboxChoiceInput":63,"./CheckboxFieldRenderer":64,"./CheckboxInput":65,"./CheckboxSelectMultiple":66,"./ChoiceField":67,"./ChoiceFieldRenderer":68,"./ChoiceInput":69,"./ClearableFileInput":70,"./ComboField":71,"./DateField":72,"./DateInput":73,"./DateTimeBaseInput":74,"./DateTimeField":75,"./DateTimeInput":76,"./DecimalField":77,"./EmailField":79,"./EmailInput":80,"./ErrorList":81,"./ErrorObject":82,"./Field":83,"./FileField":84,"./FileInput":85,"./FilePathField":86,"./FloatField":87,"./Form":88,"./FormRow":89,"./FormSet":90,"./GenericIPAddressField":91,"./HiddenInput":92,"./IPAddressField":93,"./ImageField":94,"./Input":95,"./IntegerField":96,"./MultiValueField":97,"./MultiWidget":98,"./MultipleChoiceField":99,"./MultipleFileField":100,"./MultipleHiddenInput":101,"./NullBooleanField":102,"./NullBooleanSelect":103,"./NumberInput":104,"./PasswordInput":105,"./RadioChoiceInput":107,"./RadioFieldRenderer":108,"./RadioSelect":109,"./RegexField":110,"./RenderForm":111,"./RenderFormSet":112,"./RendererMixin":113,"./Select":114,"./SelectMultiple":115,"./SlugField":116,"./SplitDateTimeField":117,"./SplitDateTimeWidget":118,"./SplitHiddenDateTimeWidget":119,"./SubWidget":120,"./TextInput":121,"./Textarea":122,"./TimeField":123,"./TimeInput":124,"./TypedChoiceField":125,"./TypedMultipleChoiceField":126,"./URLField":127,"./Widget":129,"./env":131,"./formats":132,"./isFormAsync":133,"./locales":134,"./util":135,"validators":288}],"react-router":[function(require,module,exports){
 /* components */
 'use strict';
 
@@ -23434,9 +34115,9 @@ exports.match = _match3['default'];
 var _Router4 = _interopRequireDefault(_Router2);
 
 exports['default'] = _Router4['default'];
-},{"./History":26,"./IndexLink":27,"./IndexRedirect":28,"./IndexRoute":29,"./Lifecycle":30,"./Link":31,"./PropTypes":33,"./Redirect":34,"./Route":35,"./RouteContext":36,"./RouteUtils":37,"./Router":38,"./RoutingContext":39,"./match":45,"./useRoutes":47}],"react":[function(require,module,exports){
+},{"./History":137,"./IndexLink":138,"./IndexRedirect":139,"./IndexRoute":140,"./Lifecycle":141,"./Link":142,"./PropTypes":144,"./Redirect":145,"./Route":146,"./RouteContext":147,"./RouteUtils":148,"./Router":149,"./RoutingContext":150,"./match":156,"./useRoutes":158}],"react":[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib/React');
 
-},{"./lib/React":73}]},{},[]);
+},{"./lib/React":182}]},{},[]);
