@@ -9,6 +9,10 @@ var _index = require('./index');
 (0, _reactDom.render)((0, _index.GetRouter)(), document.getElementById('body'));
 delete global.__ReactInitState__;
 
+// // decomment for testing perf
+// import React from 'react/addons'
+// window.React = React
+
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./index":7,"react-dom":66}],2:[function(require,module,exports){
 "use strict";
@@ -244,6 +248,11 @@ var Info = (function (_Component6) {
   }
 
   _createClass(Info, [{
+    key: 'shouldComponentUpdate',
+    value: function shouldComponentUpdate(props, state) {
+      return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m;
+    }
+  }, {
     key: 'render',
     value: function render() {
       return _react2['default'].createElement(
@@ -252,9 +261,7 @@ var Info = (function (_Component6) {
         _react2['default'].createElement(
           'div',
           null,
-          this.props.month,
-          ' ',
-          this.props.year
+          this.props.info.m + " " + this.props.info.y
         )
       );
     }
@@ -488,9 +495,11 @@ var _default = (function (_Component) {
       view: this.props.view,
       events: this.props.events,
       store: this.agenda.matrix(),
+      info: this.agenda.getInfo(),
       start: -1,
       end: -1
     };
+    this.props.onLoad(this.props);
   }
 
   _createClass(_default, [{
@@ -502,9 +511,11 @@ var _default = (function (_Component) {
         events: props.events,
         agenda: this.agenda,
         store: this.agenda.matrix(),
+        info: this.agenda.getInfo(),
         start: -1,
         end: -1
       });
+      this.props.onChange(props);
     }
   }, {
     key: 'toggleSelection',
@@ -519,7 +530,7 @@ var _default = (function (_Component) {
           start: -1,
           end: -1
         });
-        this.props.onSelectDate(selection);
+        this.props.onSelect(selection);
       } else {
         this.setState({
           start: val,
@@ -547,14 +558,13 @@ var _default = (function (_Component) {
         moveSelection: this.moveSelection.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end
-      },
-          info = this.agenda.getInfo();
+      };
 
       return _react2['default'].createElement(
         'div',
         { className: 'agenda' },
         _react2['default'].createElement(_calendarUtils.Navigation, { store: store, agenda: this.agenda, view: view }),
-        _react2['default'].createElement(_calendarUtils.Info, { year: info.y, month: info.m }),
+        _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info }),
         _react2['default'].createElement(_calendarUtils.Header, { view: this.props.view, store: store }),
         view === 'week' && _react2['default'].createElement(
           _calendarUtils.Row,
@@ -629,6 +639,16 @@ var _default = (function (_Component) {
       this.loadEvents();
     }
   }, {
+    key: 'shouldComponentUpdate',
+    value: function shouldComponentUpdate(props, state) {
+      return this.state && this.state !== state;
+    }
+  }, {
+    key: 'componentWillUnmount',
+    value: function componentWillUnmount() {
+      if (global.io) io.socket.off();
+    }
+  }, {
     key: 'loadEvents',
     value: function loadEvents() {
       var _this2 = this;
@@ -638,14 +658,23 @@ var _default = (function (_Component) {
       });
     }
   }, {
-    key: 'onSelectDate',
-    value: function onSelectDate(selection) {
-      console.log(selection);
+    key: 'onSelect',
+    value: function onSelect(data) {
+      console.log("onSelectDate", data);
+    }
+  }, {
+    key: 'onChange',
+    value: function onChange(data) {
+      console.log("onChange", data);
+    }
+  }, {
+    key: 'onLoad',
+    value: function onLoad(data) {
+      console.log("onLoad", data);
     }
   }, {
     key: 'render',
     value: function render() {
-      var now = new Date();
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
@@ -655,7 +684,9 @@ var _default = (function (_Component) {
           'Calendar'
         ),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
-          onSelectDate: this.onSelectDate
+          onSelect: this.onSelect,
+          onChange: this.onChange,
+          onLoad: this.onLoad
         }, this.state, this.props.params))
       );
     }

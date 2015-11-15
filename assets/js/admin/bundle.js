@@ -9,6 +9,10 @@ var _index = require('./index');
 (0, _reactDom.render)((0, _index.GetRouter)(), document.getElementById('body'));
 delete global.__ReactInitState__;
 
+// // decomment for testing perf
+// import React from 'react/addons'
+// window.React = React
+
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./index":14,"react-dom":77}],2:[function(require,module,exports){
 "use strict";

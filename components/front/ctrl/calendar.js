@@ -14,23 +14,37 @@ export default class extends Component {
   componentWillReceiveProps(props) {
     this.loadEvents()
   }
+  shouldComponentUpdate(props, state) {
+    return this.state && this.state !== state
+  }
+  componentWillUnmount() {
+    if (global.io) io.socket.off()
+  }
+
   loadEvents() {
     if (global.io)
       io.socket.get('/event', res => {
         this.setState({events: res})
       });
   }
-  onSelectDate(selection) {
-    console.log(selection)
+  onSelect(data) {
+    console.log("onSelectDate", data)
+  }
+  onChange(data) {
+    console.log("onChange", data)
+  }
+  onLoad(data) {
+    console.log("onLoad", data)
   }
 
   render() {
-    let now = new Date()
     return (
       <div className="app">
         <h1>Calendar</h1>
         <Calendar events={this.props.events||[]}
-              onSelectDate={this.onSelectDate}
+              onSelect={this.onSelect}
+              onChange={this.onChange}
+              onLoad={this.onLoad}
               {...this.state}
               {...this.props.params} />
       </div>

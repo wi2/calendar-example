@@ -3,3 +3,7 @@ import {GetRouter} from './index'
 
 render(GetRouter(), document.getElementById('body'));
 delete global.__ReactInitState__;
+
+// // decomment for testing perf
+// import React from 'react/addons'
+// window.React = React

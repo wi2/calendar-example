@@ -81,10 +81,14 @@ export class Header extends Component {
 }
 
 export class Info extends Component {
+  shouldComponentUpdate(props, state) {
+    return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m
+  }
+
   render() {
     return (
       <Row>
-        <div>{this.props.month} {this.props.year}</div>
+        <div>{this.props.info.m+" "+this.props.info.y}</div>
       </Row>
     )
   }

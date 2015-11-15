@@ -14,9 +14,11 @@ export default class extends Component {
       view: this.props.view,
       events: this.props.events,
       store: this.agenda.matrix(),
+      info: this.agenda.getInfo(),
       start: -1,
       end: -1
     }
+    this.props.onLoad(this.props)
   }
 
   componentWillReceiveProps(props) {
@@ -26,9 +28,11 @@ export default class extends Component {
       events: props.events,
       agenda: this.agenda,
       store: this.agenda.matrix(),
+      info: this.agenda.getInfo(),
       start: -1,
       end: -1
     })
+    this.props.onChange(props)
   }
 
   toggleSelection(val) {
@@ -42,7 +46,7 @@ export default class extends Component {
         start: -1,
         end: -1
       })
-      this.props.onSelectDate(selection)
+      this.props.onSelect(selection)
     } else {
       this.setState({
         start: val,
@@ -68,12 +72,11 @@ export default class extends Component {
           selectionStart: this.state.start,
           selectionEnd: this.state.end
         }
-      , info = this.agenda.getInfo()
 
     return (
       <div className="agenda">
         <Navigation store={store} agenda={this.agenda} view={view} />
-        <Info year={info.y} month={info.m} />
+        <Info info={this.state.info} />
         <Header view={this.props.view} store={store} />
         {view === 'week'
           && <Row>
