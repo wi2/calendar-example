@@ -1,4 +1,4 @@
-import {Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
+import {Form, Textarea, SplitDateTimeWidget, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
 
 
 export default function(formItem, data) {
@@ -7,6 +7,7 @@ export default function(formItem, data) {
     for(let i=0,len=formItem.length; i<len; i++) {
       let item = formItem[i];
       if (['id','createdAt','updatedAt'].indexOf(item.label) === -1) {
+        console.log(item)
         let params = item;
         if (data && data[item.label])
           params.initial = data[item.label];
@@ -33,7 +34,10 @@ export default function(formItem, data) {
           case 'integer': mobj[item.label] = IntegerField(params); break;
           case 'float':   mobj[item.label] = FloatField(params); break;
           case 'date':    mobj[item.label] = DateField(params); break;
-          case 'datetime':mobj[item.label] = DateTimeField(params); break;
+          case 'datetime':params.widget = SplitDateTimeWidget;
+                          if (data)
+                            params.initial = new Date(data[item.label]);
+                          mobj[item.label] = DateTimeField(params); break;
           case 'boolean': mobj[item.label] = BooleanField(params); break;
           case 'choice':  params.choices = item.in;
                           mobj[item.label] = ChoiceField(params); break;

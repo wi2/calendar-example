@@ -1452,6 +1452,7 @@ exports['default'] = function (formItem, data) {
     for (var i = 0, len = formItem.length; i < len; i++) {
       var item = formItem[i];
       if (['id', 'createdAt', 'updatedAt'].indexOf(item.label) === -1) {
+        console.log(item);
         var params = item;
         if (data && data[item.label]) params.initial = data[item.label];else if (item.defaultsTo) params.initial = item.defaultsTo;
         delete params.defaultsTo;
@@ -1488,6 +1489,8 @@ exports['default'] = function (formItem, data) {
           case 'date':
             mobj[item.label] = (0, _newforms.DateField)(params);break;
           case 'datetime':
+            params.widget = _newforms.SplitDateTimeWidget;
+            if (data) params.initial = new Date(data[item.label]);
             mobj[item.label] = (0, _newforms.DateTimeField)(params);break;
           case 'boolean':
             mobj[item.label] = (0, _newforms.BooleanField)(params);break;
