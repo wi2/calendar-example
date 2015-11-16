@@ -7,7 +7,6 @@ export default function(formItem, data) {
     for(let i=0,len=formItem.length; i<len; i++) {
       let item = formItem[i];
       if (['id','createdAt','updatedAt'].indexOf(item.label) === -1) {
-        console.log(item)
         let params = item;
         if (data && data[item.label])
           params.initial = data[item.label];

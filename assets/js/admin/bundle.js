@@ -1452,7 +1452,6 @@ exports['default'] = function (formItem, data) {
     for (var i = 0, len = formItem.length; i < len; i++) {
       var item = formItem[i];
       if (['id', 'createdAt', 'updatedAt'].indexOf(item.label) === -1) {
-        console.log(item);
         var params = item;
         if (data && data[item.label]) params.initial = data[item.label];else if (item.defaultsTo) params.initial = item.defaultsTo;
         delete params.defaultsTo;
