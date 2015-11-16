@@ -6,13 +6,16 @@ import {Vertical, Row, Cell} from './calendar-utils'
 
 class ViewDefault extends Component {
   toggleSelection(val) {
-    this.props.toggleSelection(val)
+    if (this.props.editor)
+      this.props.toggleSelection(val)
   }
   moveSelection(val) {
-    this.props.moveSelection(val)
+    if (this.props.editor)
+      this.props.moveSelection(val)
   }
   onSelect(val) {
-    this.props.onSelect(val)
+    if (this.props.editor)
+      this.props.onSelect(val)
   }
 }
 

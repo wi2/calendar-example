@@ -43,12 +43,19 @@ export class Navigation extends Component {
   render() {
     let store = this.props.store
       , {prevLink, nextLink, todayLink, monthLink, weekLink} = this.props.agenda.getLink(this.props.view)
+      , className = this.props.editor ? "btn btn-success" : "btn"
 
     return (
       <div>
-        <Row className="agenda-navigation-view">
-          <Link to={monthLink}>Month</Link>
-          <Link to={weekLink}>Week</Link>
+        <Row>
+          <div className="agenda-navigation-editor">
+            <button className={className}
+              onClick={this.props.toggleEditor.bind(this)}>Editor</button>
+          </div>
+          <div className="agenda-navigation-view">
+            <Link to={monthLink}>Month</Link>
+            <Link to={weekLink}>Week</Link>
+          </div>
         </Row>
         <Row className="agenda-navigation">
           <Link to={prevLink}>Previous</Link>

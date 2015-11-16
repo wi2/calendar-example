@@ -11,6 +11,7 @@ export default class extends Component {
     super(props)
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day)
     this.state = {
+      editor: false,
       view: this.props.view,
       events: this.props.events,
       store: this.agenda.matrix(),
@@ -34,6 +35,11 @@ export default class extends Component {
       startInit: -1
     })
     this.props.onChange(props)
+  }
+
+  toggleEditor() {
+    console.log(this.state)
+    this.setState({editor: !this.state.editor});
   }
 
   toggleSelection(val) {
@@ -74,17 +80,23 @@ export default class extends Component {
       , agenda = this.state.agenda
       , store = this.state.store
       , props = {
-          events: events,
-          toggleSelection: this.toggleSelection.bind(this),
-          moveSelection: this.moveSelection.bind(this),
-          onSelect: this.props.onSelect.bind(this),
-          selectionStart: this.state.start,
-          selectionEnd: this.state.end
-        }
+        events: events,
+        toggleSelection: this.toggleSelection.bind(this),
+        moveSelection: this.moveSelection.bind(this),
+        onSelect: this.props.onSelect.bind(this),
+        selectionStart: this.state.start,
+        selectionEnd: this.state.end,
+        editor: this.state.editor
+      };
+
 
     return (
       <div className="agenda">
-        <Navigation store={store} agenda={this.agenda} view={view} />
+        <Navigation store={store}
+                    agenda={this.agenda}
+                    view={view}
+                    editor={this.state.editor}
+                    toggleEditor={this.toggleEditor.bind(this)} />
         <Info info={this.state.info} />
         <Header view={view} store={store} />
         {view === 'week'

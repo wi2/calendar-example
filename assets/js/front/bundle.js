@@ -155,22 +155,37 @@ var Navigation = (function (_Component4) {
       var todayLink = _props$agenda$getLink.todayLink;
       var monthLink = _props$agenda$getLink.monthLink;
       var weekLink = _props$agenda$getLink.weekLink;
+      var className = this.props.editor ? "btn btn-success" : "btn";
 
       return _react2['default'].createElement(
         'div',
         null,
         _react2['default'].createElement(
           Row,
-          { className: 'agenda-navigation-view' },
+          null,
           _react2['default'].createElement(
-            _reactRouter.Link,
-            { to: monthLink },
-            'Month'
+            'div',
+            { className: 'agenda-navigation-editor' },
+            _react2['default'].createElement(
+              'button',
+              { className: className,
+                onClick: this.props.toggleEditor.bind(this) },
+              'Editor'
+            )
           ),
           _react2['default'].createElement(
-            _reactRouter.Link,
-            { to: weekLink },
-            'Week'
+            'div',
+            { className: 'agenda-navigation-view' },
+            _react2['default'].createElement(
+              _reactRouter.Link,
+              { to: monthLink },
+              'Month'
+            ),
+            _react2['default'].createElement(
+              _reactRouter.Link,
+              { to: weekLink },
+              'Week'
+            )
           )
         ),
         _react2['default'].createElement(
@@ -307,17 +322,17 @@ var ViewDefault = (function (_Component) {
   _createClass(ViewDefault, [{
     key: 'toggleSelection',
     value: function toggleSelection(val) {
-      this.props.toggleSelection(val);
+      if (this.props.editor) this.props.toggleSelection(val);
     }
   }, {
     key: 'moveSelection',
     value: function moveSelection(val) {
-      this.props.moveSelection(val);
+      if (this.props.editor) this.props.moveSelection(val);
     }
   }, {
     key: 'onSelect',
     value: function onSelect(val) {
-      this.props.onSelect(val);
+      if (this.props.editor) this.props.onSelect(val);
     }
   }]);
 
@@ -503,6 +518,7 @@ var _default = (function (_Component) {
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
     this.agenda = new _libAgenda2['default'](this.props.year, this.props.month, this.props.day);
     this.state = {
+      editor: false,
       view: this.props.view,
       events: this.props.events,
       store: this.agenda.matrix(),
@@ -528,6 +544,12 @@ var _default = (function (_Component) {
         startInit: -1
       });
       this.props.onChange(props);
+    }
+  }, {
+    key: 'toggleEditor',
+    value: function toggleEditor() {
+      console.log(this.state);
+      this.setState({ editor: !this.state.editor });
     }
   }, {
     key: 'toggleSelection',
@@ -578,13 +600,18 @@ var _default = (function (_Component) {
         moveSelection: this.moveSelection.bind(this),
         onSelect: this.props.onSelect.bind(this),
         selectionStart: this.state.start,
-        selectionEnd: this.state.end
+        selectionEnd: this.state.end,
+        editor: this.state.editor
       };
 
       return _react2['default'].createElement(
         'div',
         { className: 'agenda' },
-        _react2['default'].createElement(_calendarUtils.Navigation, { store: store, agenda: this.agenda, view: view }),
+        _react2['default'].createElement(_calendarUtils.Navigation, { store: store,
+          agenda: this.agenda,
+          view: view,
+          editor: this.state.editor,
+          toggleEditor: this.toggleEditor.bind(this) }),
         _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info }),
         _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store }),
         view === 'week' && _react2['default'].createElement(
