@@ -11,6 +11,9 @@ class ViewDefault extends Component {
   moveSelection(val) {
     this.props.moveSelection(val)
   }
+  onSelect(val) {
+    this.props.onSelect(val)
+  }
 }
 
 export class Week extends ViewDefault {
@@ -37,17 +40,20 @@ export class Week extends ViewDefault {
       s: this.props.selectionStart.date,
       e: this.props.selectionEnd.date
     }
-    let that = this
+    // let that = this
     return (
       <Vertical>
-        {events && events.map((evt, i) => <div className="event" style={this.style(left+=22, evt)} key={`event-${i}`}>{evt.title}</div> )}
+        {events && events.map((evt, i) => <div className="event"
+                                            style={this.style(left+=22, evt)}
+                                            onClick={this.onSelect.bind(this, evt)}
+                                            key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
           let props = {
             value: item.hour,
             className: cond ? "col-day col-day-active" : "col-day",
-            toggleSelection: that.toggleSelection.bind(this, item),
-            moveSelection: that.moveSelection.bind(this, item),
+            toggleSelection: this.toggleSelection.bind(this, item),
+            moveSelection: this.moveSelection.bind(this, item),
             key: `hour-${item.hour}-${item.row}-${item.col}`
           }
           return <Cell {...props} />
@@ -82,7 +88,10 @@ export class Month extends ViewDefault {
     let that = this
     return (
       <Row>
-        {events && events.map((evt, i) => <div className="event" style={this.style(top+=13, evt)} key={`event-${i}`}>{evt.title}</div> )}
+        {events && events.map((evt, i) => <div className="event"
+                                            style={this.style(top+=13, evt)}
+                                            onClick={this.onSelect.bind(this, evt)}
+                                            key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
           let props = {

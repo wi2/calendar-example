@@ -77,6 +77,7 @@ export default class extends Component {
           events: events,
           toggleSelection: this.toggleSelection.bind(this),
           moveSelection: this.moveSelection.bind(this),
+          onSelect: this.props.onSelect.bind(this),
           selectionStart: this.state.start,
           selectionEnd: this.state.end
         }

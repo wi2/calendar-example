@@ -38,17 +38,29 @@ export default class extends Component {
       selection: null
     })
   }
-  onSubmit(data) {
-    if (global.io)
-      io.socket.post("/event", data, ( res => {
-        this.loadEvents()
-      }))
+  onSubmit(data, id) {
+    if (global.io) {
+      if (id)
+        io.socket.put("/event/"+id, data, ( res => {
+          this.loadEvents()
+        }))
+      else
+        io.socket.post("/event", data, ( res => {
+          this.loadEvents()
+        }))
+    }
     this.hideModal()
   }
   onCancel() {
     this.hideModal()
   }
   onSelect(data) {
+    this.setState({
+      show: true,
+      selection: data
+    })
+  }
+  onSelectEvent(data) {
     this.setState({
       show: true,
       selection: data

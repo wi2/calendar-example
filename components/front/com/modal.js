@@ -7,17 +7,21 @@ import BootstrapForm, {Container, Row, Field} from 'newforms-bootstrap'
 export default class extends Component {
   constructor(props) {
     super(props)
+
     this.form = Form.extend({
-      title: CharField(),
-      content: CharField({widget: Textarea}),
-      room: ChoiceField({choices: this.props.rooms.map((r) => [r.id, r.name])}),
+      title: CharField({initial: this.props.title||''}),
+      content: CharField({widget: Textarea, initial: this.props.content||''}),
+      room: ChoiceField({
+        choices: this.props.rooms.map((r) => [r.id, r.name]),
+        initial: this.props.room ? this.props.room.id : null
+      }),
       start: DateTimeField({
         widget: SplitDateTimeWidget,
-        initial: this.props.start.date
+        initial: this.props.start.date ? this.props.start.date : new Date(this.props.start)
       }),
       end: DateTimeField({
         widget: SplitDateTimeWidget,
-        initial: this.props.end.date
+        initial: this.props.end.date ? this.props.end.date : new Date(this.props.end)
       })
     })
   }
@@ -26,7 +30,7 @@ export default class extends Component {
     e.preventDefault();
     let form = this.mForm.getForm()
     if(form.validate()) {
-      this.props.onSubmit(form.cleanedData)
+      this.props.onSubmit(form.cleanedData, this.props.id)
     }
   }
   _onCancel(e) {

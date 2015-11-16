@@ -314,6 +314,11 @@ var ViewDefault = (function (_Component) {
     value: function moveSelection(val) {
       this.props.moveSelection(val);
     }
+  }, {
+    key: 'onSelect',
+    value: function onSelect(val) {
+      this.props.onSelect(val);
+    }
   }]);
 
   return ViewDefault;
@@ -356,14 +361,17 @@ var Week = (function (_ViewDefault) {
         s: this.props.selectionStart.date,
         e: this.props.selectionEnd.date
       };
-      var that = this;
+      // let that = this
       return _react2['default'].createElement(
         _calendarUtils.Vertical,
         null,
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
             'div',
-            { className: 'event', style: _this.style(left += 22, evt), key: 'event-' + i },
+            { className: 'event',
+              style: _this.style(left += 22, evt),
+              onClick: _this.onSelect.bind(_this, evt),
+              key: 'event-' + i },
             evt.title
           );
         }),
@@ -372,8 +380,8 @@ var Week = (function (_ViewDefault) {
           var props = {
             value: item.hour,
             className: cond ? "col-day col-day-active" : "col-day",
-            toggleSelection: that.toggleSelection.bind(_this, item),
-            moveSelection: that.moveSelection.bind(_this, item),
+            toggleSelection: _this.toggleSelection.bind(_this, item),
+            moveSelection: _this.moveSelection.bind(_this, item),
             key: 'hour-' + item.hour + '-' + item.row + '-' + item.col
           };
           return _react2['default'].createElement(_calendarUtils.Cell, props);
@@ -428,7 +436,10 @@ var Month = (function (_ViewDefault2) {
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
             'div',
-            { className: 'event', style: _this2.style(top += 13, evt), key: 'event-' + i },
+            { className: 'event',
+              style: _this2.style(top += 13, evt),
+              onClick: _this2.onSelect.bind(_this2, evt),
+              key: 'event-' + i },
             evt.title
           );
         }),
@@ -565,6 +576,7 @@ var _default = (function (_Component) {
         events: events,
         toggleSelection: this.toggleSelection.bind(this),
         moveSelection: this.moveSelection.bind(this),
+        onSelect: this.props.onSelect.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end
       };
@@ -633,19 +645,23 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+
     this.form = _newforms.Form.extend({
-      title: (0, _newforms.CharField)(),
-      content: (0, _newforms.CharField)({ widget: _newforms.Textarea }),
-      room: (0, _newforms.ChoiceField)({ choices: this.props.rooms.map(function (r) {
+      title: (0, _newforms.CharField)({ initial: this.props.title || '' }),
+      content: (0, _newforms.CharField)({ widget: _newforms.Textarea, initial: this.props.content || '' }),
+      room: (0, _newforms.ChoiceField)({
+        choices: this.props.rooms.map(function (r) {
           return [r.id, r.name];
-        }) }),
+        }),
+        initial: this.props.room ? this.props.room.id : null
+      }),
       start: (0, _newforms.DateTimeField)({
         widget: _newforms.SplitDateTimeWidget,
-        initial: this.props.start.date
+        initial: this.props.start.date ? this.props.start.date : new Date(this.props.start)
       }),
       end: (0, _newforms.DateTimeField)({
         widget: _newforms.SplitDateTimeWidget,
-        initial: this.props.end.date
+        initial: this.props.end.date ? this.props.end.date : new Date(this.props.end)
       })
     });
   }
@@ -656,7 +672,7 @@ var _default = (function (_Component) {
       e.preventDefault();
       var form = this.mForm.getForm();
       if (form.validate()) {
-        this.props.onSubmit(form.cleanedData);
+        this.props.onSubmit(form.cleanedData, this.props.id);
       }
     }
   }, {
@@ -815,12 +831,16 @@ var _default = (function (_Component) {
     }
   }, {
     key: 'onSubmit',
-    value: function onSubmit(data) {
+    value: function onSubmit(data, id) {
       var _this3 = this;
 
-      if (global.io) io.socket.post("/event", data, function (res) {
-        _this3.loadEvents();
-      });
+      if (global.io) {
+        if (id) io.socket.put("/event/" + id, data, function (res) {
+          _this3.loadEvents();
+        });else io.socket.post("/event", data, function (res) {
+          _this3.loadEvents();
+        });
+      }
       this.hideModal();
     }
   }, {
@@ -831,6 +851,14 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelect',
     value: function onSelect(data) {
+      this.setState({
+        show: true,
+        selection: data
+      });
+    }
+  }, {
+    key: 'onSelectEvent',
+    value: function onSelectEvent(data) {
       this.setState({
         show: true,
         selection: data
