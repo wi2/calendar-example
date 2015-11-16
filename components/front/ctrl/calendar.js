@@ -39,26 +39,23 @@ export default class extends Component {
     })
   }
   onSubmit(data) {
-    console.log("onSubmit", data)
+    if (global.io)
+      io.socket.post("/event", data, ( res => {
+        this.loadEvents()
+      }))
     this.hideModal()
   }
   onCancel() {
-    console.log("onCancel")
     this.hideModal()
   }
   onSelect(data) {
-    console.log("onSelectDate", data)
     this.setState({
       show: true,
       selection: data
     })
   }
-  onChange(data) {
-    console.log("onChange", data)
-  }
-  onLoad(data) {
-    console.log("onLoad", data)
-  }
+  onChange(data) {}
+  onLoad(data) {}
 
   render() {
     return (

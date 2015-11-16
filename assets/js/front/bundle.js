@@ -656,7 +656,6 @@ var _default = (function (_Component) {
       e.preventDefault();
       var form = this.mForm.getForm();
       if (form.validate()) {
-        console.log("Saving", form.cleanedData);
         this.props.onSubmit(form.cleanedData);
       }
     }
@@ -817,19 +816,21 @@ var _default = (function (_Component) {
   }, {
     key: 'onSubmit',
     value: function onSubmit(data) {
-      console.log("onSubmit", data);
+      var _this3 = this;
+
+      if (global.io) io.socket.post("/event", data, function (res) {
+        _this3.loadEvents();
+      });
       this.hideModal();
     }
   }, {
     key: 'onCancel',
     value: function onCancel() {
-      console.log("onCancel");
       this.hideModal();
     }
   }, {
     key: 'onSelect',
     value: function onSelect(data) {
-      console.log("onSelectDate", data);
       this.setState({
         show: true,
         selection: data
@@ -837,14 +838,10 @@ var _default = (function (_Component) {
     }
   }, {
     key: 'onChange',
-    value: function onChange(data) {
-      console.log("onChange", data);
-    }
+    value: function onChange(data) {}
   }, {
     key: 'onLoad',
-    value: function onLoad(data) {
-      console.log("onLoad", data);
-    }
+    value: function onLoad(data) {}
   }, {
     key: 'render',
     value: function render() {
