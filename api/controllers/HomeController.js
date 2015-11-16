@@ -18,7 +18,10 @@ module.exports = {
                              : url + "month/" + tmpUrl
     }
     var state = {identities: Object.keys(sails.models)};
-    resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
+    Room.find().then( rooms => {
+      state.rooms = rooms;
+      resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
+    })
   }
 
 };

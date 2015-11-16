@@ -25,7 +25,6 @@ function Routes(layout=Layout) {
 }
 
 module.exports = {
-  Home: Home,
   GetRouter: GetRouter,
   Routes: Routes
 }
