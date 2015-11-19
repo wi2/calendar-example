@@ -3,7 +3,7 @@ import _ from 'lodash'
 
 export default class {
 
-  constructor(y,m,d) {
+  constructor(y,m,d,h=0,mm=0) {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
 
     if (!y) {
@@ -11,11 +11,16 @@ export default class {
       y = now.getFullYear()
       m = this.months[now.getMonth()]
     }
-    this.changeDate(y,m,d)
+
+    if (typeof Number(m) === 'number')
+      m = this.months[m]
+    this.changeDate(y,m,d,h,mm)
   }
 
-  changeDate(y,m,d) {
-    this.date = this.linkHelper(y,m,d)
+  changeDate(y,m,d,h,mm) {
+    if (typeof m === 'number')
+      m = this.months[m]
+    this.date = this.linkHelper(y,m,d,h,mm)
   }
 
   getEvents(line, events, withHour=false) {
@@ -28,7 +33,7 @@ export default class {
     })
   }
 
-  matrix() {
+  matrix(view='month') {
     let {y,m,d} = this.date
     var {rows, cols} = this.getRange(6,7)
       , {start, next, date} = this.getDates()
@@ -57,8 +62,8 @@ export default class {
           monthTmp -= 1
         else if (tmp < 0)
           monthTmp += 1
-
         cellDate = new Date(y, monthTmp , Math.abs(tmp))
+
         weeks.push({
           date: cellDate,
           day: tmp,
@@ -70,10 +75,10 @@ export default class {
         })
 
       });
-      if (cellDate.getWeek() === date.getWeek() && !currentWeek)
+      if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek)
         currentWeek = weeks
 
-      if (!row || weeks[0].day > 1)
+      if (!row || weeks[0].day > 0)
         months.push(weeks)
 
     });
@@ -121,7 +126,7 @@ export default class {
   }
 
   getLink(view) {
-    let {previous, next, today, current} = this.getLinkHelper()
+    let {previous, next, today, current} = this.getLinkHelper(view)
 
     let prevLink = `/${view}/${previous.y}/${previous.m}`
       , nextLink = `/${view}/${next.y}/${next.m}`
@@ -137,28 +142,33 @@ export default class {
     return {prevLink, nextLink, todayLink, monthLink, weekLink}
   }
 
-  getLinkHelper() {
+  getLinkHelper(view) {
     let y = this.date.y
       , m = this.date.m * 1
-      , d = this.date.d
+      , d = this.date.d * 1
+      , h = this.date.h
+      , mm = this.date.mm
 
-    if (d) {
-      let nt = new Date(y, m, d*1 + 7)
-        , pv = new Date(y, m, d*1 - 7)
+    if (view === 'week') {
+      let nt = new Date(y, m, d + 7)
+        , pv = new Date(y, m, d - 7)
+
       return {
         next: this.linkHelper(nt.getFullYear(), nt.getMonth(), nt.getDate()),
         previous: this.linkHelper(pv.getFullYear(), pv.getMonth(), pv.getDate()),
         today: this.getToday(true),
-        current: this.linkHelper(y,m,d)
+        current: this.linkHelper(y,m,d,h,mm)
       }
     } else {
-      let nt = new Date(y, m+1)
-        , pv = new Date(y, m-1)
+
+      let nt = new Date(y, m + 1)
+        , pv = new Date(y, m - 1)
+
       return {
         next: this.linkHelper(nt.getFullYear(), nt.getMonth()),
         previous: this.linkHelper(pv.getFullYear(), pv.getMonth()),
         today: this.getToday(),
-        current: this.linkHelper(y,m,d)
+        current: this.linkHelper(y,m,d,h,mm)
       }
     }
 
@@ -203,7 +213,7 @@ export default class {
         && date1.getFullYear() === date2.getFullYear()
   }
 
-  linkHelper(y, m, d, reverse) {
+  linkHelper(y, m, d, h=0, mm=0) {
     let mo = m*1
     if (mo >= -1) {
       if (mo == -1) {
@@ -217,7 +227,7 @@ export default class {
     } else {
       m = this.months.indexOf(m);
     }
-    return {y, m, d};
+    return {y, m, d, h, mm, month: this.months.indexOf(m)};
   }
 
 }

@@ -30,7 +30,7 @@ export class Cell extends Component {
   }
   render() {
     return (
-      <div className={this.props.className}
+      <div className={this.props.className} style={{height: this.props.height}}
            onClick={this._handleClick.bind(this)}
            onMouseOver={this._handleOver.bind(this)}>
         <div className="col-content">{this.props.value}</div>
@@ -88,6 +88,14 @@ export class Header extends Component {
 }
 
 export class Info extends Component {
+  _handlePrevious(e) {
+    e.preventDefault()
+    this.props.onPrevious(this.props.info)
+  }
+  _handleNext(e) {
+    e.preventDefault()
+    this.props.onNext(this.props.info)
+  }
   shouldComponentUpdate(props, state) {
     return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m
   }
@@ -95,7 +103,9 @@ export class Info extends Component {
   render() {
     return (
       <Row>
+        {this.props.onPrevious && <a onClick={this._handlePrevious.bind(this)} className="btn"> {"<"} </a>}
         <div>{this.props.info.m+" "+this.props.info.y}</div>
+        {this.props.onNext && <a onClick={this._handleNext.bind(this)} className="btn"> {">"} </a>}
       </Row>
     )
   }

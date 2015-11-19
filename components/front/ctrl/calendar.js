@@ -1,8 +1,9 @@
 "use strict";
 
 import React, {Component} from 'react';
-import Calendar from '../com/calendar'
-import Modal from '../com/modal'
+import {findDOMNode} from 'react-dom';
+import Calendar from '../com/calendar';
+import Modal from '../com/modal';
 
 
 export default class extends Component {
@@ -10,12 +11,19 @@ export default class extends Component {
     super(props)
     this.state = {
       show: false,
-      rooms: this.props.rooms||[]
+      rooms: this.props.rooms||[],
+      width: 1000
     }
+    this.timeout = null;
     this.loadEvents()
     if (global.io)
       io.socket.on('event', msg => this.loadEvents());
   }
+  componentDidMount() {
+    this.setState({width:findDOMNode(this).offsetWidth})
+    window.addEventListener('resize', this.handleResize.bind(this));
+  }
+
   componentWillReceiveProps(props) {
     this.loadEvents()
   }
@@ -23,7 +31,13 @@ export default class extends Component {
     return this.state && this.state !== state
   }
   componentWillUnmount() {
-    if (global.io) io.socket.off()
+    if (global.io)
+      io.socket.off()
+    window.removeEventListener('resize', this.handleResize);
+  }
+
+  handleResize(e) {
+    this.setState({width:e.target.innerWidth})
   }
 
   loadEvents() {
@@ -69,20 +83,24 @@ export default class extends Component {
   onChange(data) {}
   onLoad(data) {}
 
+
   render() {
     return (
       <div className="app">
         <h1>Calendar</h1>
+
         {this.state.show &&
           <Modal {...this.state.selection}
                   rooms={this.state.rooms}
                   onSubmit={this.onSubmit.bind(this)}
-                  onCancel={this.onCancel.bind(this)}  />}
+                  onCancel={this.onCancel.bind(this)}
+                  {...this.props.params} />}
         <Calendar events={this.props.events||[]}
                   onSelect={this.onSelect.bind(this)}
                   onChange={this.onChange.bind(this)}
                   onLoad={this.onLoad.bind(this)}
                   {...this.state}
+                  height={600} width={this.state.width}
                   {...this.props.params} />
       </div>
     );

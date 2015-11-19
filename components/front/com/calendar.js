@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Row, Info} from './calendar-utils'
 import {Week, Month} from './calendar-view'
@@ -13,22 +14,23 @@ export default class extends Component {
     this.state = {
       editor: false,
       view: this.props.view,
-      events: this.props.events,
-      store: this.agenda.matrix(),
+      events: this.props.events||[],
+      store: this.agenda.matrix(this.props.view),
       info: this.agenda.getInfo(),
       start: -1,
       end: -1
     }
-    this.props.onLoad(this.props)
+    if (this.props.onLoad)
+      this.props.onLoad(this.props)
   }
 
   componentWillReceiveProps(props) {
     this.agenda.changeDate(props.year, props.month, props.day)
     this.setState({
       view: props.view,
-      events: props.events,
+      events: props.events||[],
       agenda: this.agenda,
-      store: this.agenda.matrix(),
+      store: this.agenda.matrix(props.view),
       info: this.agenda.getInfo(),
       start: -1,
       end: -1,
@@ -38,7 +40,6 @@ export default class extends Component {
   }
 
   toggleEditor() {
-    console.log(this.state)
     this.setState({editor: !this.state.editor});
   }
 
@@ -104,12 +105,16 @@ export default class extends Component {
               {store.map((week, j) =>
                 <Week {...props}
                       week={week}
+                      height={this.props.height}
+                      width={this.props.width}
                       agenda={this.agenda} key={`row-${j}`} />)}
              </Row>}
         {view === 'month'
           && store.map((week, j) =>
             <Month  {...props}
                     week={week}
+                    height={this.props.height}
+                    width={this.props.width}
                     agenda={this.agenda} key={`row-${j}`} />)}
       </div>
     )

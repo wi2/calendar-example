@@ -1,10 +1,21 @@
 "use strict";
 
 import React, {Component} from 'react';
-import {Vertical, Row, Cell} from './calendar-utils'
+import {Vertical, Row, Cell} from './calendar-utils';
 
 
 class ViewDefault extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      width: this.props.width,
+      height: this.props.height
+    };
+  }
+  setDimension(width, height) {
+    this.setState({width, height});
+  }
+
   toggleSelection(val) {
     if (this.props.editor)
       this.props.toggleSelection(val)
@@ -20,10 +31,16 @@ class ViewDefault extends Component {
 }
 
 export class Week extends ViewDefault {
+  componentDidMount() {
+    this.setDimension(this.props.width/7, this.props.height/24)
+  }
+  componentWillReceiveProps(props) {
+    this.setDimension(this.props.width/7, this.props.height/24)
+  }
 
   style(left, evt) {
     let {room, cell} = evt
-      , width = 40
+      , width = this.props.height/24;
 
     return {
       left: left + 'px',
@@ -36,14 +53,17 @@ export class Week extends ViewDefault {
   }
 
   render() {
-    let left = 22
-    let events = this.props.agenda.getEvents(this.props.week, this.props.events, true)
-    let week = this.props.week
+    let events
+      , left = 22
+      , week = this.props.week
+    if (this.props.agenda && this.props.events) {
+      events = this.props.agenda.getEvents(week, this.props.events, true)
+    }
     let selection = {
       s: this.props.selectionStart.date,
       e: this.props.selectionEnd.date
     }
-    // let that = this
+
     return (
       <Vertical>
         {events && events.map((evt, i) => <div className="event"
@@ -59,7 +79,7 @@ export class Week extends ViewDefault {
             moveSelection: this.moveSelection.bind(this, item),
             key: `hour-${item.hour}-${item.row}-${item.col}`
           }
-          return <Cell {...props} />
+          return <Cell {...props} {...this.state} />
         })}
       </Vertical>
     )
@@ -68,22 +88,29 @@ export class Week extends ViewDefault {
 
 
 export class Month extends ViewDefault {
+  componentDidMount() {
+    this.setDimension(this.props.width/7, this.props.height/7)
+  }
+  componentWillReceiveProps(props) {
+    this.setDimension(this.props.width/7, this.props.height/7)
+  }
 
   style(top, evt) {
     let {room, cell} = evt
-      , width = 100 / 7
+      , width = this.state.width
+
     return {
       top: top + 'px',
-      left: `${cell.start * width}%`,
-      width: `${(cell.end - cell.start + 1) * width}%`,
+      left: `${cell.start * width}px`,
+      width: `${(cell.end - cell.start + 1) * width}px`,
       background: room.color||'grey'
     }
   }
 
   render() {
     let top = 0
-    let events = this.props.agenda.getEvents(this.props.week, this.props.events)
     let week = this.props.week
+    let events = this.props.agenda.getEvents(week, this.props.events)
     let selection = {
       s: this.props.selectionStart.date,
       e: this.props.selectionEnd.date
@@ -104,9 +131,10 @@ export class Month extends ViewDefault {
             moveSelection: that.moveSelection.bind(this, item),
             key: `day-${item.day}-${item.col}-${item.row}`
           }
-          return <Cell {...props} />
+          return <Cell {...props} {...this.state} />
         } )}
       </Row>
     )
   }
 }
+
