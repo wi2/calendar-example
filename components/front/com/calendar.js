@@ -18,8 +18,10 @@ export default class extends Component {
       store: this.agenda.matrix(this.props.view),
       info: this.agenda.getInfo(),
       start: -1,
-      end: -1
+      end: -1,
+      startInit: -1
     }
+    console.log("calendar")
     if (this.props.onLoad)
       this.props.onLoad(this.props)
   }
@@ -32,9 +34,6 @@ export default class extends Component {
       agenda: this.agenda,
       store: this.agenda.matrix(props.view),
       info: this.agenda.getInfo(),
-      start: -1,
-      end: -1,
-      startInit: -1
     })
     this.props.onChange(props)
   }

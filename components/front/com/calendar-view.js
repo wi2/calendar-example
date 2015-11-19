@@ -40,7 +40,7 @@ export class Week extends ViewDefault {
 
   style(left, evt) {
     let {room, cell} = evt
-      , width = this.props.height/24;
+      , width = this.props.height/23;
 
     return {
       left: left + 'px',
@@ -67,7 +67,7 @@ export class Week extends ViewDefault {
     return (
       <Vertical>
         {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(left+=22, evt)}
+                                            style={this.style(left+=18, evt)}
                                             onClick={this.onSelect.bind(this, evt)}
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {

@@ -400,7 +400,7 @@ var Week = (function (_ViewDefault) {
     value: function style(left, evt) {
       var room = evt.room;
       var cell = evt.cell;
-      var width = this.props.height / 24;
+      var width = this.props.height / 23;
 
       return {
         left: left + 'px',
@@ -434,7 +434,7 @@ var Week = (function (_ViewDefault) {
           return _react2['default'].createElement(
             'div',
             { className: 'event',
-              style: _this.style(left += 22, evt),
+              style: _this.style(left += 18, evt),
               onClick: _this.onSelect.bind(_this, evt),
               key: 'event-' + i },
             evt.title
@@ -587,8 +587,10 @@ var _default = (function (_Component) {
       store: this.agenda.matrix(this.props.view),
       info: this.agenda.getInfo(),
       start: -1,
-      end: -1
+      end: -1,
+      startInit: -1
     };
+    console.log("calendar");
     if (this.props.onLoad) this.props.onLoad(this.props);
   }
 
@@ -601,10 +603,7 @@ var _default = (function (_Component) {
         events: props.events || [],
         agenda: this.agenda,
         store: this.agenda.matrix(props.view),
-        info: this.agenda.getInfo(),
-        start: -1,
-        end: -1,
-        startInit: -1
+        info: this.agenda.getInfo()
       });
       this.props.onChange(props);
     }
