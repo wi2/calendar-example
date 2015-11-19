@@ -1,29 +1,101 @@
 "use strict";
 
 import React, {Component, cloneElement} from 'react';
-import {RenderForm, Form, Textarea, SplitDateTimeWidget, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
-import BootstrapForm, {Container, Row, Field} from 'newforms-bootstrap'
+import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
+import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
+import Agenda from '../lib/agenda'
+import Calendar from './calendar'
+import {DatePicker} from './date-picker'
+
 
 export default class extends Component {
   constructor(props) {
     super(props)
+    let now;
+    this.state = {
+      startPicker: {
+        show: false,
+        date: now
+      },
+      endPicker: {
+        show: false,
+        date: now
+      }
+    }
+    this.createForm()
+  }
 
-    this.form = Form.extend({
+  createForm() {
+    let MyForm = Form.extend({
       title: CharField({initial: this.props.title||''}),
-      content: CharField({widget: Textarea, initial: this.props.content||''}),
+      content: CharField({
+        required: false,
+        widget: Textarea,
+        initial: this.props.content||''
+      }),
       room: ChoiceField({
         choices: this.props.rooms.map((r) => [r.id, r.name]),
-        initial: this.props.room ? this.props.room.id : null
+        initial: this.props.room ? this.props.room.id : this.props.rooms[0].id
       }),
       start: DateTimeField({
-        widget: SplitDateTimeWidget,
-        initial: this.props.start.date ? this.props.start.date : new Date(this.props.start)
+        initial: this.props.start.date ? this.props.start.date : new Date(this.props.start),
+        widgetAttrs: {
+          onClick: this._showDatePicker.bind(this)
+        }
       }),
       end: DateTimeField({
-        widget: SplitDateTimeWidget,
-        initial: this.props.end.date ? this.props.end.date : new Date(this.props.end)
+        initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
+        widgetAttrs: {
+          onClick: this._showDatePicker.bind(this)
+        }
       })
     })
+    this.form = new MyForm({controlled: true})
+  }
+
+  _showDatePicker(e) {
+    e.preventDefault()
+    let date = new Date(e.target.value)
+    this.changeDate(date, e.target.name)
+  }
+
+  changeDate(date, name, toggle=true) {
+    this.setState(name === 'start'
+                ? {
+                  startPicker:{
+                    show: toggle ? !this.state.startPicker.show : this.state.startPicker.show,
+                    year: date.getFullYear(),
+                    month: date.getMonth(),
+                    day: date.getDate(),
+                    hour: date.getHours(),
+                    name: name,
+                    view: "month"
+                  }
+                }
+                : {
+                  endPicker:{
+                    show: toggle ? !this.state.endPicker.show : this.state.startPicker.show,
+                    year: date.getFullYear(),
+                    month: date.getMonth(),
+                    day: date.getDate(),
+                    hour: date.getHours(),
+                    name: name,
+                    view: "week"
+                  }
+                })
+  }
+  _onSelectStart(val) {
+    let form = this.mForm.getForm()
+      , start = new Date(val.date)
+    form.updateData({ start })
+    this.changeDate(start, "start")
+  }
+
+  _onSelectEnd(val) {
+    let form = this.mForm.getForm()
+      , end = new Date(val.date)
+    form.updateData({ end })
+    this.changeDate(end, "end")
   }
 
   _onSubmit(e) {
@@ -59,10 +131,19 @@ export default class extends Component {
               <Field name="start" md="6" />
               <Field name="end" />
             </Row>
+            <Row>
+              <Col md="6">
+                {this.state.startPicker.show &&
+                  <DatePicker {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
+              </Col>
+              <Col>
+                {this.state.endPicker.show &&
+                  <DatePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
+              </Col>
+            </Row>
           </Container>
         </RenderForm>
       </form>
     )
   }
 }
-
