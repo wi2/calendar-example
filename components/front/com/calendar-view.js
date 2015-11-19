@@ -67,7 +67,7 @@ export class Week extends ViewDefault {
     return (
       <Vertical>
         {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(left+=18, evt)}
+                                            style={this.style(left+=13, evt)}
                                             onClick={this.onSelect.bind(this, evt)}
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {

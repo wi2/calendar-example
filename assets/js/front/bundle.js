@@ -434,7 +434,7 @@ var Week = (function (_ViewDefault) {
           return _react2['default'].createElement(
             'div',
             { className: 'event',
-              style: _this.style(left += 18, evt),
+              style: _this.style(left += 13, evt),
               onClick: _this.onSelect.bind(_this, evt),
               key: 'event-' + i },
             evt.title
