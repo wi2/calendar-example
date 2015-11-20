@@ -72,12 +72,19 @@ export class Week extends ViewDefault {
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
+
           let props = {
             value: item.hour,
             className: cond ? "col-day col-day-active" : "col-day",
             toggleSelection: this.toggleSelection.bind(this, item),
             moveSelection: this.moveSelection.bind(this, item),
+            disabled: item.disabled,
             key: `hour-${item.hour}-${item.row}-${item.col}`
+          }
+          if (item.disabled) {
+            delete props.toggleSelection;
+            delete props.moveSelection;
+            props.className = "col-day col-day-disabled";
           }
           return <Cell {...props} {...this.state} />
         })}
@@ -129,7 +136,13 @@ export class Month extends ViewDefault {
             className: cond ? "col col-active" : "col",
             toggleSelection: that.toggleSelection.bind(this, item),
             moveSelection: that.moveSelection.bind(this, item),
+            disabled: item.disabled,
             key: `day-${item.day}-${item.col}-${item.row}`
+          }
+          if (item.disabled) {
+            delete props.toggleSelection;
+            delete props.moveSelection;
+            props.className = "col-day col-day-disabled";
           }
           return <Cell {...props} {...this.state} />
         } )}

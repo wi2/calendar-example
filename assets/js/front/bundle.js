@@ -228,7 +228,7 @@ var Header = (function (_Component5) {
   _createClass(Header, [{
     key: 'render',
     value: function render() {
-      var days = ["D", "L", "M", "M", "J", "V", "S"],
+      var days = this.props.agenda.getDays(),
           view = this.props.view;
       return _react2['default'].createElement(
         Row,
@@ -442,13 +442,20 @@ var Week = (function (_ViewDefault) {
         }),
         week.map(function (item) {
           var cond = item.date >= selection.s && item.date <= selection.e;
+
           var props = {
             value: item.hour,
             className: cond ? "col-day col-day-active" : "col-day",
             toggleSelection: _this.toggleSelection.bind(_this, item),
             moveSelection: _this.moveSelection.bind(_this, item),
+            disabled: item.disabled,
             key: 'hour-' + item.hour + '-' + item.row + '-' + item.col
           };
+          if (item.disabled) {
+            delete props.toggleSelection;
+            delete props.moveSelection;
+            props.className = "col-day col-day-disabled";
+          }
           return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this.state));
         })
       );
@@ -526,8 +533,14 @@ var Month = (function (_ViewDefault2) {
             className: cond ? "col col-active" : "col",
             toggleSelection: that.toggleSelection.bind(_this2, item),
             moveSelection: that.moveSelection.bind(_this2, item),
+            disabled: item.disabled,
             key: 'day-' + item.day + '-' + item.col + '-' + item.row
           };
+          if (item.disabled) {
+            delete props.toggleSelection;
+            delete props.moveSelection;
+            props.className = "col-day col-day-disabled";
+          }
           return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
         })
       );
@@ -674,7 +687,7 @@ var _default = (function (_Component) {
           editor: this.state.editor,
           toggleEditor: this.toggleEditor.bind(this) }),
         _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info }),
-        _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store }),
+        _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: this.agenda }),
         view === 'week' && _react2['default'].createElement(
           _calendarUtils.Row,
           null,
@@ -709,8 +722,6 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
@@ -848,7 +859,7 @@ var DatePicker = (function (_ViewDefault) {
         this.state && _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info,
           onPrevious: this.onPrevious.bind(this),
           onNext: this.onNext.bind(this) }),
-        this.state && _react2['default'].createElement(_calendarUtils.Header, { view: this.state.view, store: this.state.store }),
+        this.state && _react2['default'].createElement(_calendarUtils.Header, { view: this.state.view, store: this.state.store, agenda: this.agenda }),
         _react2['default'].createElement(
           _calendarUtils.Row,
           null,
@@ -859,9 +870,15 @@ var DatePicker = (function (_ViewDefault) {
                 height: 30,
                 value: item.day,
                 className: cond ? 'col-day col-day-active' : 'col-day',
+                disabled: item.disabled,
+                toggleSelection: _this._onSelect.bind(_this, item),
                 key: 'cell-' + j + '-' + i + _this.props.name
               };
-              return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, { toggleSelection: _this._onSelect.bind(_this, item) }));
+              if (item.disabled) {
+                delete props.toggleSelection;
+                props.className = "col-day col-day-disabled";
+              }
+              return _react2['default'].createElement(_calendarUtils.Cell, props);
             });else return _react2['default'].createElement(
               _calendarUtils.Vertical,
               { key: 'vertical-' + j + '-' + _this.props.name },
@@ -871,9 +888,15 @@ var DatePicker = (function (_ViewDefault) {
                   height: 30,
                   value: item.day + " " + item.hour,
                   className: cond ? 'col-day col-day-active' : 'col-day',
+                  disabled: item.disabled,
+                  toggleSelection: _this._onSelect.bind(_this, item),
                   key: 'cell-' + j + '-' + i + _this.props.name
                 };
-                return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, { toggleSelection: _this._onSelect.bind(_this, item) }));
+                if (item.disabled) {
+                  delete props.toggleSelection;
+                  props.className = "col-day col-day-disabled";
+                }
+                return _react2['default'].createElement(_calendarUtils.Cell, props);
               })
             );
           })
@@ -976,7 +999,17 @@ var _default = (function (_Component) {
           }
         })
       });
-      this.form = new MyForm({ controlled: true });
+      this.form = new MyForm({
+        controlled: true,
+        onChange: this.onFormChange.bind(this),
+        validation: 'auto'
+      });
+    }
+  }, {
+    key: 'onFormChange',
+    value: function onFormChange(e) {
+      console.log("onFormChange", e, this);
+      this.forceUpdate();
     }
   }, {
     key: '_showDatePicker',
@@ -1504,6 +1537,7 @@ var _default = (function () {
     _classCallCheck(this, _default);
 
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
+    this.days = ["D", "L", "M", "M", "J", "V", "S"];
 
     if (!y) {
       var now = new Date();
@@ -1513,6 +1547,9 @@ var _default = (function () {
 
     if (typeof Number(m) === 'number') m = this.months[m];
     this.changeDate(y, m, d, h, mm);
+
+    //
+    this.except = ['D', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 17) }, { start: 8, end: 15 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
   }
 
   _createClass(_default, [{
@@ -1543,11 +1580,15 @@ var _default = (function () {
   }, {
     key: "matrix",
     value: function matrix() {
+      var _this2 = this;
+
       var view = arguments.length <= 0 || arguments[0] === undefined ? 'month' : arguments[0];
       var _date = this.date;
       var y = _date.y;
       var m = _date.m;
       var d = _date.d;
+      var h = _date.h;
+      var mm = _date.mm;
 
       var _getRange = this.getRange(6, 7);
 
@@ -1581,6 +1622,8 @@ var _default = (function () {
           if (tmp < -20) monthTmp -= 1;else if (tmp < 0) monthTmp += 1;
           cellDate = new Date(y, monthTmp, Math.abs(tmp));
 
+          var check = _this2.checkExcept(cellDate);
+
           weeks.push({
             date: cellDate,
             day: tmp,
@@ -1588,7 +1631,8 @@ var _default = (function () {
             month: cellDate.getMonth(),
             year: y,
             col: col,
-            row: row
+            row: row,
+            disabled: check
           });
         });
         if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek) currentWeek = weeks;
@@ -1602,7 +1646,9 @@ var _default = (function () {
           _lodash2["default"].each(currentWeek, function (item) {
             var dayHour = [];
             _lodash2["default"].range(0, 24).map(function (hour) {
-              dayHour.push(_lodash2["default"].assign({}, item, { hour: hour }, { col: hour }, { date: new Date(item.year, item.month, Math.abs(item.day), hour) }));
+              var date = new Date(item.year, item.month, Math.abs(item.day), hour),
+                  check = _this2.checkExcept(date);
+              dayHour.push(_lodash2["default"].assign({}, item, { hour: hour }, { col: hour }, { date: date }, { disabled: check }));
             });
             weekHour.push(dayHour);
           });
@@ -1614,6 +1660,34 @@ var _default = (function () {
         if (typeof _ret === "object") return _ret.v;
       }
       return months;
+    }
+  }, {
+    key: "checkExcept",
+    value: function checkExcept(date) {
+      var ret = false;
+      for (var i = 0, len = this.except.length; i < len; i++) {
+        switch (typeof this.except[i]) {
+          case 'string':
+            if (date.getDay() === this.days.indexOf(this.except[i])) ret = true;
+            break;
+          case 'object':
+            switch (typeof this.except[i].start) {
+              case 'number':
+                if (date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
+                break;
+              default:
+                if (date >= this.except[i].start && date <= this.except[i].end) ret = true;
+                break;
+            }
+            if (date.getDay() === this.days.indexOf(this.except[i])) ret = true;
+            break;
+          default:
+            if (date == this.except[i]) ret = true;
+            break;
+
+        }
+      }
+      return ret;
     }
   }, {
     key: "getRange",
@@ -1631,6 +1705,11 @@ var _default = (function () {
         next: new Date(this.date.y, this.date.m + 1, 0),
         date: new Date(this.date.y, this.date.m, this.date.d)
       };
+    }
+  }, {
+    key: "getDays",
+    value: function getDays() {
+      return this.days;
     }
   }, {
     key: "getToday",
@@ -1702,18 +1781,18 @@ var _default = (function () {
   }, {
     key: "getLimit",
     value: function getLimit(line, evt, withHour) {
-      var _this2 = this;
+      var _this3 = this;
 
       var eventDate = {
         start: new Date(evt.start),
         end: new Date(evt.end)
       };
       var start = _lodash2["default"].find(line, function (item) {
-        return _this2.compare(item.date, eventDate.start, withHour);
+        return _this3.compare(item.date, eventDate.start, withHour);
       });
 
       var end = _lodash2["default"].find(line, function (item) {
-        return _this2.compare(item.date, eventDate.end, withHour);
+        return _this3.compare(item.date, eventDate.end, withHour);
       });
 
       if (!(start || end || line[0].date > eventDate.start && line[line.length - 1].date < eventDate.end)) return { start: start, end: end };

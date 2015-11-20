@@ -5,6 +5,7 @@ export default class {
 
   constructor(y,m,d,h=0,mm=0) {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
+    this.days = ["D", "L", "M", "M", "J", "V", "S"];
 
     if (!y) {
       let now = new Date()
@@ -15,6 +16,15 @@ export default class {
     if (typeof Number(m) === 'number')
       m = this.months[m]
     this.changeDate(y,m,d,h,mm)
+
+    //
+    this.except = [
+      'D',
+      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 17)},
+      {start: 8, end: 15},
+      new Date(2015, 10, 7),
+      new Date(2015, 10, 10)
+    ]
   }
 
   changeDate(y,m,d,h,mm) {
@@ -34,7 +44,7 @@ export default class {
   }
 
   matrix(view='month') {
-    let {y,m,d} = this.date
+    let {y,m,d,h,mm} = this.date
     var {rows, cols} = this.getRange(6,7)
       , {start, next, date} = this.getDates()
       , days = next.getDate()
@@ -64,6 +74,8 @@ export default class {
           monthTmp += 1
         cellDate = new Date(y, monthTmp , Math.abs(tmp))
 
+        let check = this.checkExcept(cellDate)
+
         weeks.push({
           date: cellDate,
           day: tmp,
@@ -71,7 +83,8 @@ export default class {
           month: cellDate.getMonth(),
           year: y,
           col: col,
-          row: row
+          row: row,
+          disabled: check
         })
 
       });
@@ -88,13 +101,47 @@ export default class {
       _.each(currentWeek, (item) => {
         let dayHour = []
         _.range(0, 24).map((hour) => {
-          dayHour.push(_.assign({}, item, {hour}, {col: hour}, {date: new Date(item.year, item.month , Math.abs(item.day), hour)}))
+          let date = new Date(item.year, item.month , Math.abs(item.day), hour)
+            , check = this.checkExcept(date)
+          dayHour.push(_.assign({}, item, {hour}, {col: hour}, {date}, {disabled: check}))
         })
         weekHour.push(dayHour)
       })
       return weekHour;
     }
     return months;
+  }
+
+  checkExcept(date) {
+    var ret = false;
+    for(let i=0, len=this.except.length; i<len; i++) {
+      switch(typeof this.except[i]) {
+        case 'string':
+          if (date.getDay() === this.days.indexOf(this.except[i]))
+            ret = true;
+          break;
+        case 'object':
+          switch(typeof this.except[i].start) {
+            case 'number':
+              if (date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
+                ret = true;
+              break;
+            default:
+              if (date >= this.except[i].start && date <= this.except[i].end)
+                ret = true;
+              break;
+          }
+          if (date.getDay() === this.days.indexOf(this.except[i]))
+            ret = true;
+          break;
+        default:
+          if (date == this.except[i])
+            ret = true;
+          break;
+
+      }
+    }
+    return ret;
   }
 
   getRange(rows, cols) {
@@ -110,6 +157,10 @@ export default class {
       next: new Date(this.date.y, this.date.m + 1, 0),
       date: new Date(this.date.y, this.date.m, this.date.d)
     }
+  }
+
+  getDays() {
+    return this.days;
   }
 
   getToday(withDay) {

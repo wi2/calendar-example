@@ -97,7 +97,7 @@ export class DatePicker extends ViewDefault {
         {this.state && <Info info={this.state.info}
           onPrevious={this.onPrevious.bind(this)}
           onNext={this.onNext.bind(this)} />}
-        {this.state && <Header view={this.state.view} store={this.state.store} />}
+        {this.state && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
         <Row>
           {this.state
             && this.state.store.map((line, j) => {
@@ -108,9 +108,15 @@ export class DatePicker extends ViewDefault {
                   height: 30,
                   value: item.day,
                   className: cond ? 'col-day col-day-active':'col-day',
+                  disabled: item.disabled,
+                  toggleSelection: this._onSelect.bind(this, item),
                   key: 'cell-'+j+'-'+i+this.props.name
                 }
-                return <Cell {...props} toggleSelection={this._onSelect.bind(this, item)} />
+                if (item.disabled) {
+                  delete props.toggleSelection;
+                  props.className = "col-day col-day-disabled";
+                }
+                return <Cell {...props} />
               })
             else
               return (
@@ -121,9 +127,15 @@ export class DatePicker extends ViewDefault {
                       height: 30,
                       value: item.day +" "+item.hour,
                       className: cond ? 'col-day col-day-active':'col-day',
+                      disabled: item.disabled,
+                      toggleSelection: this._onSelect.bind(this, item),
                       key: 'cell-'+j+'-'+i+this.props.name
                     }
-                    return <Cell {...props} toggleSelection={this._onSelect.bind(this, item)} />
+                    if (item.disabled) {
+                      delete props.toggleSelection;
+                      props.className = "col-day col-day-disabled";
+                    }
+                    return <Cell {...props} />
                   })}
                 </Vertical>
               )

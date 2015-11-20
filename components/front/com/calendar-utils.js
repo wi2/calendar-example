@@ -69,7 +69,7 @@ export class Navigation extends Component {
 
 export class Header extends Component {
   render() {
-    let days = ["D", "L", "M", "M", "J", "V", "S"]
+    let days = this.props.agenda.getDays()
       , view = this.props.view
     return (
       <Row>
