@@ -405,7 +405,7 @@ var Week = (function (_ViewDefault) {
       return {
         left: left + 'px',
         top: cell.start * width + 'px',
-        width: (cell.end - cell.start + 1) * width + 'px',
+        width: (cell.end - cell.start) * width + 'px',
         transform: 'rotate(90deg)',
         transformOrigin: 'left top 0',
         background: room.color || 'grey'
@@ -1316,7 +1316,7 @@ var _default = (function (_Component) {
           onChange: this.onChange.bind(this),
           onLoad: this.onLoad.bind(this)
         }, this.state, {
-          height: 600, width: this.state.width
+          height: 700, width: this.state.width
         }, this.props.params))
       );
     }
@@ -1537,7 +1537,7 @@ var _default = (function () {
     _classCallCheck(this, _default);
 
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
-    this.days = ["D", "L", "M", "M", "J", "V", "S"];
+    this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     if (!y) {
       var now = new Date();
@@ -1549,7 +1549,7 @@ var _default = (function () {
     this.changeDate(y, m, d, h, mm);
 
     //
-    this.except = ['D', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 17) }, { start: 8, end: 15 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
+    this.except = ['Sun', 'Sat', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 11) }, { start: new Date(2015, 9, 15), end: new Date(2015, 9, 17) }, { start: 0, end: 8 }, { start: 18, end: 23 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
   }
 
   _createClass(_default, [{
@@ -1622,7 +1622,7 @@ var _default = (function () {
           if (tmp < -20) monthTmp -= 1;else if (tmp < 0) monthTmp += 1;
           cellDate = new Date(y, monthTmp, Math.abs(tmp));
 
-          var check = _this2.checkExcept(cellDate);
+          var check = _this2.checkExcept(cellDate, view);
 
           weeks.push({
             date: cellDate,
@@ -1647,7 +1647,7 @@ var _default = (function () {
             var dayHour = [];
             _lodash2["default"].range(0, 24).map(function (hour) {
               var date = new Date(item.year, item.month, Math.abs(item.day), hour),
-                  check = _this2.checkExcept(date);
+                  check = _this2.checkExcept(date, view);
               dayHour.push(_lodash2["default"].assign({}, item, { hour: hour }, { col: hour }, { date: date }, { disabled: check }));
             });
             weekHour.push(dayHour);
@@ -1663,17 +1663,18 @@ var _default = (function () {
     }
   }, {
     key: "checkExcept",
-    value: function checkExcept(date) {
+    value: function checkExcept(date, view) {
       var ret = false;
       for (var i = 0, len = this.except.length; i < len; i++) {
         switch (typeof this.except[i]) {
           case 'string':
+            console.log(date.getDay() === this.days.indexOf(this.except[i]), date.getDay(), this.days.indexOf(this.except[i]));
             if (date.getDay() === this.days.indexOf(this.except[i])) ret = true;
             break;
           case 'object':
             switch (typeof this.except[i].start) {
               case 'number':
-                if (date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
+                if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
                 break;
               default:
                 if (date >= this.except[i].start && date <= this.except[i].end) ret = true;
@@ -1783,6 +1784,7 @@ var _default = (function () {
     value: function getLimit(line, evt, withHour) {
       var _this3 = this;
 
+      // console.log("line", line, evt)
       var eventDate = {
         start: new Date(evt.start),
         end: new Date(evt.end)

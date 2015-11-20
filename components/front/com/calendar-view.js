@@ -45,7 +45,7 @@ export class Week extends ViewDefault {
     return {
       left: left + 'px',
       top: `${cell.start * width}px`,
-      width: `${(cell.end - cell.start + 1) * width}px`,
+      width: `${(cell.end - cell.start) * width}px`,
       transform: 'rotate(90deg)',
       transformOrigin: 'left top 0',
       background: room.color||'grey'

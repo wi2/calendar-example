@@ -100,7 +100,7 @@ export default class extends Component {
                   onChange={this.onChange.bind(this)}
                   onLoad={this.onLoad.bind(this)}
                   {...this.state}
-                  height={600} width={this.state.width}
+                  height={700} width={this.state.width}
                   {...this.props.params} />
       </div>
     );

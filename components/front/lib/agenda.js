@@ -5,7 +5,7 @@ export default class {
 
   constructor(y,m,d,h=0,mm=0) {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
-    this.days = ["D", "L", "M", "M", "J", "V", "S"];
+    this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     if (!y) {
       let now = new Date()
@@ -19,9 +19,12 @@ export default class {
 
     //
     this.except = [
-      'D',
-      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 17)},
-      {start: 8, end: 15},
+      'Sun',
+      'Sat',
+      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 11)},
+      {start: new Date(2015, 9, 15), end: new Date(2015, 9, 17)},
+      {start: 0, end: 8},
+      {start: 18, end: 23},
       new Date(2015, 10, 7),
       new Date(2015, 10, 10)
     ]
@@ -34,7 +37,7 @@ export default class {
   }
 
   getEvents(line, events, withHour=false) {
-    return events.filter((evt) => {
+    return events.filter( evt  => {
       let {start, end} = this.getLimit(line, evt, withHour)
       if (start && end) {
         evt.cell = {start: start.col, end: end.col}
@@ -74,7 +77,7 @@ export default class {
           monthTmp += 1
         cellDate = new Date(y, monthTmp , Math.abs(tmp))
 
-        let check = this.checkExcept(cellDate)
+        let check = this.checkExcept(cellDate, view)
 
         weeks.push({
           date: cellDate,
@@ -102,7 +105,7 @@ export default class {
         let dayHour = []
         _.range(0, 24).map((hour) => {
           let date = new Date(item.year, item.month , Math.abs(item.day), hour)
-            , check = this.checkExcept(date)
+            , check = this.checkExcept(date, view)
           dayHour.push(_.assign({}, item, {hour}, {col: hour}, {date}, {disabled: check}))
         })
         weekHour.push(dayHour)
@@ -112,18 +115,19 @@ export default class {
     return months;
   }
 
-  checkExcept(date) {
+  checkExcept(date, view) {
     var ret = false;
     for(let i=0, len=this.except.length; i<len; i++) {
       switch(typeof this.except[i]) {
         case 'string':
+          console.log(date.getDay() === this.days.indexOf(this.except[i]), date.getDay(), this.days.indexOf(this.except[i]))
           if (date.getDay() === this.days.indexOf(this.except[i]))
             ret = true;
           break;
         case 'object':
           switch(typeof this.except[i].start) {
             case 'number':
-              if (date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
+              if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
                 ret = true;
               break;
             default:
@@ -226,6 +230,7 @@ export default class {
   }
 
   getLimit(line, evt, withHour) {
+    // console.log("line", line, evt)
     let eventDate = {
       start: new Date(evt.start),
       end: new Date(evt.end)
