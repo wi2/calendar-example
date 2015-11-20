@@ -77,7 +77,8 @@ export default class extends Component {
                     day: date.getDate(),
                     hour: date.getHours(),
                     name: name,
-                    view: "month"
+                    view: "month",
+                    except: this.props.except||[]
                   }
                 }
                 : {
@@ -88,7 +89,8 @@ export default class extends Component {
                     day: date.getDate(),
                     hour: date.getHours(),
                     name: name,
-                    view: "week"
+                    view: "week",
+                    except: this.props.except||[]
                   }
                 })
   }

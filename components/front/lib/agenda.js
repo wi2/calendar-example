@@ -18,16 +18,11 @@ export default class {
     this.changeDate(y,m,d,h,mm)
 
     //
-    this.except = [
-      'Sun',
-      'Sat',
-      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 11)},
-      {start: new Date(2015, 9, 15), end: new Date(2015, 9, 17)},
-      {start: 0, end: 8},
-      {start: 18, end: 23},
-      new Date(2015, 10, 7),
-      new Date(2015, 10, 10)
-    ]
+    this.except = [];
+  }
+
+  setException(except) {
+    this.except = except;
   }
 
   changeDate(y,m,d,h,mm) {

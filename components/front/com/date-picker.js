@@ -9,13 +9,13 @@ import {Header, Navigation, Vertical, Row, Cell, Info} from './calendar-utils'
 class ViewDefault extends Component {
   constructor(props) {
     super(props)
-    this.agenda = new Agenda()
   }
 }
 
 export class DatePicker extends ViewDefault {
   componentDidMount() {
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day, this.props.hour)
+    this.agenda.setException(this.props.except||[]);
     let view = this.props.day ? "week" : "month";
     view = this.props.view||view
 

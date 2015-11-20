@@ -11,6 +11,7 @@ export default class extends Component {
   constructor(props) {
     super(props)
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day)
+    this.agenda.setException(this.props.except||[]);
     this.state = {
       editor: false,
       view: this.props.view,
@@ -21,7 +22,6 @@ export default class extends Component {
       end: -1,
       startInit: -1
     }
-    console.log("calendar")
     if (this.props.onLoad)
       this.props.onLoad(this.props)
   }

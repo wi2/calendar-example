@@ -593,6 +593,7 @@ var _default = (function (_Component) {
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
     this.agenda = new _libAgenda2['default'](this.props.year, this.props.month, this.props.day);
+    this.agenda.setException(this.props.except || []);
     this.state = {
       editor: false,
       view: this.props.view,
@@ -603,7 +604,6 @@ var _default = (function (_Component) {
       end: -1,
       startInit: -1
     };
-    console.log("calendar");
     if (this.props.onLoad) this.props.onLoad(this.props);
   }
 
@@ -752,7 +752,6 @@ var ViewDefault = (function (_Component) {
     _classCallCheck(this, ViewDefault);
 
     _get(Object.getPrototypeOf(ViewDefault.prototype), 'constructor', this).call(this, props);
-    this.agenda = new _libAgenda2['default']();
   }
 
   return ViewDefault;
@@ -771,6 +770,7 @@ var DatePicker = (function (_ViewDefault) {
     key: 'componentDidMount',
     value: function componentDidMount() {
       this.agenda = new _libAgenda2['default'](this.props.year, this.props.month, this.props.day, this.props.hour);
+      this.agenda.setException(this.props.except || []);
       var view = this.props.day ? "week" : "month";
       view = this.props.view || view;
 
@@ -1031,7 +1031,8 @@ var _default = (function (_Component) {
           day: date.getDate(),
           hour: date.getHours(),
           name: name,
-          view: "month"
+          view: "month",
+          except: this.props.except || []
         }
       } : {
         endPicker: {
@@ -1041,7 +1042,8 @@ var _default = (function (_Component) {
           day: date.getDate(),
           hour: date.getHours(),
           name: name,
-          view: "week"
+          view: "week",
+          except: this.props.except || []
         }
       });
     }
@@ -1198,6 +1200,7 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+    this.except = ['Sun', 'Sat', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 11) }, { start: new Date(2015, 9, 15), end: new Date(2015, 9, 17) }, { start: 0, end: 8 }, { start: 18, end: 23 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
     this.state = {
       show: false,
       rooms: this.props.rooms || [],
@@ -1309,14 +1312,16 @@ var _default = (function (_Component) {
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {
           rooms: this.state.rooms,
           onSubmit: this.onSubmit.bind(this),
-          onCancel: this.onCancel.bind(this)
+          onCancel: this.onCancel.bind(this),
+          except: this.except
         }, this.props.params)),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
           onSelect: this.onSelect.bind(this),
           onChange: this.onChange.bind(this),
           onLoad: this.onLoad.bind(this)
         }, this.state, {
-          height: 700, width: this.state.width
+          height: 700, width: this.state.width,
+          except: this.except
         }, this.props.params))
       );
     }
@@ -1549,10 +1554,15 @@ var _default = (function () {
     this.changeDate(y, m, d, h, mm);
 
     //
-    this.except = ['Sun', 'Sat', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 11) }, { start: new Date(2015, 9, 15), end: new Date(2015, 9, 17) }, { start: 0, end: 8 }, { start: 18, end: 23 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
+    this.except = [];
   }
 
   _createClass(_default, [{
+    key: "setException",
+    value: function setException(except) {
+      this.except = except;
+    }
+  }, {
     key: "changeDate",
     value: function changeDate(y, m, d, h, mm) {
       if (typeof m === 'number') m = this.months[m];

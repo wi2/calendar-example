@@ -9,6 +9,16 @@ import Modal from '../com/modal';
 export default class extends Component {
   constructor(props) {
     super(props)
+    this.except = [
+      'Sun',
+      'Sat',
+      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 11)},
+      {start: new Date(2015, 9, 15), end: new Date(2015, 9, 17)},
+      {start: 0, end: 8},
+      {start: 18, end: 23},
+      new Date(2015, 10, 7),
+      new Date(2015, 10, 10)
+    ];
     this.state = {
       show: false,
       rooms: this.props.rooms||[],
@@ -94,6 +104,7 @@ export default class extends Component {
                   rooms={this.state.rooms}
                   onSubmit={this.onSubmit.bind(this)}
                   onCancel={this.onCancel.bind(this)}
+                  except={this.except}
                   {...this.props.params} />}
         <Calendar events={this.props.events||[]}
                   onSelect={this.onSelect.bind(this)}
@@ -101,6 +112,7 @@ export default class extends Component {
                   onLoad={this.onLoad.bind(this)}
                   {...this.state}
                   height={700} width={this.state.width}
+                  except={this.except}
                   {...this.props.params} />
       </div>
     );
