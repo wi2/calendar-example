@@ -20,7 +20,7 @@ body { padding-top: 70px; font-family: Arial }
     box-sizing: border-box;
     width: @agendaCell;
     .col-content {
-      margin: 1px;
+      border: 1px solid #111;
       background: #FFF;
       height: 100%;
      }
@@ -37,7 +37,7 @@ body { padding-top: 70px; font-family: Arial }
       height: 20px;
       line-height: 20px;
       text-align: center;
-      margin: 1px;
+      border: 1px solid #CCC;
       background: #DDD;
     }
   }
@@ -47,7 +47,7 @@ body { padding-top: 70px; font-family: Arial }
     width: @agendaCell;
     background: #FF0000;
     color: #FFF;
-    font: 0.8em arial;
+    font: 0.7em arial;
     z-index: 5;
   }
 }
@@ -72,12 +72,9 @@ body { padding-top: 70px; font-family: Arial }
     box-sizing: border-box;
     width: 100%;
     .col-content {
-      margin: 1px;
+      border: 1px solid #111;
       background: #FFF;
      }
-  }
-  .col-day {
-     margin-bottom: 1px;
   }
   .col-day-active {
     .col-content {
@@ -90,7 +87,7 @@ body { padding-top: 70px; font-family: Arial }
       height: 20px;
       line-height: 20px;
       text-align: center;
-      margin: 1px;
+      border: 1px solid #CCC;
       background: #DDD;
     }
   }
@@ -100,7 +97,7 @@ body { padding-top: 70px; font-family: Arial }
     width: @agendaCell;
     background: #FF0000;
     color: #FFF;
-    font: 0.8em arial;
+    font: 0.7em arial;
     z-index: 5;
   }
 }
@@ -147,8 +144,11 @@ body { padding-top: 70px; font-family: Arial }
 }
 
 .col-day-disabled {
+  z-index: 10;
+  opacity: 0.9;
   .col-content {
-    background: #CCC!important;
+    background: #333!important;
+    color: #fff;
     height: 100%;
   }
 }
