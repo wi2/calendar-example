@@ -50,7 +50,15 @@ export default class extends Component {
         }
       })
     })
-    this.form = new MyForm({controlled: true})
+    this.form = new MyForm({
+      controlled: true,
+      onChange: this.onFormChange.bind(this),
+      validation: 'auto'
+    })
+  }
+  onFormChange(e) {
+    console.log("onFormChange", e, this)
+    this.forceUpdate()
   }
 
   _showDatePicker(e) {
