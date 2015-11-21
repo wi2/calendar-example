@@ -1,0 +1,40 @@
+.agenda-navigation {
+  position: relative;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-align-content: flex-end;
+  align-content: flex-end;
+  background: #CCC;
+  a {
+    width: calc(100% / 3);
+    text-align: center;
+    color: #FFF;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+}
+.agenda-navigation-view, .agenda-navigation-editor {
+  height: 30px;
+  width: 50%;
+  position: relative;
+  background: #FFF;
+  a {
+    display: block;
+    float: right;
+    padding: 3px 5px;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+}
+.agenda-navigation-editor {
+  a {
+    float: left;
+  }
+}

@@ -2,6 +2,10 @@ body { padding-top: 50px; font-family: Arial }
 
 @agendaCell: calc(100% / 7);
 
+@import 'modal';
+@import 'panel';
+@import 'navigation';
+
 .agenda-row {
   position: relative;
   display: -webkit-flex;
@@ -25,8 +29,6 @@ body { padding-top: 50px; font-family: Arial }
       height: 100%;
      }
   }
-  .col-day {
-   }
   .col-active, .col-day-active {
     .col-content {
       background: #FFC156;
@@ -99,47 +101,7 @@ body { padding-top: 50px; font-family: Arial }
     z-index: 5;
   }
 }
-.agenda-navigation {
-  position: relative;
-  display: -webkit-flex;
-  display: flex;
-  -webkit-align-items: center;
-  align-items: center;
-  -webkit-justify-content: center;
-  justify-content: center;
-  -webkit-flex-flow: row wrap;
-  flex-flow: row wrap;
-  -webkit-align-content: flex-end;
-  align-content: flex-end;
-  background: #CCC;
-  a {
-    width: calc(100% / 3);
-    text-align: center;
-    color: #FFF;
-    text-transform: uppercase;
-    font-weight: bold;
-  }
-}
-.agenda-navigation-view, .agenda-navigation-editor {
-  height: 30px;
-  width: 50%;
-  position: relative;
-  background: #FFF;
-  a {
-    display: block;
-    float: right;
-    padding: 3px 5px;
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: bold;
-  }
-}
-.agenda-navigation-editor {
 
-  a {
-    float: left;
-  }
-}
 
 .col-day-disabled {
   z-index: 10;
@@ -151,23 +113,5 @@ body { padding-top: 50px; font-family: Arial }
   }
 }
 
-.agenda-panel {
-  position: fixed;
-  top: 50px;
-  right: 0;
-  bottom:0;
-  width: 20%;
-  background: #EFEFEF;
-}
 
 
-.agenda-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: #FFF;
-  opacity: 0.9;
-  z-index: 99;
-}
