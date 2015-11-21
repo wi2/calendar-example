@@ -31,7 +31,7 @@ export default class extends Component {
       io.socket.on('event', msg => this.loadEvents());
   }
   componentDidMount() {
-    this.setState({width:findDOMNode(this).offsetWidth*0.8})
+    this.setState({width:findDOMNode(this).offsetWidth})
     window.addEventListener('resize', this.handleResize.bind(this));
   }
 
@@ -57,7 +57,7 @@ export default class extends Component {
 
   loadEvents() {
     if (global.io)
-      io.socket.get('/event', res => { this.setState({events: res}) });
+      io.socket.get('/event?limit=100', res => { this.setState({events: res}) });
   }
   hideModal() {
     this.setState({
@@ -80,24 +80,32 @@ export default class extends Component {
 
   onSelect(data, edition=false) {
     if (edition)
-      this.setState({ show: true, selection: data })
-    else
-      this.setState({ current: data })
-  }
-  onSelectEvent(data, edition=false) {
-    if (edition)
-      this.setState({ show: true, selection: data })
-    else
-      this.setState({ current: data })
+      this.setState({
+        show: true,
+        selection: data,
+        width: document.body.offsetWidth
+      })
+    else {
+      this.setState({
+        current: data,
+        width: document.body.offsetWidth*0.8
+      })
+      setTimeout(() => {
+        this.setState({ width: document.body.offsetWidth*0.8 }) // twice : why?
+      })
+
+    }
+
   }
 
   onChange(data) {}
   onLoad(data) {}
 
-
   render() {
     return (
       <div className="app">
+
+        <Panel {...this.state.current} />
 
         {this.state.show &&
           <Modal {...this.state.selection}
@@ -106,14 +114,14 @@ export default class extends Component {
                   onCancel={this.onCancel.bind(this)}
                   except={this.except}
                   {...this.props.params} />}
-        <Panel {...this.state.current} />
+
         <div style={{width: this.state.width}}>
           <Calendar events={this.props.events||[]}
                     onSelect={this.onSelect.bind(this)}
                     onChange={this.onChange.bind(this)}
                     onLoad={this.onLoad.bind(this)}
                     {...this.state}
-                    height={700} width={this.state.width}
+                    height={700}
                     except={this.except}
                     {...this.props.params} />
         </div>

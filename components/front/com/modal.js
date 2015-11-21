@@ -104,7 +104,7 @@ export default class extends Component {
   }
   render() {
     return (
-      <form encType="multipart/form-data">
+      <form encType="multipart/form-data" className="agenda-modal">
         <RenderForm form={this.form} ref={(ref) => this.mForm = ref}>
           <Container autoColumns="md">
             <h1>Event</h1>

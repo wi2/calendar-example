@@ -691,7 +691,7 @@ var _default = (function (_Component) {
   }, {
     key: 'moveSelection',
     value: function moveSelection(val) {
-      if (this.state.start !== -1) this.setState(this.getSmartSelection(val), this.state.editor);
+      if (this.state.start !== -1) this.setState(this.getSmartSelection(val));
     }
   }, {
     key: 'onSelectEvent',
@@ -1098,7 +1098,7 @@ var _default = (function (_Component) {
 
       return _react2['default'].createElement(
         'form',
-        { encType: 'multipart/form-data' },
+        { encType: 'multipart/form-data', className: 'agenda-modal' },
         _react2['default'].createElement(
           _newforms.RenderForm,
           { form: this.form, ref: function (ref) {
@@ -1211,7 +1211,7 @@ var _default = (function (_Component) {
         Object.keys(this.props).map(function (key) {
           return _react2["default"].createElement(
             "div",
-            null,
+            { key: key },
             _this.props[key].toString()
           );
         })
@@ -1237,7 +1237,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -1288,7 +1288,7 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: 'componentDidMount',
     value: function componentDidMount() {
-      this.setState({ width: (0, _reactDom.findDOMNode)(this).offsetWidth * 0.8 });
+      this.setState({ width: (0, _reactDom.findDOMNode)(this).offsetWidth });
       window.addEventListener('resize', this.handleResize.bind(this));
     }
   }, {
@@ -1324,7 +1324,7 @@ var _default = (function (_Component) {
     value: function loadEvents() {
       var _this3 = this;
 
-      if (global.io) io.socket.get('/event', function (res) {
+      if (global.io) io.socket.get('/event?limit=100', function (res) {
         _this3.setState({ events: res });
       });
     }
@@ -1358,18 +1358,23 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelect',
     value: function onSelect(data) {
+      var _this5 = this;
+
       var edition = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
-      console.log(data);
-      if (edition) this.setState({ show: true, selection: data });else this.setState({ current: data });
-    }
-  }, {
-    key: 'onSelectEvent',
-    value: function onSelectEvent(data) {
-      var edition = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
-
-      console.log(data);
-      if (edition) this.setState({ show: true, selection: data });else this.setState({ current: data });
+      if (edition) this.setState({
+        show: true,
+        selection: data,
+        width: document.body.offsetWidth
+      });else {
+        this.setState({
+          current: data,
+          width: document.body.offsetWidth * 0.8
+        });
+        setTimeout(function () {
+          _this5.setState({ width: document.body.offsetWidth * 0.8 }); // twice : why?
+        });
+      }
     }
   }, {
     key: 'onChange',
@@ -1383,13 +1388,13 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
+        _react2['default'].createElement(_comPanel2['default'], this.state.current),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {
           rooms: this.state.rooms,
           onSubmit: this.onSubmit.bind(this),
           onCancel: this.onCancel.bind(this),
           except: this.except
         }, this.props.params)),
-        _react2['default'].createElement(_comPanel2['default'], this.state.current),
         _react2['default'].createElement(
           'div',
           { style: { width: this.state.width } },
@@ -1398,7 +1403,7 @@ var _default = (function (_Component) {
             onChange: this.onChange.bind(this),
             onLoad: this.onLoad.bind(this)
           }, this.state, {
-            height: 700, width: this.state.width,
+            height: 700,
             except: this.except
           }, this.props.params))
         )

@@ -67,7 +67,7 @@ export default class extends Component {
 
   moveSelection(val) {
     if (this.state.start !== -1)
-      this.setState(this.getSmartSelection(val), this.state.editor)
+      this.setState(this.getSmartSelection(val))
   }
 
   onSelectEvent(val) {

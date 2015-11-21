@@ -11,7 +11,7 @@ export default class extends Component {
   render() {
     return (
       <div className="agenda-panel">
-        {Object.keys(this.props).map(key => <div>{this.props[key].toString()}</div>)}
+        {Object.keys(this.props).map(key => <div key={key}>{this.props[key].toString()}</div>)}
       </div>
     )
   }
