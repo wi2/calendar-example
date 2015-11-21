@@ -1260,15 +1260,22 @@ var _default = (function (_Component) {
   }, {
     key: 'handleResize',
     value: function handleResize(e) {
-      this.setState({ width: e.target.innerWidth });
+      var _this2 = this;
+
+      setTimeout(function () {
+        _this2.setState({ width: e.target.innerWidth });
+      }, 100);
+      setTimeout(function () {
+        _this2.setState({ width: e.target.innerWidth });
+      }, 500); //need twice for window resize and show inspector (why??)
     }
   }, {
     key: 'loadEvents',
     value: function loadEvents() {
-      var _this2 = this;
+      var _this3 = this;
 
       if (global.io) io.socket.get('/event', function (res) {
-        _this2.setState({ events: res });
+        _this3.setState({ events: res });
       });
     }
   }, {
@@ -1282,13 +1289,13 @@ var _default = (function (_Component) {
   }, {
     key: 'onSubmit',
     value: function onSubmit(data, id) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (global.io) {
         if (id) io.socket.put("/event/" + id, data, function (res) {
-          _this3.loadEvents();
+          _this4.loadEvents();
         });else io.socket.post("/event", data, function (res) {
-          _this3.loadEvents();
+          _this4.loadEvents();
         });
       }
       this.hideModal();
