@@ -458,7 +458,6 @@ var Week = (function (_ViewDefault) {
           week = this.props.week;
       if (this.props.agenda && this.props.events) {
         events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true));
-        // events = this.props.agenda.getEvents(week, this.props.events, true)
       }
       var selection = {
         s: this.props.selectionStart.date,
@@ -1264,10 +1263,10 @@ var _default = (function (_Component) {
 
       setTimeout(function () {
         _this2.setState({ width: e.target.innerWidth });
-      }, 100);
+      }, 50);
       setTimeout(function () {
         _this2.setState({ width: e.target.innerWidth });
-      }, 500); //need twice for window resize and show inspector (why??)
+      }, 100); //need twice for window resize and show inspector (why??)
     }
   }, {
     key: 'loadEvents',

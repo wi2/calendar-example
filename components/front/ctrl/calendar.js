@@ -49,10 +49,10 @@ export default class extends Component {
   handleResize(e) {
     setTimeout(() => {
       this.setState({width:e.target.innerWidth})
-    }, 100);
+    }, 50);
     setTimeout(() => {
       this.setState({width:e.target.innerWidth})
-    }, 500);//need twice for window resize and show inspector (why??)
+    }, 100);//need twice for window resize and show inspector (why??)
   }
 
   loadEvents() {

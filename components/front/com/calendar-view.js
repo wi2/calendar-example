@@ -85,7 +85,6 @@ export class Week extends ViewDefault {
       , week = this.props.week
     if (this.props.agenda && this.props.events) {
       events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true))
-      // events = this.props.agenda.getEvents(week, this.props.events, true)
     }
     let selection = {
       s: this.props.selectionStart.date,
