@@ -4,6 +4,7 @@ import React, {Component} from 'react';
 import {findDOMNode} from 'react-dom';
 import Calendar from '../com/calendar';
 import Modal from '../com/modal';
+import Panel from '../com/panel';
 
 
 export default class extends Component {
@@ -30,7 +31,7 @@ export default class extends Component {
       io.socket.on('event', msg => this.loadEvents());
   }
   componentDidMount() {
-    this.setState({width:findDOMNode(this).offsetWidth})
+    this.setState({width:findDOMNode(this).offsetWidth*0.8})
     window.addEventListener('resize', this.handleResize.bind(this));
   }
 
@@ -76,11 +77,13 @@ export default class extends Component {
   onCancel() {
     this.hideModal()
   }
-  onSelect(data) {
-    this.setState({ show: true, selection: data })
+  onSelect(data, edition=false) {
+    if (edition)
+      this.setState({ show: true, selection: data })
   }
-  onSelectEvent(data) {
-    this.setState({ show: true, selection: data })
+  onSelectEvent(data, edition=false) {
+    if (edition)
+      this.setState({ show: true, selection: data })
   }
   onChange(data) {}
   onLoad(data) {}
@@ -89,7 +92,6 @@ export default class extends Component {
   render() {
     return (
       <div className="app">
-        <h1>Calendar</h1>
 
         {this.state.show &&
           <Modal {...this.state.selection}
@@ -98,14 +100,17 @@ export default class extends Component {
                   onCancel={this.onCancel.bind(this)}
                   except={this.except}
                   {...this.props.params} />}
-        <Calendar events={this.props.events||[]}
-                  onSelect={this.onSelect.bind(this)}
-                  onChange={this.onChange.bind(this)}
-                  onLoad={this.onLoad.bind(this)}
-                  {...this.state}
-                  height={700} width={this.state.width}
-                  except={this.except}
-                  {...this.props.params} />
+        <Panel />
+        <div style={{width: this.state.width}}>
+          <Calendar events={this.props.events||[]}
+                    onSelect={this.onSelect.bind(this)}
+                    onChange={this.onChange.bind(this)}
+                    onLoad={this.onLoad.bind(this)}
+                    {...this.state}
+                    height={700} width={this.state.width}
+                    except={this.except}
+                    {...this.props.params} />
+        </div>
       </div>
     );
   }

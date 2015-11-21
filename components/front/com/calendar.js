@@ -43,27 +43,37 @@ export default class extends Component {
   }
 
   toggleSelection(val) {
-    if (this.state.start !== -1) {
-      let selection = this.getSmartSelection(val)
-      this.setState({
-        selection: selection,
-        start: -1,
-        end: -1,
-        startInit: -1
-      })
-      this.props.onSelect(selection)
-    } else {
-      this.setState({
-        startInit: val,
-        start: val,
-        end: val
-      })
+    if (this.state.editor) {
+      if (this.state.start !== -1) {
+        let selection = this.getSmartSelection(val)
+        this.setState({
+          selection: selection,
+          start: -1,
+          end: -1,
+          startInit: -1
+        })
+        this.props.onSelect(selection, this.state.editor)
+      } else {
+        this.setState({
+          startInit: val,
+          start: val,
+          end: val
+        })
+      }
     }
   }
 
   moveSelection(val) {
-    if (this.state.start !== -1)
-      this.setState(this.getSmartSelection(val))
+    if (this.state.editor) {
+      if (this.state.start !== -1)
+        this.setState(this.getSmartSelection(val))
+    }
+  }
+
+  onSelectEvent(val) {
+    if (this.state.editor) {
+      this.props.onSelect(val, this.state.editor)
+    }
   }
 
   getSmartSelection(b) {
@@ -83,7 +93,7 @@ export default class extends Component {
         events: events,
         toggleSelection: this.toggleSelection.bind(this),
         moveSelection: this.moveSelection.bind(this),
-        onSelect: this.props.onSelect.bind(this),
+        onSelect: this.onSelectEvent.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end,
         editor: this.state.editor
