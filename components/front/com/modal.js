@@ -57,7 +57,6 @@ export default class extends Component {
     })
   }
   onFormChange(e) {
-    console.log("onFormChange", e, this)
     this.forceUpdate()
   }
 

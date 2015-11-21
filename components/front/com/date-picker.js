@@ -17,78 +17,47 @@ export class DatePicker extends ViewDefault {
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day, this.props.hour)
     this.agenda.setException(this.props.except||[]);
     let view = this.props.day ? "week" : "month";
-    view = this.props.view||view
-
-    let store = this.agenda.matrix(view)
-      , info = this.agenda.getInfo(view)
-      , link = this.agenda.getLinkHelper(view)
-      , current = new Date(link.current.y, link.current.month, link.current.d, link.current.h)
-
-    this.setState({
-      store,
-      info,
-      link,
-      view,
-      current
-    });
+    view = this.props.view||view;
+    this.update(view);
   }
 
   componentWillReceiveProps(props) {
     this.agenda.changeDate(props.year, props.month, props.day, props.hour)
     let view = props.day ? "week" : "month";
-    view = props.view||view
+    view = props.view||view;
+    this.update(view);
+  }
 
-    let store = this.agenda.matrix(view)
-      , info = this.agenda.getInfo(view)
+  onPrevious(date) {
+    this.agenda.changeDate(this.state.link.previous.y, this.state.link.previous.m, this.state.link.previous.d)
+    this.update(this.state.view);
+  }
+  onNext(date) {
+    this.agenda.changeDate(this.state.link.next.y, this.state.link.next.m, this.state.link.next.d)
+    this.update(this.state.view);
+  }
+
+  _onSelect(val) {
+    this.props.onSelect(val)
+  }
+  _toggleView() {
+    this.update(this.state.view === 'month' ? 'week' : 'month')
+  }
+
+  update(view) {
+    let info = this.agenda.getInfo(view)
       , link = this.agenda.getLinkHelper(view)
-      , current = new Date(link.current.y, link.current.month, link.current.d, link.current.h)
+      , store = this.agenda.matrix(view)
+      , current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
 
-    this.setState({
+    let value = {
       store,
       info,
       link,
       view,
       current
-    });
-
-  }
-  onPrevious(date) {
-
-    this.agenda.changeDate(this.state.link.previous.y, this.state.link.previous.m, this.state.link.previous.d)
-
-    let view = this.state.view
-      , store = this.agenda.matrix(view)
-      , info = this.agenda.getInfo(view)
-      , link = this.agenda.getLinkHelper(view)
-
-    this.setState({
-      store,
-      info,
-      link,
-      view,
-    });
-
-  }
-  onNext(date) {
-
-    this.agenda.changeDate(this.state.link.next.y, this.state.link.next.m, this.state.link.next.d)
-
-    let view = this.state.view
-      , store = this.agenda.matrix(view)
-      , info = this.agenda.getInfo(view)
-      , link = this.agenda.getLinkHelper(view)
-
-
-    this.setState({
-      store,
-      info,
-      link,
-      view,
-    });
-
-  }
-  _onSelect(val) {
-    this.props.onSelect(val)
+    }
+    this.setState(value);
   }
 
   render() {
@@ -98,6 +67,9 @@ export class DatePicker extends ViewDefault {
           onPrevious={this.onPrevious.bind(this)}
           onNext={this.onNext.bind(this)} />}
         {this.state && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
+        <Row>
+          <a onClick={this._toggleView.bind(this)} className="btn">toggle view</a>
+        </Row>
         <Row>
           {this.state
             && this.state.store.map((line, j) => {

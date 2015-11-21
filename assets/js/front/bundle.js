@@ -773,19 +773,7 @@ var DatePicker = (function (_ViewDefault) {
       this.agenda.setException(this.props.except || []);
       var view = this.props.day ? "week" : "month";
       view = this.props.view || view;
-
-      var store = this.agenda.matrix(view),
-          info = this.agenda.getInfo(view),
-          link = this.agenda.getLinkHelper(view),
-          current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
-
-      this.setState({
-        store: store,
-        info: info,
-        link: link,
-        view: view,
-        current: current
-      });
+      this.update(view);
     }
   }, {
     key: 'componentWillReceiveProps',
@@ -793,60 +781,46 @@ var DatePicker = (function (_ViewDefault) {
       this.agenda.changeDate(props.year, props.month, props.day, props.hour);
       var view = props.day ? "week" : "month";
       view = props.view || view;
-
-      var store = this.agenda.matrix(view),
-          info = this.agenda.getInfo(view),
-          link = this.agenda.getLinkHelper(view),
-          current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
-
-      this.setState({
-        store: store,
-        info: info,
-        link: link,
-        view: view,
-        current: current
-      });
+      this.update(view);
     }
   }, {
     key: 'onPrevious',
     value: function onPrevious(date) {
-
       this.agenda.changeDate(this.state.link.previous.y, this.state.link.previous.m, this.state.link.previous.d);
-
-      var view = this.state.view,
-          store = this.agenda.matrix(view),
-          info = this.agenda.getInfo(view),
-          link = this.agenda.getLinkHelper(view);
-
-      this.setState({
-        store: store,
-        info: info,
-        link: link,
-        view: view
-      });
+      this.update(this.state.view);
     }
   }, {
     key: 'onNext',
     value: function onNext(date) {
-
       this.agenda.changeDate(this.state.link.next.y, this.state.link.next.m, this.state.link.next.d);
-
-      var view = this.state.view,
-          store = this.agenda.matrix(view),
-          info = this.agenda.getInfo(view),
-          link = this.agenda.getLinkHelper(view);
-
-      this.setState({
-        store: store,
-        info: info,
-        link: link,
-        view: view
-      });
+      this.update(this.state.view);
     }
   }, {
     key: '_onSelect',
     value: function _onSelect(val) {
       this.props.onSelect(val);
+    }
+  }, {
+    key: '_toggleView',
+    value: function _toggleView() {
+      this.update(this.state.view === 'month' ? 'week' : 'month');
+    }
+  }, {
+    key: 'update',
+    value: function update(view) {
+      var info = this.agenda.getInfo(view),
+          link = this.agenda.getLinkHelper(view),
+          store = this.agenda.matrix(view),
+          current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
+
+      var value = {
+        store: store,
+        info: info,
+        link: link,
+        view: view,
+        current: current
+      };
+      this.setState(value);
     }
   }, {
     key: 'render',
@@ -860,6 +834,15 @@ var DatePicker = (function (_ViewDefault) {
           onPrevious: this.onPrevious.bind(this),
           onNext: this.onNext.bind(this) }),
         this.state && _react2['default'].createElement(_calendarUtils.Header, { view: this.state.view, store: this.state.store, agenda: this.agenda }),
+        _react2['default'].createElement(
+          _calendarUtils.Row,
+          null,
+          _react2['default'].createElement(
+            'a',
+            { onClick: this._toggleView.bind(this), className: 'btn' },
+            'toggle view'
+          )
+        ),
         _react2['default'].createElement(
           _calendarUtils.Row,
           null,
@@ -1008,7 +991,6 @@ var _default = (function (_Component) {
   }, {
     key: 'onFormChange',
     value: function onFormChange(e) {
-      console.log("onFormChange", e, this);
       this.forceUpdate();
     }
   }, {
@@ -1678,7 +1660,6 @@ var _default = (function () {
       for (var i = 0, len = this.except.length; i < len; i++) {
         switch (typeof this.except[i]) {
           case 'string':
-            console.log(date.getDay() === this.days.indexOf(this.except[i]), date.getDay(), this.days.indexOf(this.except[i]));
             if (date.getDay() === this.days.indexOf(this.except[i])) ret = true;
             break;
           case 'object':
@@ -1794,7 +1775,6 @@ var _default = (function () {
     value: function getLimit(line, evt, withHour) {
       var _this3 = this;
 
-      // console.log("line", line, evt)
       var eventDate = {
         start: new Date(evt.start),
         end: new Date(evt.end)
@@ -1849,6 +1829,7 @@ var _default = (function () {
       } else {
         m = this.months.indexOf(m);
       }
+      d = d || 1;
       return { y: y, m: m, d: d, h: h, mm: mm, month: this.months.indexOf(m) };
     }
   }]);

@@ -115,7 +115,6 @@ export default class {
     for(let i=0, len=this.except.length; i<len; i++) {
       switch(typeof this.except[i]) {
         case 'string':
-          console.log(date.getDay() === this.days.indexOf(this.except[i]), date.getDay(), this.days.indexOf(this.except[i]))
           if (date.getDay() === this.days.indexOf(this.except[i]))
             ret = true;
           break;
@@ -225,7 +224,6 @@ export default class {
   }
 
   getLimit(line, evt, withHour) {
-    // console.log("line", line, evt)
     let eventDate = {
       start: new Date(evt.start),
       end: new Date(evt.end)
@@ -278,6 +276,7 @@ export default class {
     } else {
       m = this.months.indexOf(m);
     }
+    d = d||1;
     return {y, m, d, h, mm, month: this.months.indexOf(m)};
   }
 
