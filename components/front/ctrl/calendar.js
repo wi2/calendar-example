@@ -41,8 +41,7 @@ export default class extends Component {
     return this.state && this.state !== state
   }
   componentWillUnmount() {
-    if (global.io)
-      io.socket.off()
+    if (global.io) io.socket.off()
     window.removeEventListener('resize', this.handleResize);
   }
 
@@ -57,9 +56,7 @@ export default class extends Component {
 
   loadEvents() {
     if (global.io)
-      io.socket.get('/event', res => {
-        this.setState({events: res})
-      });
+      io.socket.get('/event', res => { this.setState({events: res}) });
   }
   hideModal() {
     this.setState({
@@ -70,13 +67,9 @@ export default class extends Component {
   onSubmit(data, id) {
     if (global.io) {
       if (id)
-        io.socket.put("/event/"+id, data, ( res => {
-          this.loadEvents()
-        }))
+        io.socket.put("/event/"+id, data, ( res => { this.loadEvents() }))
       else
-        io.socket.post("/event", data, ( res => {
-          this.loadEvents()
-        }))
+        io.socket.post("/event", data, ( res => { this.loadEvents() }))
     }
     this.hideModal()
   }
@@ -84,16 +77,10 @@ export default class extends Component {
     this.hideModal()
   }
   onSelect(data) {
-    this.setState({
-      show: true,
-      selection: data
-    })
+    this.setState({ show: true, selection: data })
   }
   onSelectEvent(data) {
-    this.setState({
-      show: true,
-      selection: data
-    })
+    this.setState({ show: true, selection: data })
   }
   onChange(data) {}
   onLoad(data) {}

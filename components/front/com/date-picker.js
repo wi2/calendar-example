@@ -1,7 +1,6 @@
 "use strict";
 
 import React, {Component} from 'react';
-import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Vertical, Row, Cell, Info} from './calendar-utils'
 
@@ -61,6 +60,7 @@ export class DatePicker extends ViewDefault {
   }
 
   render() {
+    let height = 30;
     return (
       <div>
         {this.state && <Info info={this.state.info}
@@ -77,7 +77,7 @@ export class DatePicker extends ViewDefault {
               return line.map((item, i) => {
                 let cond = this.agenda.compare(this.state.current, item.date)
                 let props = {
-                  height: 30,
+                  height,
                   value: item.day,
                   className: cond ? 'col-day col-day-active':'col-day',
                   disabled: item.disabled,
@@ -96,7 +96,7 @@ export class DatePicker extends ViewDefault {
                   {line.map((item, i) => {
                     let cond = this.agenda.compare(this.state.current, item.date, true)
                     let props = {
-                      height: 30,
+                      height,
                       value: item.day +" "+item.hour,
                       className: cond ? 'col-day col-day-active':'col-day',
                       disabled: item.disabled,

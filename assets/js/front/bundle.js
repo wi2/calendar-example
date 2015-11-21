@@ -776,8 +776,6 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var _reactDom = require('react-dom');
-
 var _libAgenda = require('../lib/agenda');
 
 var _libAgenda2 = _interopRequireDefault(_libAgenda);
@@ -866,6 +864,7 @@ var DatePicker = (function (_ViewDefault) {
     value: function render() {
       var _this = this;
 
+      var height = 30;
       return _react2['default'].createElement(
         'div',
         null,
@@ -889,7 +888,7 @@ var DatePicker = (function (_ViewDefault) {
             if (_this.state.view === 'month') return line.map(function (item, i) {
               var cond = _this.agenda.compare(_this.state.current, item.date);
               var props = {
-                height: 30,
+                height: height,
                 value: item.day,
                 className: cond ? 'col-day col-day-active' : 'col-day',
                 disabled: item.disabled,
@@ -907,7 +906,7 @@ var DatePicker = (function (_ViewDefault) {
               line.map(function (item, i) {
                 var cond = _this.agenda.compare(_this.state.current, item.date, true);
                 var props = {
-                  height: 30,
+                  height: height,
                   value: item.day + " " + item.hour,
                   className: cond ? 'col-day col-day-active' : 'col-day',
                   disabled: item.disabled,
@@ -932,7 +931,7 @@ var DatePicker = (function (_ViewDefault) {
 
 exports.DatePicker = DatePicker;
 
-},{"../lib/agenda":11,"./calendar-utils":2,"react":"react","react-dom":70}],6:[function(require,module,exports){
+},{"../lib/agenda":11,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -954,6 +953,10 @@ function _inherits(subClass, superClass) { if (typeof superClass !== 'function' 
 var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
+
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
 
 var _newforms = require('newforms');
 
@@ -980,14 +983,8 @@ var _default = (function (_Component) {
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
     var now = undefined;
     this.state = {
-      startPicker: {
-        show: false,
-        date: now
-      },
-      endPicker: {
-        show: false,
-        date: now
-      }
+      startPicker: { show: false, date: now },
+      endPicker: { show: false, date: now }
     };
     this.createForm();
   }
@@ -1010,15 +1007,11 @@ var _default = (function (_Component) {
         }),
         start: (0, _newforms.DateTimeField)({
           initial: this.props.start.date ? this.props.start.date : new Date(this.props.start),
-          widgetAttrs: {
-            onClick: this._showDatePicker.bind(this)
-          }
+          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         }),
         end: (0, _newforms.DateTimeField)({
           initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
-          widgetAttrs: {
-            onClick: this._showDatePicker.bind(this)
-          }
+          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         })
       });
       this.form = new MyForm({
@@ -1044,29 +1037,21 @@ var _default = (function (_Component) {
     value: function changeDate(date, name) {
       var toggle = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
 
-      this.setState(name === 'start' ? {
-        startPicker: {
+      var common = {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        day: date.getDate(),
+        hour: date.getHours(),
+        name: name,
+        except: this.props.except || []
+      };
+      this.setState(name === 'start' ? { startPicker: _lodash2['default'].extend({
           show: toggle ? !this.state.startPicker.show : this.state.startPicker.show,
-          year: date.getFullYear(),
-          month: date.getMonth(),
-          day: date.getDate(),
-          hour: date.getHours(),
-          name: name,
-          view: "month",
-          except: this.props.except || []
-        }
-      } : {
-        endPicker: {
+          view: "month"
+        }, common) } : { endPicker: _lodash2['default'].extend({
           show: toggle ? !this.state.endPicker.show : this.state.startPicker.show,
-          year: date.getFullYear(),
-          month: date.getMonth(),
-          day: date.getDate(),
-          hour: date.getHours(),
-          name: name,
-          view: "week",
-          except: this.props.except || []
-        }
-      });
+          view: "week"
+        }, common) });
     }
   }, {
     key: '_onSelectStart',
@@ -1089,9 +1074,7 @@ var _default = (function (_Component) {
     value: function _onSubmit(e) {
       e.preventDefault();
       var form = this.mForm.getForm();
-      if (form.validate()) {
-        this.props.onSubmit(form.cleanedData, this.props.id);
-      }
+      if (form.validate()) this.props.onSubmit(form.cleanedData, this.props.id);
     }
   }, {
     key: '_onCancel',
@@ -1178,7 +1161,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":11,"./calendar":4,"./date-picker":5,"newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],7:[function(require,module,exports){
+},{"../lib/agenda":11,"./calendar":4,"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],7:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1307,18 +1290,12 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelect',
     value: function onSelect(data) {
-      this.setState({
-        show: true,
-        selection: data
-      });
+      this.setState({ show: true, selection: data });
     }
   }, {
     key: 'onSelectEvent',
     value: function onSelectEvent(data) {
-      this.setState({
-        show: true,
-        selection: data
-      });
+      this.setState({ show: true, selection: data });
     }
   }, {
     key: 'onChange',
