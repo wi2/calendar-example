@@ -16,6 +16,33 @@ class ViewDefault extends Component {
     this.setState({width, height});
   }
 
+  tetris(events) {
+    if (events.length===0)
+      return [];
+    events[0].cell.line = 1;
+
+    for (let j=0,len=events.length; j<len; j++) {
+      let collision = false;
+      let evt = events[j].cell;
+      let line = 1;
+      while(!evt.line) {
+        let evts = events.filter(a => { if (a.cell.line === line) return a; });
+        for(let i=0,len=evts.length; i<len; i++) {
+          let c = evts[i].cell
+          if ( evt.start >= c.start && evt.start <= c.end || evt.end >= c.start && evt.end <= c.end)
+            collision = true;
+        }
+        if (collision) {
+          collision = false;
+          line++;
+        } else {
+          evt.line = line
+        }
+      }
+    }
+    return events
+  }
+
   toggleSelection(val) {
     if (this.props.editor)
       this.props.toggleSelection(val)
@@ -38,14 +65,15 @@ export class Week extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/24)
   }
 
-  style(left, evt) {
+  style(evt) {
     let {room, cell} = evt
-      , width = this.props.height/23;
+      , width = this.props.height/24;
 
     return {
-      left: left + 'px',
+      opacity: 0.8,
+      left: evt.cell.line*12 + 'px',
       top: `${cell.start * width}px`,
-      width: `${(cell.end - cell.start) * width}px`,
+      width: `${(cell.end - cell.start + 1) * width}px`,
       transform: 'rotate(90deg)',
       transformOrigin: 'left top 0',
       background: room.color||'grey'
@@ -54,10 +82,10 @@ export class Week extends ViewDefault {
 
   render() {
     let events
-      , left = 22
       , week = this.props.week
     if (this.props.agenda && this.props.events) {
-      events = this.props.agenda.getEvents(week, this.props.events, true)
+      events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true))
+      // events = this.props.agenda.getEvents(week, this.props.events, true)
     }
     let selection = {
       s: this.props.selectionStart.date,
@@ -67,7 +95,7 @@ export class Week extends ViewDefault {
     return (
       <Vertical>
         {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(left+=13, evt)}
+                                            style={this.style(evt)}
                                             onClick={this.onSelect.bind(this, evt)}
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
@@ -102,12 +130,13 @@ export class Month extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/7)
   }
 
-  style(top, evt) {
+  style(evt) {
     let {room, cell} = evt
       , width = this.state.width
 
     return {
-      top: top + 'px',
+      opacity: 0.8,
+      top: evt.cell.line*12 + 'px',
       left: `${cell.start * width}px`,
       width: `${(cell.end - cell.start + 1) * width}px`,
       background: room.color||'grey'
@@ -115,9 +144,10 @@ export class Month extends ViewDefault {
   }
 
   render() {
-    let top = 0
+    let numLine = 0
     let week = this.props.week
-    let events = this.props.agenda.getEvents(week, this.props.events)
+    let events = this.tetris(this.props.agenda.getEvents(week, this.props.events))
+
     let selection = {
       s: this.props.selectionStart.date,
       e: this.props.selectionEnd.date
@@ -126,7 +156,7 @@ export class Month extends ViewDefault {
     return (
       <Row>
         {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(top+=13, evt)}
+                                            style={this.style(evt)}
                                             onClick={this.onSelect.bind(this, evt)}
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {

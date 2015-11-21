@@ -32,13 +32,21 @@ export default class {
   }
 
   getEvents(line, events, withHour=false) {
-    return events.filter( evt  => {
+    let allevents = events.filter( evt  => {
       let {start, end} = this.getLimit(line, evt, withHour)
       if (start && end) {
         evt.cell = {start: start.col, end: end.col}
         return evt;
       }
     })
+
+    return allevents
+      .sort( (a, b) => {
+        return b.cell.start - a.cell.start;
+      })
+      .sort( (a, b) => {
+        return (b.cell.end - b.cell.start) - (a.cell.end - a.cell.start);
+      })
   }
 
   matrix(view='month') {
@@ -289,6 +297,8 @@ Date.prototype.getWeek = function() {
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
   var week1 = new Date(date.getFullYear(), 0, 4);
-  return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
+  var ret = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
          - 3 + (week1.getDay() + 6) % 7) / 7);
+  return (ret<=52) ? ret : 52;
+
 }
