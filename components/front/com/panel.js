@@ -8,10 +8,11 @@ export default class extends Component {
     super(props)
   }
 
-
   render() {
     return (
-      <div className="agenda-panel">Panel</div>
+      <div className="agenda-panel">
+        {Object.keys(this.props).map(key => <div>{this.props[key].toString()}</div>)}
+      </div>
     )
   }
 }

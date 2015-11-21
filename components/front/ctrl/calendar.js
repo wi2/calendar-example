@@ -77,14 +77,20 @@ export default class extends Component {
   onCancel() {
     this.hideModal()
   }
+
   onSelect(data, edition=false) {
     if (edition)
       this.setState({ show: true, selection: data })
+    else
+      this.setState({ current: data })
   }
   onSelectEvent(data, edition=false) {
     if (edition)
       this.setState({ show: true, selection: data })
+    else
+      this.setState({ current: data })
   }
+
   onChange(data) {}
   onLoad(data) {}
 
@@ -100,7 +106,7 @@ export default class extends Component {
                   onCancel={this.onCancel.bind(this)}
                   except={this.except}
                   {...this.props.params} />}
-        <Panel />
+        <Panel {...this.state.current} />
         <div style={{width: this.state.width}}>
           <Calendar events={this.props.events||[]}
                     onSelect={this.onSelect.bind(this)}

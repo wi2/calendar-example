@@ -684,21 +684,19 @@ var _default = (function (_Component) {
             end: val
           });
         }
+      } else {
+        this.props.onSelect(val, this.state.editor);
       }
     }
   }, {
     key: 'moveSelection',
     value: function moveSelection(val) {
-      if (this.state.editor) {
-        if (this.state.start !== -1) this.setState(this.getSmartSelection(val));
-      }
+      if (this.state.start !== -1) this.setState(this.getSmartSelection(val), this.state.editor);
     }
   }, {
     key: 'onSelectEvent',
     value: function onSelectEvent(val) {
-      if (this.state.editor) {
-        this.props.onSelect(val, this.state.editor);
-      }
+      this.props.onSelect(val, this.state.editor);
     }
   }, {
     key: 'getSmartSelection',
@@ -1205,10 +1203,18 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: "render",
     value: function render() {
+      var _this = this;
+
       return _react2["default"].createElement(
         "div",
         { className: "agenda-panel" },
-        "Panel"
+        Object.keys(this.props).map(function (key) {
+          return _react2["default"].createElement(
+            "div",
+            null,
+            _this.props[key].toString()
+          );
+        })
       );
     }
   }]);
@@ -1354,14 +1360,16 @@ var _default = (function (_Component) {
     value: function onSelect(data) {
       var edition = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
-      if (edition) this.setState({ show: true, selection: data });
+      console.log(data);
+      if (edition) this.setState({ show: true, selection: data });else this.setState({ current: data });
     }
   }, {
     key: 'onSelectEvent',
     value: function onSelectEvent(data) {
       var edition = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
-      if (edition) this.setState({ show: true, selection: data });
+      console.log(data);
+      if (edition) this.setState({ show: true, selection: data });else this.setState({ current: data });
     }
   }, {
     key: 'onChange',
@@ -1381,7 +1389,7 @@ var _default = (function (_Component) {
           onCancel: this.onCancel.bind(this),
           except: this.except
         }, this.props.params)),
-        _react2['default'].createElement(_comPanel2['default'], null),
+        _react2['default'].createElement(_comPanel2['default'], this.state.current),
         _react2['default'].createElement(
           'div',
           { style: { width: this.state.width } },

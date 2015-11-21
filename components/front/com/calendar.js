@@ -60,20 +60,18 @@ export default class extends Component {
           end: val
         })
       }
+    } else {
+      this.props.onSelect(val, this.state.editor)
     }
   }
 
   moveSelection(val) {
-    if (this.state.editor) {
-      if (this.state.start !== -1)
-        this.setState(this.getSmartSelection(val))
-    }
+    if (this.state.start !== -1)
+      this.setState(this.getSmartSelection(val), this.state.editor)
   }
 
   onSelectEvent(val) {
-    if (this.state.editor) {
-      this.props.onSelect(val, this.state.editor)
-    }
+    this.props.onSelect(val, this.state.editor)
   }
 
   getSmartSelection(b) {
