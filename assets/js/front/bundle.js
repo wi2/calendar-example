@@ -876,7 +876,7 @@ var DatePicker = (function (_ViewDefault) {
           onPrevious: this.onPrevious.bind(this),
           onNext: this.onNext.bind(this) }),
         this.state && _react2['default'].createElement(_calendarUtils.Header, { view: this.state.view, store: this.state.store, agenda: this.agenda }),
-        _react2['default'].createElement(
+        this.props.toggle && _react2['default'].createElement(
           _calendarUtils.Row,
           null,
           _react2['default'].createElement(
@@ -1145,12 +1145,12 @@ var _default = (function (_Component) {
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 { md: '6' },
-                this.state.startPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({}, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
+                this.state.startPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({ toggle: true }, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
               ),
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 null,
-                this.state.endPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({}, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
+                this.state.endPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({ toggle: true }, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
               )
             )
           )
@@ -1199,7 +1199,9 @@ var _default = (function (_Component) {
 
   _createClass(_default, [{
     key: '_onSelect',
-    value: function _onSelect() {}
+    value: function _onSelect(val) {
+      console.log(val);
+    }
   }, {
     key: 'render',
     value: function render() {
@@ -1208,7 +1210,7 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'agenda-panel' },
-        _react2['default'].createElement(_datePicker.DatePicker, { view: 'month',
+        this.props.date && _react2['default'].createElement(_datePicker.DatePicker, { view: 'month',
           year: this.props.date.getFullYear(),
           month: this.props.date.getMonth(),
           day: this.props.date.getDate(),

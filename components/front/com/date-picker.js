@@ -68,9 +68,8 @@ export class DatePicker extends ViewDefault {
           onPrevious={this.onPrevious.bind(this)}
           onNext={this.onNext.bind(this)} />}
         {this.state && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
-        <Row>
-          <a onClick={this._toggleView.bind(this)} className="btn">toggle view</a>
-        </Row>
+        {this.props.toggle
+          && <Row><a onClick={this._toggleView.bind(this)} className="btn">toggle view</a></Row>}
         <Row>
           {this.state
             && this.state.store.map((line, j) => {

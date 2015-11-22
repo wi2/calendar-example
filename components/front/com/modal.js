@@ -127,11 +127,11 @@ export default class extends Component {
             <Row>
               <Col md="6">
                 {this.state.startPicker.show &&
-                  <DatePicker {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
+                  <DatePicker toggle {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
               </Col>
               <Col>
                 {this.state.endPicker.show &&
-                  <DatePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
+                  <DatePicker toggle {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
               </Col>
             </Row>
           </Container>
