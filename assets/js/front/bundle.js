@@ -1856,7 +1856,6 @@ var _default = (function () {
           current: this.linkHelper(y, m, d, h, mm)
         };
       } else {
-
         var nt = new Date(y, m + 1),
             pv = new Date(y, m - 1);
 

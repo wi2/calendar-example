@@ -41,12 +41,8 @@ export default class {
     })
 
     return allevents
-      .sort( (a, b) => {
-        return b.cell.start - a.cell.start;
-      })
-      .sort( (a, b) => {
-        return (b.cell.end - b.cell.start) - (a.cell.end - a.cell.start);
-      })
+      .sort( (a, b) => b.cell.start - a.cell.start )
+      .sort( (a, b) => b.cell.end - b.cell.start - (a.cell.end - a.cell.start) )
   }
 
   matrix(view='month') {
@@ -75,8 +71,8 @@ export default class {
         }
 
         //adjust month and year
-        let yearTmp = y
-          , monthTmp = m
+        let yearTmp = Number(y)
+          , monthTmp = Number(m)
         if (tmp < -20) monthTmp -= 1
         else if (tmp < 0) monthTmp += 1
         if (monthTmp < 0) {
@@ -220,7 +216,6 @@ export default class {
         current: this.linkHelper(y,m,d,h,mm)
       }
     } else {
-
       let nt = new Date(y, m + 1)
         , pv = new Date(y, m - 1)
 
