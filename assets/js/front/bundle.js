@@ -814,7 +814,7 @@ var DatePicker = (function (_ViewDefault) {
       this.agenda.setException(this.props.except || []);
       var view = this.props.day ? "week" : "month";
       view = this.props.view || view;
-      this.update(view);
+      this.update(view, true);
     }
   }, {
     key: 'componentWillReceiveProps',
@@ -822,7 +822,7 @@ var DatePicker = (function (_ViewDefault) {
       this.agenda.changeDate(props.year, props.month, props.day, props.hour);
       var view = props.day ? "week" : "month";
       view = props.view || view;
-      this.update(view);
+      this.update(view, true);
     }
   }, {
     key: 'onPrevious',
@@ -848,7 +848,7 @@ var DatePicker = (function (_ViewDefault) {
     }
   }, {
     key: 'update',
-    value: function update(view) {
+    value: function update(view, withCurrent) {
       var info = this.agenda.getInfo(view),
           link = this.agenda.getLinkHelper(view),
           store = this.agenda.matrix(view),
@@ -858,9 +858,9 @@ var DatePicker = (function (_ViewDefault) {
         store: store,
         info: info,
         link: link,
-        view: view,
-        current: current
+        view: view
       };
+      if (withCurrent) value.current = current;
       this.setState(value);
     }
   }, {

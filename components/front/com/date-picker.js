@@ -17,14 +17,14 @@ export class DatePicker extends ViewDefault {
     this.agenda.setException(this.props.except||[]);
     let view = this.props.day ? "week" : "month";
     view = this.props.view||view;
-    this.update(view);
+    this.update(view, true);
   }
 
   componentWillReceiveProps(props) {
     this.agenda.changeDate(props.year, props.month, props.day, props.hour)
     let view = props.day ? "week" : "month";
     view = props.view||view;
-    this.update(view);
+    this.update(view, true);
   }
 
   onPrevious(date) {
@@ -43,7 +43,7 @@ export class DatePicker extends ViewDefault {
     this.update(this.state.view === 'month' ? 'week' : 'month')
   }
 
-  update(view) {
+  update(view, withCurrent) {
     let info = this.agenda.getInfo(view)
       , link = this.agenda.getLinkHelper(view)
       , store = this.agenda.matrix(view)
@@ -53,9 +53,10 @@ export class DatePicker extends ViewDefault {
       store,
       info,
       link,
-      view,
-      current
+      view
     }
+    if (withCurrent)
+      value.current = current;
     this.setState(value);
   }
 
