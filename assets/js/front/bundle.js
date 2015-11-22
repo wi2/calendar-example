@@ -1700,21 +1700,29 @@ var _default = (function () {
             day = _lodash2["default"].last(months)[6].day + col + 1;
             tmp = day <= days ? day : -(day - days);
           }
-          var monthTmp = m;
+
+          //adjust month and year
+          var yearTmp = y,
+              monthTmp = m;
           if (tmp < -20) monthTmp -= 1;else if (tmp < 0) monthTmp += 1;
-          cellDate = new Date(y, monthTmp, Math.abs(tmp));
+          if (monthTmp < 0) {
+            monthTmp = 11;
+            yearTmp -= 1;
+          } else if (monthTmp > 11) {
+            monthTmp = 0;
+            yearTmp += 1;
+          }
 
-          var check = _this2.checkExcept(cellDate, view);
-
+          cellDate = new Date(yearTmp, monthTmp, Math.abs(tmp));
           weeks.push({
             date: cellDate,
             day: tmp,
             week: cellDate.getWeek(),
             month: cellDate.getMonth(),
-            year: y,
+            year: cellDate.getFullYear(),
             col: col,
             row: row,
-            disabled: check
+            disabled: _this2.checkExcept(cellDate, view)
           });
         });
         if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek) currentWeek = weeks;
