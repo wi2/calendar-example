@@ -39,8 +39,8 @@
   "scripts": {
     "start": "node app.js",
     "debug": "node debug app.js",
-    "front": "browserify -r react -r react-router -r newforms -r newforms-bootstrap -r lodash > assets/js/front/dependencies/build.js",
-    "admin": "browserify -r react -r react-router -r newforms -r newforms-bootstrap -r lodash > assets/js/admin/dependencies/build.js"
+    "front": "browserify -r react -r react-dom -r react-router -r history -r newforms -r newforms-bootstrap -r lodash > assets/js/front/dependencies/build.js",
+    "admin": "browserify -r react -r react-dom -r react-router -r history -r newforms -r newforms-bootstrap -r lodash > assets/js/admin/dependencies/build.js"
   },
   "main": "app.js",
   "repository": {

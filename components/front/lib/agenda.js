@@ -52,7 +52,7 @@ export default class {
   matrix(view='month') {
     let {y,m,d,h,mm} = this.date
     var {rows, cols} = this.getRange(6,7)
-      , {start, next, date} = this.getDates()
+      , {start, next, date} = this.getInitDates()
       , days = next.getDate()
       , months = []
       , weeks
@@ -157,7 +157,7 @@ export default class {
     }
   }
 
-  getDates() {
+  getInitDates() {
     return {
       start: new Date(this.date.y, this.date.m),
       next: new Date(this.date.y, this.date.m + 1, 0),
@@ -171,10 +171,7 @@ export default class {
 
   getToday(withDay) {
     let today = new Date()
-    if (withDay)
-      return this.linkHelper(today.getFullYear(), today.getMonth(), today.getDate());
-    else
-      return this.linkHelper(today.getFullYear(), today.getMonth());
+    return this.linkHelper(today.getFullYear(), today.getMonth(), withDay ? today.getDate() : null);
   }
 
   getInfo() {
@@ -299,6 +296,5 @@ Date.prototype.getWeek = function() {
   var week1 = new Date(date.getFullYear(), 0, 4);
   var ret = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
          - 3 + (week1.getDay() + 6) % 7) / 7);
-  return (ret<=52) ? ret : 52;
-
+  return ret;
 }

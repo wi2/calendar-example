@@ -23,7 +23,8 @@ export default class extends Component {
     this.state = {
       show: false,
       rooms: this.props.rooms||[],
-      width: 1000
+      width: 1000,
+      height: 700
     }
     this.timeout = null;
     this.loadEvents()
@@ -42,7 +43,8 @@ export default class extends Component {
     return this.state && this.state !== state
   }
   componentWillUnmount() {
-    if (global.io) io.socket.off()
+    if (global.io)
+      io.socket.off()
     window.removeEventListener('resize', this.handleResize);
   }
 
@@ -60,10 +62,7 @@ export default class extends Component {
       io.socket.get('/event?limit=100', res => { this.setState({events: res}) });
   }
   hideModal() {
-    this.setState({
-      show: false,
-      selection: null
-    })
+    this.setState({ show: false, selection: null })
   }
   onSubmit(data, id) {
     if (global.io) {
@@ -93,9 +92,7 @@ export default class extends Component {
       setTimeout(() => {
         this.setState({ width: document.body.offsetWidth*0.8 }) // twice : why?
       })
-
     }
-
   }
 
   onChange(data) {}
@@ -105,7 +102,8 @@ export default class extends Component {
     return (
       <div className="app">
 
-        <Panel {...this.state.current} />
+        {this.state.current &&
+          <Panel {...this.state.current} />}
 
         {this.state.show &&
           <Modal {...this.state.selection}
@@ -115,16 +113,13 @@ export default class extends Component {
                   except={this.except}
                   {...this.props.params} />}
 
-        <div style={{width: this.state.width}}>
-          <Calendar events={this.props.events||[]}
-                    onSelect={this.onSelect.bind(this)}
-                    onChange={this.onChange.bind(this)}
-                    onLoad={this.onLoad.bind(this)}
-                    {...this.state}
-                    height={700}
-                    except={this.except}
-                    {...this.props.params} />
-        </div>
+        <Calendar events={this.props.events||[]}
+                  onSelect={this.onSelect.bind(this)}
+                  onChange={this.onChange.bind(this)}
+                  onLoad={this.onLoad.bind(this)}
+                  {...this.state}
+                  except={this.except}
+                  {...this.props.params} />
       </div>
     );
   }

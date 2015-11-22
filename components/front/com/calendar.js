@@ -99,7 +99,7 @@ export default class extends Component {
 
 
     return (
-      <div className="agenda">
+      <div className="agenda" style={{width: this.props.width}}>
         <Navigation store={store}
                     agenda={this.agenda}
                     view={view}

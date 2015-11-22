@@ -1,8 +1,6 @@
 "use strict";
 
 import React, {Component} from 'react';
-import _ from 'lodash'
-import { render } from 'react-dom';
 import {Link} from 'react-router';
 import Agenda from '../lib/agenda'
 
