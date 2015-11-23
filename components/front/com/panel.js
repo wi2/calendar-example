@@ -1,7 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
-import {DatePicker} from './date-picker'
+import {DatePicker} from './date-picker';
 
 
 export default class extends Component {

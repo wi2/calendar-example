@@ -1251,16 +1251,34 @@ var _calendarUtils = require('./calendar-utils');
 var TimePicker = (function (_Component) {
   _inherits(TimePicker, _Component);
 
-  function TimePicker() {
+  function TimePicker(props) {
     _classCallCheck(this, TimePicker);
 
-    _get(Object.getPrototypeOf(TimePicker.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(TimePicker.prototype), 'constructor', this).call(this, props);
+    var diameter = Number(this.props.diameter) || 200;
+    this.state = {
+      big: {
+        diameter: diameter,
+        background: '#FF0000'
+      },
+      small: {
+        diameter: diameter * 0.6,
+        left: diameter * 0.2,
+        top: diameter * 0.2
+      }
+    };
   }
 
   _createClass(TimePicker, [{
     key: 'render',
     value: function render() {
-      return _react2['default'].createElement('div', null);
+
+      return _react2['default'].createElement(
+        'div',
+        { className: 'time-picker' },
+        _react2['default'].createElement(Circle, this.state.big),
+        _react2['default'].createElement(Circle, this.state.small)
+      );
     }
   }]);
 
@@ -1268,6 +1286,35 @@ var TimePicker = (function (_Component) {
 })(_react.Component);
 
 exports.TimePicker = TimePicker;
+
+var Circle = (function (_Component2) {
+  _inherits(Circle, _Component2);
+
+  function Circle(props) {
+    _classCallCheck(this, Circle);
+
+    _get(Object.getPrototypeOf(Circle.prototype), 'constructor', this).call(this, props);
+    var diameter = Number(this.props.diameter) || 100;
+    this.state = {
+      style: {
+        width: diameter + "px",
+        height: diameter + "px",
+        left: this.props.left || 0,
+        top: this.props.top || 0,
+        background: this.props.background || '#CCC'
+      }
+    };
+  }
+
+  _createClass(Circle, [{
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement('div', { className: 'circle', style: this.state.style });
+    }
+  }]);
+
+  return Circle;
+})(_react.Component);
 
 },{"../lib/agenda":13,"./calendar-utils":2,"react":"react"}],9:[function(require,module,exports){
 (function (global){
