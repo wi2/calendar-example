@@ -6,6 +6,7 @@ export default class {
   constructor(y,m,d,h=0,mm=0) {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
     this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    this.except = [];
 
     if (!y) {
       let now = new Date()
@@ -16,9 +17,6 @@ export default class {
     if (typeof Number(m) === 'number')
       m = this.months[m]
     this.changeDate(y,m,d,h,mm)
-
-    //
-    this.except = [];
   }
 
   setException(except) {
@@ -183,8 +181,7 @@ export default class {
 
   getLink(view) {
     let {previous, next, today, current} = this.getLinkHelper(view)
-
-    let prevLink = `/${view}/${previous.y}/${previous.m}`
+      , prevLink = `/${view}/${previous.y}/${previous.m}`
       , nextLink = `/${view}/${next.y}/${next.m}`
       , todayLink = `/${view}/${today.y}/${today.m}`
       , monthLink = `/month/${current.y}/${current.m}`
@@ -288,7 +285,6 @@ export default class {
 
 }
 
-//
 //
 Date.prototype.getWeek = function() {
   var date = new Date(this.getTime());

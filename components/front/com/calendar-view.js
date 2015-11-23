@@ -140,31 +140,31 @@ export class Month extends ViewDefault {
   }
 
   render() {
-    let numLine = 0
-    let week = this.props.week
-    let events = this.tetris(this.props.agenda.getEvents(week, this.props.events))
-
-    let selection = {
-      s: this.props.selectionStart.date,
-      e: this.props.selectionEnd.date
-    }
     let that = this
+      , week = this.props.week
+      , events = this.tetris(this.props.agenda.getEvents(week, this.props.events))
+      , selection = {
+        s: this.props.selectionStart.date,
+        e: this.props.selectionEnd.date
+      }
+
     return (
       <Row>
-        {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(evt)}
-                                            onClick={this.onSelect.bind(this, evt)}
-                                            key={`event-${i}`}>{evt.title}</div> )}
+        {events &&
+          events.map((evt, i) => <div className="event"
+                                      style={this.style(evt)}
+                                      onClick={this.onSelect.bind(this, evt)}
+                                      key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
-          let props = {
-            value: item.day,
-            className: cond ? "col col-active" : "col",
-            toggleSelection: that.toggleSelection.bind(this, item),
-            moveSelection: that.moveSelection.bind(this, item),
-            disabled: item.disabled,
-            key: `day-${item.day}-${item.col}-${item.row}`
-          }
+            , props = {
+              value: item.day,
+              className: cond ? "col col-active" : "col",
+              toggleSelection: that.toggleSelection.bind(this, item),
+              moveSelection: that.moveSelection.bind(this, item),
+              disabled: item.disabled,
+              key: `day-${item.day}-${item.col}-${item.row}`
+            }
           if (item.disabled) {
             delete props.toggleSelection;
             delete props.moveSelection;

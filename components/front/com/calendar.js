@@ -39,7 +39,12 @@ export default class extends Component {
   }
 
   toggleEditor() {
-    this.setState({editor: !this.state.editor});
+    this.setState({
+      editor: !this.state.editor,
+      start: -1,
+      end: -1,
+      startInit: -1
+    });
   }
 
   toggleSelection(val) {

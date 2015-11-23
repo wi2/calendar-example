@@ -47,14 +47,13 @@ export default class extends Component {
       validation: 'auto'
     })
   }
-  onFormChange(e) {
+  onFormChange() {
     this.forceUpdate()
   }
 
   _showDatePicker(e) {
     e.preventDefault()
-    let date = new Date(e.target.value)
-    this.changeDate(date, e.target.name)
+    this.changeDate(new Date(e.target.value), e.target.name)
   }
 
   changeDate(date, name, toggle=true) {

@@ -14,7 +14,7 @@ delete global.__ReactInitState__;
 // window.React = React
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./index":10,"react-dom":"react-dom"}],2:[function(require,module,exports){
+},{"./index":11,"react-dom":"react-dom"}],2:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -313,7 +313,7 @@ var Info = (function (_Component6) {
 
 exports.Info = Info;
 
-},{"../lib/agenda":12,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
+},{"../lib/agenda":13,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -538,15 +538,14 @@ var Month = (function (_ViewDefault2) {
     value: function render() {
       var _this2 = this;
 
-      var numLine = 0;
-      var week = this.props.week;
-      var events = this.tetris(this.props.agenda.getEvents(week, this.props.events));
-
-      var selection = {
+      var that = this,
+          week = this.props.week,
+          events = this.tetris(this.props.agenda.getEvents(week, this.props.events)),
+          selection = {
         s: this.props.selectionStart.date,
         e: this.props.selectionEnd.date
       };
-      var that = this;
+
       return _react2['default'].createElement(
         _calendarUtils.Row,
         null,
@@ -561,8 +560,8 @@ var Month = (function (_ViewDefault2) {
           );
         }),
         week.map(function (item) {
-          var cond = item.date >= selection.s && item.date <= selection.e;
-          var props = {
+          var cond = item.date >= selection.s && item.date <= selection.e,
+              props = {
             value: item.day,
             className: cond ? "col col-active" : "col",
             toggleSelection: that.toggleSelection.bind(_this2, item),
@@ -657,7 +656,12 @@ var _default = (function (_Component) {
   }, {
     key: 'toggleEditor',
     value: function toggleEditor() {
-      this.setState({ editor: !this.state.editor });
+      this.setState({
+        editor: !this.state.editor,
+        start: -1,
+        end: -1,
+        startInit: -1
+      });
     }
   }, {
     key: 'toggleSelection',
@@ -759,7 +763,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":12,"./calendar-utils":2,"./calendar-view":3,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":13,"./calendar-utils":2,"./calendar-view":3,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -786,20 +790,8 @@ var _libAgenda2 = _interopRequireDefault(_libAgenda);
 
 var _calendarUtils = require('./calendar-utils');
 
-var ViewDefault = (function (_Component) {
-  _inherits(ViewDefault, _Component);
-
-  function ViewDefault(props) {
-    _classCallCheck(this, ViewDefault);
-
-    _get(Object.getPrototypeOf(ViewDefault.prototype), 'constructor', this).call(this, props);
-  }
-
-  return ViewDefault;
-})(_react.Component);
-
-var DatePicker = (function (_ViewDefault) {
-  _inherits(DatePicker, _ViewDefault);
+var DatePicker = (function (_Component) {
+  _inherits(DatePicker, _Component);
 
   function DatePicker() {
     _classCallCheck(this, DatePicker);
@@ -854,12 +846,8 @@ var DatePicker = (function (_ViewDefault) {
           store = this.agenda.matrix(view),
           current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
 
-      var value = {
-        store: store,
-        info: info,
-        link: link,
-        view: view
-      };
+      var value = { store: store, info: info, link: link, view: view };
+
       if (withCurrent) value.current = current;
       this.setState(value);
     }
@@ -931,11 +919,11 @@ var DatePicker = (function (_ViewDefault) {
   }]);
 
   return DatePicker;
-})(ViewDefault);
+})(_react.Component);
 
 exports.DatePicker = DatePicker;
 
-},{"../lib/agenda":12,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
+},{"../lib/agenda":13,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1026,15 +1014,14 @@ var _default = (function (_Component) {
     }
   }, {
     key: 'onFormChange',
-    value: function onFormChange(e) {
+    value: function onFormChange() {
       this.forceUpdate();
     }
   }, {
     key: '_showDatePicker',
     value: function _showDatePicker(e) {
       e.preventDefault();
-      var date = new Date(e.target.value);
-      this.changeDate(date, e.target.name);
+      this.changeDate(new Date(e.target.value), e.target.name);
     }
   }, {
     key: 'changeDate',
@@ -1165,7 +1152,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":12,"./calendar":4,"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],7:[function(require,module,exports){
+},{"../lib/agenda":13,"./calendar":4,"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1235,6 +1222,54 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 },{"./date-picker":5,"react":"react"}],8:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _libAgenda = require('../lib/agenda');
+
+var _libAgenda2 = _interopRequireDefault(_libAgenda);
+
+var _calendarUtils = require('./calendar-utils');
+
+var TimePicker = (function (_Component) {
+  _inherits(TimePicker, _Component);
+
+  function TimePicker() {
+    _classCallCheck(this, TimePicker);
+
+    _get(Object.getPrototypeOf(TimePicker.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(TimePicker, [{
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement('div', null);
+    }
+  }]);
+
+  return TimePicker;
+})(_react.Component);
+
+exports.TimePicker = TimePicker;
+
+},{"../lib/agenda":13,"./calendar-utils":2,"react":"react"}],9:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1420,7 +1455,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../com/calendar":4,"../com/modal":6,"../com/panel":7,"react":"react","react-dom":"react-dom"}],9:[function(require,module,exports){
+},{"../com/calendar":4,"../com/modal":6,"../com/panel":7,"react":"react","react-dom":"react-dom"}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1485,7 +1520,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":12,"react":"react","react-router":"react-router"}],10:[function(require,module,exports){
+},{"../lib/agenda":13,"react":"react","react-router":"react-router"}],11:[function(require,module,exports){
 "use strict";
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -1540,7 +1575,7 @@ module.exports = {
   Routes: Routes
 };
 
-},{"./ctrl/calendar":8,"./ctrl/home":9,"./layout":11,"history":"history","react":"react","react-router":"react-router"}],11:[function(require,module,exports){
+},{"./ctrl/calendar":9,"./ctrl/home":10,"./layout":12,"history":"history","react":"react","react-router":"react-router"}],12:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1597,7 +1632,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./nav":13,"react":"react"}],12:[function(require,module,exports){
+},{"./nav":14,"react":"react"}],13:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1623,6 +1658,7 @@ var _default = (function () {
 
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
     this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    this.except = [];
 
     if (!y) {
       var now = new Date();
@@ -1632,9 +1668,6 @@ var _default = (function () {
 
     if (typeof Number(m) === 'number') m = this.months[m];
     this.changeDate(y, m, d, h, mm);
-
-    //
-    this.except = [];
   }
 
   _createClass(_default, [{
@@ -1836,12 +1869,11 @@ var _default = (function () {
       var next = _getLinkHelper.next;
       var today = _getLinkHelper.today;
       var current = _getLinkHelper.current;
-
-      var prevLink = "/" + view + "/" + previous.y + "/" + previous.m,
-          nextLink = "/" + view + "/" + next.y + "/" + next.m,
-          todayLink = "/" + view + "/" + today.y + "/" + today.m,
-          monthLink = "/month/" + current.y + "/" + current.m,
-          weekLink = "/week/" + current.y + "/" + current.m + "/2";
+      var prevLink = "/" + view + "/" + previous.y + "/" + previous.m;
+      var nextLink = "/" + view + "/" + next.y + "/" + next.m;
+      var todayLink = "/" + view + "/" + today.y + "/" + today.m;
+      var monthLink = "/month/" + current.y + "/" + current.m;
+      var weekLink = "/week/" + current.y + "/" + current.m + "/2";
 
       if (view === 'week') {
         prevLink += "/" + previous.d;
@@ -1949,7 +1981,6 @@ var _default = (function () {
 })();
 
 //
-//
 exports["default"] = _default;
 Date.prototype.getWeek = function () {
   var date = new Date(this.getTime());
@@ -1961,7 +1992,7 @@ Date.prototype.getWeek = function () {
 };
 module.exports = exports["default"];
 
-},{"lodash":"lodash"}],13:[function(require,module,exports){
+},{"lodash":"lodash"}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -2053,4 +2084,4 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./lib/agenda":12,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13]);
+},{"./lib/agenda":13,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14]);

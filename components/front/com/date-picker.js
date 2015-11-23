@@ -5,13 +5,7 @@ import Agenda from '../lib/agenda'
 import {Header, Navigation, Vertical, Row, Cell, Info} from './calendar-utils'
 
 
-class ViewDefault extends Component {
-  constructor(props) {
-    super(props)
-  }
-}
-
-export class DatePicker extends ViewDefault {
+export class DatePicker extends Component {
   componentDidMount() {
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day, this.props.hour)
     this.agenda.setException(this.props.except||[]);
@@ -49,12 +43,8 @@ export class DatePicker extends ViewDefault {
       , store = this.agenda.matrix(view)
       , current = new Date(link.current.y, link.current.month, link.current.d, link.current.h);
 
-    let value = {
-      store,
-      info,
-      link,
-      view
-    }
+    let value = { store, info, link, view }
+
     if (withCurrent)
       value.current = current;
     this.setState(value);
