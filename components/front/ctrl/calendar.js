@@ -103,7 +103,7 @@ export default class extends Component {
       <div className="app">
 
         {this.state.current &&
-          <Panel {...this.state.current} />}
+          <Panel {...this.state.current} except={this.except} />}
 
         {this.state.show &&
           <Modal {...this.state.selection}

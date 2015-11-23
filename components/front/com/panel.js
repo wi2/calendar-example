@@ -20,7 +20,8 @@ export default class extends Component {
                       year={this.props.date.getFullYear()}
                       month={this.props.date.getMonth()}
                       day={this.props.date.getDate()}
-                      onSelect={this._onSelect.bind(this)}  />}
+                      except={this.props.except}
+                      onSelect={this._onSelect.bind(this)} />}
         <hr />
         {Object.keys(this.props).map(key => <div key={key}>{this.props[key].toString()}</div>)}
       </div>

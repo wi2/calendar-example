@@ -1214,6 +1214,7 @@ var _default = (function (_Component) {
           year: this.props.date.getFullYear(),
           month: this.props.date.getMonth(),
           day: this.props.date.getDate(),
+          except: this.props.except,
           onSelect: this._onSelect.bind(this) }),
         _react2['default'].createElement('hr', null),
         Object.keys(this.props).map(function (key) {
@@ -1394,7 +1395,7 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
-        this.state.current && _react2['default'].createElement(_comPanel2['default'], this.state.current),
+        this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, { except: this.except })),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {
           rooms: this.state.rooms,
           onSubmit: this.onSubmit.bind(this),
