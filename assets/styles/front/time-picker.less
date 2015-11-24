@@ -1,10 +1,51 @@
 .time-picker {
   position: relative;
+  margin-top: 50%;
+  margin-left: 50%;
 }
 
-.circle {
+.time-circle {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  border-radius: 50%;
+  transform-origin: bottom center;
+  transform: translate(-50%, -50%);
+  background: navy;
+}
+.time-circle-small {
+  width: 2%;
+  height: 2%;
+  background: black;
+}
+.time-hour, .time-minute, .time-dash {
   position: absolute;
   border-radius: 50%;
+  top: -15%;
+  left: 0;
+  width: 2px;
+  height: 30%;
+  transform-origin: bottom center;
+  transform: translate(-50%, -50%);
+  background: green;
 }
-
+.time-minute {
+  background: red;
+  top: -25%;
+  height: 50%;
+}
+.time-dash {
+  background: orange;
+  text-align:center;
+  div {
+    border-radius: 50%;
+    margin-top: 22px;
+    color: #FFF;
+    display:block;
+    line-height: 32px;
+    height: 32px;
+    width: 32px;
+    background: #333;
+  }
+}
 

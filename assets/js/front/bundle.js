@@ -618,6 +618,8 @@ var _calendarUtils = require('./calendar-utils');
 
 var _calendarView = require('./calendar-view');
 
+var _timePicker = require('./time-picker');
+
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -752,7 +754,31 @@ var _default = (function (_Component) {
             height: _this.props.height,
             width: _this.props.width,
             agenda: _this.agenda, key: 'row-' + j }));
-        })
+        }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 8,
+          minute: 45,
+          except: this.props.except,
+          diameter: 380 }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 10,
+          minute: 55,
+          except: this.props.except,
+          diameter: 280 }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 6,
+          minute: 15,
+          except: this.props.except,
+          diameter: 100 }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 7,
+          minute: 27,
+          except: this.props.except,
+          diameter: 120 }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 8,
+          minute: 52,
+          except: this.props.except,
+          diameter: 150 }),
+        _react2['default'].createElement(_timePicker.TimePicker, { hour: 14,
+          minute: 35,
+          except: this.props.except,
+          diameter: 580 })
       );
     }
   }]);
@@ -763,7 +789,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":13,"./calendar-utils":2,"./calendar-view":3,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":13,"./calendar-utils":2,"./calendar-view":3,"./time-picker":8,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1175,6 +1201,8 @@ var _react2 = _interopRequireDefault(_react);
 
 var _datePicker = require('./date-picker');
 
+var _timePicker = require('./time-picker');
+
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -1203,6 +1231,11 @@ var _default = (function (_Component) {
           day: this.props.date.getDate(),
           except: this.props.except,
           onSelect: this._onSelect.bind(this) }),
+        this.props.date && _react2['default'].createElement(_timePicker.TimePicker, { hour: this.props.hour || this.props.date.getHours(),
+          minute: this.props.minute || this.props.date.getMinutes(),
+          except: this.props.except,
+          diameter: 180,
+          onSelect: this._onSelect.bind(this) }),
         _react2['default'].createElement('hr', null),
         Object.keys(this.props).map(function (key) {
           return _react2['default'].createElement(
@@ -1221,12 +1254,14 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"react":"react"}],8:[function(require,module,exports){
+},{"./date-picker":5,"./time-picker":8,"react":"react"}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
@@ -1242,11 +1277,9 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var _libAgenda = require('../lib/agenda');
+var _lodash = require('lodash');
 
-var _libAgenda2 = _interopRequireDefault(_libAgenda);
-
-var _calendarUtils = require('./calendar-utils');
+var _lodash2 = _interopRequireDefault(_lodash);
 
 var TimePicker = (function (_Component) {
   _inherits(TimePicker, _Component);
@@ -1255,16 +1288,16 @@ var TimePicker = (function (_Component) {
     _classCallCheck(this, TimePicker);
 
     _get(Object.getPrototypeOf(TimePicker.prototype), 'constructor', this).call(this, props);
-    var diameter = Number(this.props.diameter) || 200;
+    var diameter = Number(this.props.diameter) || 150;
     this.state = {
-      big: {
-        diameter: diameter,
-        background: '#FF0000'
+      dash: {
+        radius: diameter * 0.7 / 2
       },
-      small: {
-        diameter: diameter * 0.6,
-        left: diameter * 0.2,
-        top: diameter * 0.2
+      hour: {
+        angle: Number(this.props.hour) * (360 / 12)
+      },
+      minute: {
+        angle: Number(this.props.minute) * (360 / 60)
       }
     };
   }
@@ -1272,12 +1305,20 @@ var TimePicker = (function (_Component) {
   _createClass(TimePicker, [{
     key: 'render',
     value: function render() {
+      var _this = this;
 
+      var radius = Number(this.props.diameter || 150) / 2 + "px",
+          style = { width: radius, height: radius };
       return _react2['default'].createElement(
         'div',
-        { className: 'time-picker' },
-        _react2['default'].createElement(Circle, this.state.big),
-        _react2['default'].createElement(Circle, this.state.small)
+        { className: 'time-picker', style: style },
+        _react2['default'].createElement(Circle, null),
+        _react2['default'].createElement(Pointer, _extends({ className: 'time-minute' }, this.state.minute)),
+        _react2['default'].createElement(Pointer, _extends({ className: 'time-hour' }, this.state.hour)),
+        _react2['default'].createElement(Circle, { className: 'time-circle time-circle-small' }),
+        _lodash2['default'].range(0, 12).map(function (num) {
+          return _react2['default'].createElement(Dash, _extends({ key: "num" + num, className: 'time-dash' }, _this.state.dash, { angle: num * (360 / 12), value: num }));
+        })
       );
     }
   }]);
@@ -1290,33 +1331,87 @@ exports.TimePicker = TimePicker;
 var Circle = (function (_Component2) {
   _inherits(Circle, _Component2);
 
-  function Circle(props) {
+  function Circle() {
     _classCallCheck(this, Circle);
 
-    _get(Object.getPrototypeOf(Circle.prototype), 'constructor', this).call(this, props);
-    var diameter = Number(this.props.diameter) || 100;
-    this.state = {
-      style: {
-        width: diameter + "px",
-        height: diameter + "px",
-        left: this.props.left || 0,
-        top: this.props.top || 0,
-        background: this.props.background || '#CCC'
-      }
-    };
+    _get(Object.getPrototypeOf(Circle.prototype), 'constructor', this).apply(this, arguments);
   }
 
   _createClass(Circle, [{
     key: 'render',
     value: function render() {
-      return _react2['default'].createElement('div', { className: 'circle', style: this.state.style });
+      return _react2['default'].createElement('div', { className: this.props.className || "time-circle" });
     }
   }]);
 
   return Circle;
 })(_react.Component);
 
-},{"../lib/agenda":13,"./calendar-utils":2,"react":"react"}],9:[function(require,module,exports){
+var Dash = (function (_Circle) {
+  _inherits(Dash, _Circle);
+
+  function Dash(props) {
+    _classCallCheck(this, Dash);
+
+    _get(Object.getPrototypeOf(Dash.prototype), 'constructor', this).call(this, props);
+    this.state = {
+      style: {
+        transform: 'translate(-50%, -50%) rotate(' + this.props.angle + 'deg) translateY(-' + this.props.radius + 'px)'
+      },
+      numStyle: {
+        transform: 'translate(-50%, -50%) rotate(-' + this.props.angle + 'deg)'
+      }
+    };
+  }
+
+  _createClass(Dash, [{
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement(
+        'div',
+        { className: this.props.className || "time-dash", style: this.state.style },
+        _react2['default'].createElement(
+          'div',
+          { style: this.state.numStyle },
+          this.props.value * 5
+        )
+      );
+    }
+  }]);
+
+  return Dash;
+})(Circle);
+
+var Pointer = (function (_Dash) {
+  _inherits(Pointer, _Dash);
+
+  function Pointer() {
+    _classCallCheck(this, Pointer);
+
+    _get(Object.getPrototypeOf(Pointer.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(Pointer, [{
+    key: 'componentWillReceiveProps',
+    value: function componentWillReceiveProps(props) {
+      var diameter = props.diameter || 100;
+      this.setState({
+        style: {
+          transform: 'translate(-50%, -50%) rotate(' + props.angle + 'deg)'
+        }
+      });
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement('div', { className: this.props.className, style: this.state.style });
+    }
+  }]);
+
+  return Pointer;
+})(Dash);
+
+},{"lodash":"lodash","react":"react"}],9:[function(require,module,exports){
 (function (global){
 "use strict";
 
