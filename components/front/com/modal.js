@@ -6,7 +6,7 @@ import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
 import Agenda from '../lib/agenda'
 import Calendar from './calendar'
-import {DatePicker} from './date-picker'
+import DateTimePicker from './date-time-picker'
 
 
 export default class extends Component {
@@ -62,6 +62,7 @@ export default class extends Component {
       month: date.getMonth(),
       day: date.getDate(),
       hour: date.getHours(),
+      minute: date.getMinutes(),
       name: name,
       except: this.props.except||[]
     }
@@ -126,11 +127,13 @@ export default class extends Component {
             <Row>
               <Col md="6">
                 {this.state.startPicker.show &&
-                  <DatePicker toggle {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
+                  <DateTimePicker {...this.state.startPicker}
+                                  onSelect={this._onSelectStart.bind(this)}  />}
               </Col>
               <Col>
                 {this.state.endPicker.show &&
-                  <DatePicker toggle {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
+                  <DateTimePicker {...this.state.endPicker}
+                                  onSelect={this._onSelectEnd.bind(this)}  />}
               </Col>
             </Row>
           </Container>
