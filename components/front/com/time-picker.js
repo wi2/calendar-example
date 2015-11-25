@@ -3,7 +3,7 @@
 import React, {Component} from 'react';
 import _ from 'lodash';
 
-export class TimePicker extends Component {
+export default class extends Component {
   constructor(props) {
     super(props)
     let diameter = Number(this.props.diameter)||150

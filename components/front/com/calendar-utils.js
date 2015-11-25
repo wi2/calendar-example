@@ -4,7 +4,6 @@ import React, {Component} from 'react';
 import {Link} from 'react-router';
 import Agenda from '../lib/agenda'
 
-
 export class Vertical extends Component {
   render() {
     return <div className="agenda-vertical">{this.props.children}</div>

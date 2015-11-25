@@ -3,7 +3,6 @@
 import React, {Component} from 'react';
 import {Vertical, Row, Cell} from './calendar-utils';
 
-
 class ViewDefault extends Component {
   constructor(props) {
     super(props)

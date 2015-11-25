@@ -14,7 +14,7 @@ delete global.__ReactInitState__;
 // window.React = React
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./index":11,"react-dom":"react-dom"}],2:[function(require,module,exports){
+},{"./index":12,"react-dom":"react-dom"}],2:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -313,7 +313,7 @@ var Info = (function (_Component6) {
 
 exports.Info = Info;
 
-},{"../lib/agenda":13,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
+},{"../lib/agenda":14,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -618,8 +618,6 @@ var _calendarUtils = require('./calendar-utils');
 
 var _calendarView = require('./calendar-view');
 
-var _timePicker = require('./time-picker');
-
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -754,31 +752,7 @@ var _default = (function (_Component) {
             height: _this.props.height,
             width: _this.props.width,
             agenda: _this.agenda, key: 'row-' + j }));
-        }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 8,
-          minute: 45,
-          except: this.props.except,
-          diameter: 380 }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 10,
-          minute: 55,
-          except: this.props.except,
-          diameter: 280 }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 6,
-          minute: 15,
-          except: this.props.except,
-          diameter: 100 }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 7,
-          minute: 27,
-          except: this.props.except,
-          diameter: 120 }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 8,
-          minute: 52,
-          except: this.props.except,
-          diameter: 150 }),
-        _react2['default'].createElement(_timePicker.TimePicker, { hour: 14,
-          minute: 35,
-          except: this.props.except,
-          diameter: 580 })
+        })
       );
     }
   }]);
@@ -789,7 +763,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":13,"./calendar-utils":2,"./calendar-view":3,"./time-picker":8,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":14,"./calendar-utils":2,"./calendar-view":3,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -816,16 +790,16 @@ var _libAgenda2 = _interopRequireDefault(_libAgenda);
 
 var _calendarUtils = require('./calendar-utils');
 
-var DatePicker = (function (_Component) {
-  _inherits(DatePicker, _Component);
+var _default = (function (_Component) {
+  _inherits(_default, _Component);
 
-  function DatePicker() {
-    _classCallCheck(this, DatePicker);
+  function _default() {
+    _classCallCheck(this, _default);
 
-    _get(Object.getPrototypeOf(DatePicker.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).apply(this, arguments);
   }
 
-  _createClass(DatePicker, [{
+  _createClass(_default, [{
     key: 'componentDidMount',
     value: function componentDidMount() {
       this.agenda = new _libAgenda2['default'](this.props.year, this.props.month, this.props.day, this.props.hour);
@@ -944,12 +918,111 @@ var DatePicker = (function (_Component) {
     }
   }]);
 
-  return DatePicker;
+  return _default;
 })(_react.Component);
 
-exports.DatePicker = DatePicker;
+exports['default'] = _default;
+module.exports = exports['default'];
 
-},{"../lib/agenda":13,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
+},{"../lib/agenda":14,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
+var _datePicker = require('./date-picker');
+
+var _datePicker2 = _interopRequireDefault(_datePicker);
+
+var _timePicker = require('./time-picker');
+
+var _timePicker2 = _interopRequireDefault(_timePicker);
+
+var _default = (function (_Component) {
+  _inherits(_default, _Component);
+
+  function _default(props) {
+    _classCallCheck(this, _default);
+
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+
+    this.state = {
+      year: this.props.year,
+      month: this.props.month,
+      day: this.props.day,
+      hour: this.props.hour,
+      minute: this.props.minute,
+      name: this.props.name,
+      except: this.props.except || [],
+      type: "date"
+    };
+  }
+
+  _createClass(_default, [{
+    key: '_onSelectDate',
+    value: function _onSelectDate(val) {
+      console.log(val);
+      this.setState({
+        type: "hour",
+        year: val.year,
+        month: val.month,
+        day: val.day
+      });
+    }
+  }, {
+    key: '_onSelectTime',
+    value: function _onSelectTime(val) {
+      this.setState({
+        type: "date",
+        hour: val.hour,
+        minute: val.minute
+      });
+      var date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute),
+          current = _lodash2['default'].extend(this.state, val, { date: date });
+      this.props.onSelect(current);
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement(
+        'div',
+        { className: 'date-time-picker' },
+        this.state.type === "date" && _react2['default'].createElement(_datePicker2['default'], _extends({}, this.state, { view: 'month',
+          onSelect: this._onSelectDate.bind(this) })),
+        this.state.type === "hour" && _react2['default'].createElement(_timePicker2['default'], _extends({}, this.state, {
+          onSelect: this._onSelectTime.bind(this) }))
+      );
+    }
+  }]);
+
+  return _default;
+})(_react.Component);
+
+exports['default'] = _default;
+module.exports = exports['default'];
+
+},{"./date-picker":5,"./time-picker":9,"lodash":"lodash","react":"react"}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -986,11 +1059,9 @@ var _libAgenda = require('../lib/agenda');
 
 var _libAgenda2 = _interopRequireDefault(_libAgenda);
 
-var _calendar = require('./calendar');
+var _dateTimePicker = require('./date-time-picker');
 
-var _calendar2 = _interopRequireDefault(_calendar);
-
-var _datePicker = require('./date-picker');
+var _dateTimePicker2 = _interopRequireDefault(_dateTimePicker);
 
 var _default = (function (_Component) {
   _inherits(_default, _Component);
@@ -1059,6 +1130,7 @@ var _default = (function (_Component) {
         month: date.getMonth(),
         day: date.getDate(),
         hour: date.getHours(),
+        minute: date.getMinutes(),
         name: name,
         except: this.props.except || []
       };
@@ -1158,12 +1230,14 @@ var _default = (function (_Component) {
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 { md: '6' },
-                this.state.startPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({ toggle: true }, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
+                this.state.startPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.startPicker, {
+                  onSelect: this._onSelectStart.bind(this) }))
               ),
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 null,
-                this.state.endPicker.show && _react2['default'].createElement(_datePicker.DatePicker, _extends({ toggle: true }, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
+                this.state.endPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.endPicker, {
+                  onSelect: this._onSelectEnd.bind(this) }))
               )
             )
           )
@@ -1178,7 +1252,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":13,"./calendar":4,"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],7:[function(require,module,exports){
+},{"../lib/agenda":14,"./date-time-picker":6,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1201,15 +1275,15 @@ var _react2 = _interopRequireDefault(_react);
 
 var _datePicker = require('./date-picker');
 
-var _timePicker = require('./time-picker');
+var _datePicker2 = _interopRequireDefault(_datePicker);
 
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
-  function _default(props) {
+  function _default() {
     _classCallCheck(this, _default);
 
-    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).apply(this, arguments);
   }
 
   _createClass(_default, [{
@@ -1225,16 +1299,11 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'agenda-panel' },
-        this.props.date && _react2['default'].createElement(_datePicker.DatePicker, { view: 'month',
+        this.props.date && _react2['default'].createElement(_datePicker2['default'], { view: 'month',
           year: this.props.date.getFullYear(),
           month: this.props.date.getMonth(),
           day: this.props.date.getDate(),
           except: this.props.except,
-          onSelect: this._onSelect.bind(this) }),
-        this.props.date && _react2['default'].createElement(_timePicker.TimePicker, { hour: this.props.hour || this.props.date.getHours(),
-          minute: this.props.minute || this.props.date.getMinutes(),
-          except: this.props.except,
-          diameter: 180,
           onSelect: this._onSelect.bind(this) }),
         _react2['default'].createElement('hr', null),
         Object.keys(this.props).map(function (key) {
@@ -1254,14 +1323,12 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"./time-picker":8,"react":"react"}],8:[function(require,module,exports){
+},{"./date-picker":5,"react":"react"}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
@@ -1281,52 +1348,84 @@ var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
 
-var TimePicker = (function (_Component) {
-  _inherits(TimePicker, _Component);
+var _default = (function (_Component) {
+  _inherits(_default, _Component);
 
-  function TimePicker(props) {
-    _classCallCheck(this, TimePicker);
+  function _default(props) {
+    _classCallCheck(this, _default);
 
-    _get(Object.getPrototypeOf(TimePicker.prototype), 'constructor', this).call(this, props);
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
     var diameter = Number(this.props.diameter) || 150;
     this.state = {
-      dash: {
-        radius: diameter * 0.7 / 2
-      },
-      hour: {
-        angle: Number(this.props.hour) * (360 / 12)
-      },
-      minute: {
-        angle: Number(this.props.minute) * (360 / 60)
+      radius: diameter * 0.7 / 2,
+      hour: Number(this.props.hour),
+      minute: Number(this.props.minute),
+      type: "hour",
+      current: {
+        hour: Number(this.props.hour),
+        minute: Number(this.props.minute)
       }
     };
   }
 
-  _createClass(TimePicker, [{
+  _createClass(_default, [{
+    key: 'onSelect',
+    value: function onSelect(val) {
+      if (this.state.type === 'hour') {
+        this.setState({
+          type: "minute",
+          hour: Number(val),
+          current: {
+            hour: Number(val),
+            minute: this.state.current.minute
+          }
+        });
+      } else {
+        var current = _lodash2['default'].extend(this.state.current, { minute: Number(val) });
+        this.setState({
+          type: "hour",
+          minute: Number(val),
+          current: current
+        });
+        this.props.onSelect(current);
+      }
+    }
+  }, {
     key: 'render',
     value: function render() {
       var _this = this;
 
       var radius = Number(this.props.diameter || 150) / 2 + "px",
-          style = { width: radius, height: radius };
+          style = {
+        width: radius,
+        height: radius,
+        marginTop: radius,
+        marginLeft: radius
+      };
       return _react2['default'].createElement(
         'div',
         { className: 'time-picker', style: style },
         _react2['default'].createElement(Circle, null),
-        _react2['default'].createElement(Pointer, _extends({ className: 'time-minute' }, this.state.minute)),
-        _react2['default'].createElement(Pointer, _extends({ className: 'time-hour' }, this.state.hour)),
+        _react2['default'].createElement(Pointer, { className: 'time-minute',
+          minute: this.state.minute, type: 'minute' }),
+        _react2['default'].createElement(Pointer, { className: 'time-hour',
+          hour: this.state.hour, type: 'hour' }),
         _react2['default'].createElement(Circle, { className: 'time-circle time-circle-small' }),
         _lodash2['default'].range(0, 12).map(function (num) {
-          return _react2['default'].createElement(Dash, _extends({ key: "num" + num, className: 'time-dash' }, _this.state.dash, { angle: num * (360 / 12), value: num }));
+          return _react2['default'].createElement(Dash, { className: 'time-dash',
+            onSelect: _this.onSelect.bind(_this),
+            radius: _this.state.radius,
+            value: num,
+            type: _this.state.type, key: "dash-" + num });
         })
       );
     }
   }]);
 
-  return TimePicker;
+  return _default;
 })(_react.Component);
 
-exports.TimePicker = TimePicker;
+exports['default'] = _default;
 
 var Circle = (function (_Component2) {
   _inherits(Circle, _Component2);
@@ -1354,17 +1453,35 @@ var Dash = (function (_Circle) {
     _classCallCheck(this, Dash);
 
     _get(Object.getPrototypeOf(Dash.prototype), 'constructor', this).call(this, props);
+    var ratio = 360 / 12,
+        angle = ratio * this.props.value;
     this.state = {
       style: {
-        transform: 'translate(-50%, -50%) rotate(' + this.props.angle + 'deg) translateY(-' + this.props.radius + 'px)'
+        transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + this.props.radius + 'px)'
       },
       numStyle: {
-        transform: 'translate(-50%, -50%) rotate(-' + this.props.angle + 'deg)'
-      }
+        transform: 'translate(-50%, -50%) rotate(-' + angle + 'deg)'
+      },
+      value: this.props.type === 'hour' ? this.props.value : this.props.value * 5
     };
   }
 
   _createClass(Dash, [{
+    key: 'componentWillReceiveProps',
+    value: function componentWillReceiveProps(props) {
+      var ratio = 360 / 12,
+          angle = ratio * props.value;
+      this.setState({
+        value: props.type === 'hour' ? props.value : props.value * 5
+      });
+    }
+  }, {
+    key: '_handleClick',
+    value: function _handleClick(e) {
+      e.preventDefault();
+      if (this.props.onSelect) this.props.onSelect(this.state.value);
+    }
+  }, {
     key: 'render',
     value: function render() {
       return _react2['default'].createElement(
@@ -1372,8 +1489,8 @@ var Dash = (function (_Circle) {
         { className: this.props.className || "time-dash", style: this.state.style },
         _react2['default'].createElement(
           'div',
-          { style: this.state.numStyle },
-          this.props.value * 5
+          { onClick: this._handleClick.bind(this), style: this.state.numStyle },
+          this.state.value
         )
       );
     }
@@ -1382,22 +1499,34 @@ var Dash = (function (_Circle) {
   return Dash;
 })(Circle);
 
-var Pointer = (function (_Dash) {
-  _inherits(Pointer, _Dash);
+var Pointer = (function (_Circle2) {
+  _inherits(Pointer, _Circle2);
 
-  function Pointer() {
+  function Pointer(props) {
     _classCallCheck(this, Pointer);
 
-    _get(Object.getPrototypeOf(Pointer.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(Pointer.prototype), 'constructor', this).call(this, props);
+    console.log("thisprops", this.props);
+    var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
+        value = Number(this.props.minute || this.props.hour),
+        angle = ratio * value;
+    this.state = {
+      style: {
+        transform: 'translate(-50%, -50%) rotate(' + angle + 'deg)'
+      }
+    };
   }
 
   _createClass(Pointer, [{
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      var diameter = props.diameter || 100;
+      console.log("props", props);
+      var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
+          value = Number(props.minute || props.hour),
+          angle = ratio * value;
       this.setState({
         style: {
-          transform: 'translate(-50%, -50%) rotate(' + props.angle + 'deg)'
+          transform: 'translate(-50%, -50%) rotate(' + angle + 'deg)'
         }
       });
     }
@@ -1409,9 +1538,11 @@ var Pointer = (function (_Dash) {
   }]);
 
   return Pointer;
-})(Dash);
+})(Circle);
 
-},{"lodash":"lodash","react":"react"}],9:[function(require,module,exports){
+module.exports = exports['default'];
+
+},{"lodash":"lodash","react":"react"}],10:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1597,7 +1728,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../com/calendar":4,"../com/modal":6,"../com/panel":7,"react":"react","react-dom":"react-dom"}],10:[function(require,module,exports){
+},{"../com/calendar":4,"../com/modal":7,"../com/panel":8,"react":"react","react-dom":"react-dom"}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1662,7 +1793,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":13,"react":"react","react-router":"react-router"}],11:[function(require,module,exports){
+},{"../lib/agenda":14,"react":"react","react-router":"react-router"}],12:[function(require,module,exports){
 "use strict";
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -1717,7 +1848,7 @@ module.exports = {
   Routes: Routes
 };
 
-},{"./ctrl/calendar":9,"./ctrl/home":10,"./layout":12,"history":"history","react":"react","react-router":"react-router"}],12:[function(require,module,exports){
+},{"./ctrl/calendar":10,"./ctrl/home":11,"./layout":13,"history":"history","react":"react","react-router":"react-router"}],13:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1774,7 +1905,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./nav":14,"react":"react"}],13:[function(require,module,exports){
+},{"./nav":15,"react":"react"}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2134,7 +2265,7 @@ Date.prototype.getWeek = function () {
 };
 module.exports = exports["default"];
 
-},{"lodash":"lodash"}],14:[function(require,module,exports){
+},{"lodash":"lodash"}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -2226,4 +2357,4 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./lib/agenda":13,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
+},{"./lib/agenda":14,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);

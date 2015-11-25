@@ -5,9 +5,7 @@ import _ from 'lodash'
 import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
 import Agenda from '../lib/agenda'
-import Calendar from './calendar'
 import DateTimePicker from './date-time-picker'
-
 
 export default class extends Component {
   constructor(props) {

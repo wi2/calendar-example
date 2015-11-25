@@ -2,8 +2,8 @@
 
 import React, {Component} from 'react';
 import _ from 'lodash';
-import {DatePicker} from './date-picker'
-import {TimePicker} from './time-picker'
+import DatePicker from './date-picker'
+import TimePicker from './time-picker'
 
 export default class extends Component {
   constructor(props) {

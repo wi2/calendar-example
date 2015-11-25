@@ -4,8 +4,7 @@ import React, {Component} from 'react';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Vertical, Row, Cell, Info} from './calendar-utils'
 
-
-export class DatePicker extends Component {
+export default class extends Component {
   componentDidMount() {
     this.agenda = new Agenda(this.props.year, this.props.month, this.props.day, this.props.hour)
     this.agenda.setException(this.props.except||[]);

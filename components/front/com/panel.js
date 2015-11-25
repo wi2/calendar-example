@@ -1,13 +1,9 @@
 "use strict";
 
 import React, {Component} from 'react';
-import {DatePicker} from './date-picker';
-
+import DatePicker from './date-picker';
 
 export default class extends Component {
-  constructor(props) {
-    super(props)
-  }
   _onSelect(val) {
     console.log(val)
   }
