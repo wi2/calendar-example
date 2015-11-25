@@ -1355,9 +1355,11 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    var diameter = Number(this.props.diameter) || 150;
+    var diameter = Number(this.props.diameter) || 200;
     this.state = {
+      diameter: diameter,
       radius: diameter * 0.7 / 2,
+      ampm: 'AM',
       hour: Number(this.props.hour),
       minute: Number(this.props.minute),
       type: "hour",
@@ -1369,6 +1371,11 @@ var _default = (function (_Component) {
   }
 
   _createClass(_default, [{
+    key: 'toggle',
+    value: function toggle() {
+      this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' });
+    }
+  }, {
     key: 'onSelect',
     value: function onSelect(val) {
       if (this.state.type === 'hour') {
@@ -1395,7 +1402,7 @@ var _default = (function (_Component) {
     value: function render() {
       var _this = this;
 
-      var radius = Number(this.props.diameter || 150) / 2 + "px",
+      var radius = this.state.diameter / 2 + "px",
           style = {
         width: radius,
         height: radius,
@@ -1410,12 +1417,15 @@ var _default = (function (_Component) {
           minute: this.state.minute, type: 'minute' }),
         _react2['default'].createElement(Pointer, { className: 'time-hour',
           hour: this.state.hour, type: 'hour' }),
-        _react2['default'].createElement(Circle, { className: 'time-circle time-circle-small' }),
+        _react2['default'].createElement(Choice, { className: 'time-circle time-circle-button',
+          ampm: this.state.ampm,
+          onToggle: this.toggle.bind(this) }),
         _lodash2['default'].range(0, 12).map(function (num) {
           return _react2['default'].createElement(Dash, { className: 'time-dash',
             onSelect: _this.onSelect.bind(_this),
             radius: _this.state.radius,
             value: num,
+            ampm: _this.state.ampm,
             type: _this.state.type, key: "dash-" + num });
         })
       );
@@ -1446,15 +1456,58 @@ var Circle = (function (_Component2) {
   return Circle;
 })(_react.Component);
 
-var Dash = (function (_Circle) {
-  _inherits(Dash, _Circle);
+var Choice = (function (_Circle) {
+  _inherits(Choice, _Circle);
+
+  function Choice(props) {
+    _classCallCheck(this, Choice);
+
+    _get(Object.getPrototypeOf(Choice.prototype), 'constructor', this).call(this, props);
+    this.state = { ampm: this.props.ampm };
+  }
+
+  _createClass(Choice, [{
+    key: 'componentWillReceiveProps',
+    value: function componentWillReceiveProps(props) {
+      this.setState({ ampm: props.ampm });
+    }
+  }, {
+    key: 'toggle',
+    value: function toggle() {
+      if (this.props.onToggle) this.props.onToggle();
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return _react2['default'].createElement(
+        'div',
+        { className: this.props.className,
+          onClick: this.toggle.bind(this) },
+        this.state.ampm
+      );
+    }
+  }]);
+
+  return Choice;
+})(Circle);
+
+var Dash = (function (_Circle2) {
+  _inherits(Dash, _Circle2);
 
   function Dash(props) {
     _classCallCheck(this, Dash);
 
     _get(Object.getPrototypeOf(Dash.prototype), 'constructor', this).call(this, props);
     var ratio = 360 / 12,
-        angle = ratio * this.props.value;
+        angle = ratio * this.props.value,
+        value = this.props.value;
+
+    if (this.props.type === 'hour') {
+      value = this.props.ampm === 'AM' ? value : value + 12;
+    } else {
+      value = value * 5;
+    }
+
     this.state = {
       style: {
         transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + this.props.radius + 'px)'
@@ -1462,7 +1515,7 @@ var Dash = (function (_Circle) {
       numStyle: {
         transform: 'translate(-50%, -50%) rotate(-' + angle + 'deg)'
       },
-      value: this.props.type === 'hour' ? this.props.value : this.props.value * 5
+      value: value
     };
   }
 
@@ -1470,10 +1523,15 @@ var Dash = (function (_Circle) {
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
       var ratio = 360 / 12,
-          angle = ratio * props.value;
-      this.setState({
-        value: props.type === 'hour' ? props.value : props.value * 5
-      });
+          angle = ratio * props.value,
+          value = props.value;
+
+      if (props.type === 'hour') {
+        value = props.ampm === 'AM' ? value + 12 : value;
+      } else {
+        value = value * 5;
+      }
+      this.setState({ value: value });
     }
   }, {
     key: '_handleClick',
@@ -1499,14 +1557,13 @@ var Dash = (function (_Circle) {
   return Dash;
 })(Circle);
 
-var Pointer = (function (_Circle2) {
-  _inherits(Pointer, _Circle2);
+var Pointer = (function (_Circle3) {
+  _inherits(Pointer, _Circle3);
 
   function Pointer(props) {
     _classCallCheck(this, Pointer);
 
     _get(Object.getPrototypeOf(Pointer.prototype), 'constructor', this).call(this, props);
-    console.log("thisprops", this.props);
     var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
         value = Number(this.props.minute || this.props.hour),
         angle = ratio * value;
@@ -1520,7 +1577,6 @@ var Pointer = (function (_Circle2) {
   _createClass(Pointer, [{
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      console.log("props", props);
       var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
           value = Number(props.minute || props.hour),
           angle = ratio * value;

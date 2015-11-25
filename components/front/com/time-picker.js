@@ -6,9 +6,11 @@ import _ from 'lodash';
 export default class extends Component {
   constructor(props) {
     super(props)
-    let diameter = Number(this.props.diameter)||150
+    let diameter = Number(this.props.diameter)||200
     this.state = {
+      diameter,
       radius: diameter*0.7/2,
+      ampm: 'AM',
       hour: Number(this.props.hour),
       minute: Number(this.props.minute),
       type: "hour",
@@ -18,6 +20,9 @@ export default class extends Component {
       }
     }
 
+  }
+  toggle() {
+    this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' })
   }
 
   onSelect(val) {
@@ -42,7 +47,7 @@ export default class extends Component {
   }
 
   render() {
-    let radius = Number(this.props.diameter||150)/2 + "px"
+    let radius = this.state.diameter/2 + "px"
       , style = {
           width: radius,
           height: radius,
@@ -58,13 +63,16 @@ export default class extends Component {
         <Pointer className="time-hour"
                  hour={this.state.hour} type="hour" />
 
-        <Circle className="time-circle time-circle-small" />
+        <Choice className="time-circle time-circle-button"
+                ampm={this.state.ampm}
+                onToggle={this.toggle.bind(this)} />
 
         {_.range(0,12).map((num) =>
           <Dash className="time-dash"
                 onSelect={this.onSelect.bind(this)}
                 radius={this.state.radius}
                 value={num}
+                ampm={this.state.ampm}
                 type={this.state.type} key={"dash-"+num} />)}
       </div>
     )
@@ -77,11 +85,36 @@ class Circle extends Component {
   }
 }
 
+class Choice extends Circle {
+  constructor(props) {
+    super(props)
+    this.state = { ampm: this.props.ampm }
+  }
+  componentWillReceiveProps(props) {
+    this.setState({ ampm: props.ampm })
+  }
+  toggle() {
+    if (this.props.onToggle) this.props.onToggle()
+  }
+  render() {
+    return <div className={this.props.className}
+                onClick={this.toggle.bind(this)}>{this.state.ampm}</div>
+  }
+}
+
 class Dash extends Circle {
   constructor(props) {
     super(props)
     let ratio = 360/12
       , angle = ratio * this.props.value
+      , value = this.props.value
+
+    if (this.props.type === 'hour') {
+      value = (this.props.ampm === 'AM') ? value : value + 12
+    } else {
+      value = value * 5
+    }
+
     this.state = {
       style: {
         transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${this.props.radius}px)`
@@ -89,15 +122,20 @@ class Dash extends Circle {
       numStyle: {
         transform: `translate(-50%, -50%) rotate(-${angle}deg)`
       },
-      value: this.props.type === 'hour' ? this.props.value : this.props.value * 5
+      value
     }
   }
   componentWillReceiveProps(props) {
     let ratio = 360/12
       , angle = ratio * props.value
-    this.setState({
-      value: props.type === 'hour' ? props.value : props.value * 5
-    })
+      , value = props.value
+
+    if (props.type === 'hour') {
+      value = (props.ampm === 'AM') ? value + 12 : value
+    } else {
+      value = value * 5
+    }
+    this.setState({ value })
   }
 
   _handleClick(e) {
@@ -118,7 +156,6 @@ class Dash extends Circle {
 class Pointer extends Circle {
   constructor(props) {
     super(props)
-    console.log("thisprops", this.props)
     let ratio = props.type === 'hour' ? 360/12 : 360/60
       , value = Number(this.props.minute||this.props.hour)
       , angle = ratio * value
@@ -129,7 +166,6 @@ class Pointer extends Circle {
     }
   }
   componentWillReceiveProps(props) {
-    console.log("props", props)
     let ratio = props.type === 'hour' ? 360/12 : 360/60
       , value = Number(props.minute||props.hour)
       , angle = ratio * value
