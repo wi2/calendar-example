@@ -345,10 +345,7 @@ var ViewDefault = (function (_Component) {
     _classCallCheck(this, ViewDefault);
 
     _get(Object.getPrototypeOf(ViewDefault.prototype), 'constructor', this).call(this, props);
-    this.state = {
-      width: this.props.width,
-      height: this.props.height
-    };
+    this.state = { width: this.props.width, height: this.props.height };
   }
 
   _createClass(ViewDefault, [{
@@ -363,9 +360,9 @@ var ViewDefault = (function (_Component) {
       events[0].cell.line = 1;
 
       var _loop = function (j, len) {
-        var collision = false;
-        var evt = events[j].cell;
-        var line = 1;
+        var collision = false,
+            evt = events[j].cell,
+            line = 1;
         while (!evt.line) {
           var evts = events.filter(function (a) {
             if (a.cell.line === line) return a;
@@ -859,7 +856,7 @@ var _default = (function (_Component) {
       var height = 30;
       return _react2['default'].createElement(
         'div',
-        null,
+        { className: 'date-picker' },
         this.state && _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info,
           onPrevious: this.onPrevious.bind(this),
           onNext: this.onNext.bind(this) }),
@@ -1138,7 +1135,7 @@ var _default = (function (_Component) {
           show: toggle ? !this.state.startPicker.show : this.state.startPicker.show,
           view: "month"
         }, common) } : { endPicker: _lodash2['default'].extend({
-          show: toggle ? !this.state.endPicker.show : this.state.startPicker.show,
+          show: toggle ? !this.state.endPicker.show : this.state.endPicker.show,
           view: "week"
         }, common) });
     }
@@ -1230,14 +1227,12 @@ var _default = (function (_Component) {
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 { md: '6' },
-                this.state.startPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.startPicker, {
-                  onSelect: this._onSelectStart.bind(this) }))
+                this.state.startPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
               ),
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 null,
-                this.state.endPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.endPicker, {
-                  onSelect: this._onSelectEnd.bind(this) }))
+                this.state.endPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
               )
             )
           )
@@ -1355,18 +1350,17 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    var diameter = Number(this.props.diameter) || 200;
+    var diameter = Number(this.props.diameter) || 200,
+        hour = Number(this.props.hour),
+        minute = Number(this.props.minute);
     this.state = {
       diameter: diameter,
       radius: diameter * 0.7 / 2,
-      ampm: 'AM',
-      hour: Number(this.props.hour),
-      minute: Number(this.props.minute),
-      type: "hour",
-      current: {
-        hour: Number(this.props.hour),
-        minute: Number(this.props.minute)
-      }
+      type: this.props.type || "hour",
+      ampm: hour > 11 ? 'PM' : 'AM',
+      hour: hour,
+      minute: minute,
+      current: { hour: hour, minute: minute }
     };
   }
 
@@ -1379,19 +1373,18 @@ var _default = (function (_Component) {
     key: 'onSelect',
     value: function onSelect(val) {
       if (this.state.type === 'hour') {
+        var hour = Number(val);
         this.setState({
           type: "minute",
-          hour: Number(val),
-          current: {
-            hour: Number(val),
-            minute: this.state.current.minute
-          }
+          hour: hour,
+          current: { hour: hour, minute: this.state.current.minute }
         });
       } else {
-        var current = _lodash2['default'].extend(this.state.current, { minute: Number(val) });
+        var minute = Number(val),
+            current = _lodash2['default'].extend(this.state.current, { minute: minute });
         this.setState({
           type: "hour",
-          minute: Number(val),
+          minute: minute,
           current: current
         });
         this.props.onSelect(current);
@@ -1422,6 +1415,7 @@ var _default = (function (_Component) {
           onToggle: this.toggle.bind(this) }),
         _lodash2['default'].range(0, 12).map(function (num) {
           return _react2['default'].createElement(Dash, { className: 'time-dash',
+            except: _this.props.except,
             onSelect: _this.onSelect.bind(_this),
             radius: _this.state.radius,
             value: num,
@@ -1481,8 +1475,7 @@ var Choice = (function (_Circle) {
     value: function render() {
       return _react2['default'].createElement(
         'div',
-        { className: this.props.className,
-          onClick: this.toggle.bind(this) },
+        { className: this.props.className, onClick: this.toggle.bind(this) },
         this.state.ampm
       );
     }
@@ -1502,11 +1495,7 @@ var Dash = (function (_Circle2) {
         angle = ratio * this.props.value,
         value = this.props.value;
 
-    if (this.props.type === 'hour') {
-      value = this.props.ampm === 'AM' ? value : value + 12;
-    } else {
-      value = value * 5;
-    }
+    value = this.props.type === 'hour' ? this.props.ampm === 'AM' ? value : value + 12 : value * 5;
 
     this.state = {
       style: {
@@ -1527,7 +1516,7 @@ var Dash = (function (_Circle2) {
           value = props.value;
 
       if (props.type === 'hour') {
-        value = props.ampm === 'AM' ? value + 12 : value;
+        value = props.ampm === 'AM' ? value : value + 12;
       } else {
         value = value * 5;
       }
@@ -1743,8 +1732,8 @@ var _default = (function (_Component) {
           width: document.body.offsetWidth * 0.8
         });
         setTimeout(function () {
-          _this5.setState({ width: document.body.offsetWidth * 0.8 }); // twice : why?
-        });
+          _this5.setState({ width: document.body.offsetWidth * 0.8 });
+        }); // twice : why?
       }
     }
   }, {

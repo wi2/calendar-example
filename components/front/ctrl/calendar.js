@@ -49,12 +49,8 @@ export default class extends Component {
   }
 
   handleResize(e) {
-    setTimeout(() => {
-      this.setState({width:e.target.innerWidth})
-    }, 50);
-    setTimeout(() => {
-      this.setState({width:e.target.innerWidth})
-    }, 100);//need twice for window resize and show inspector (why??)
+    setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 50);
+    setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 100);//need twice for window resize and show inspector (why??)
   }
 
   loadEvents() {
@@ -89,9 +85,7 @@ export default class extends Component {
         current: data,
         width: document.body.offsetWidth*0.8
       })
-      setTimeout(() => {
-        this.setState({ width: document.body.offsetWidth*0.8 }) // twice : why?
-      })
+      setTimeout(() => { this.setState({ width: document.body.offsetWidth*0.8 }) })// twice : why?
     }
   }
 

@@ -6,10 +6,7 @@ import {Vertical, Row, Cell} from './calendar-utils';
 class ViewDefault extends Component {
   constructor(props) {
     super(props)
-    this.state = {
-      width: this.props.width,
-      height: this.props.height
-    };
+    this.state = { width: this.props.width, height: this.props.height };
   }
   setDimension(width, height) {
     this.setState({width, height});
@@ -21,9 +18,9 @@ class ViewDefault extends Component {
     events[0].cell.line = 1;
 
     for (let j=0,len=events.length; j<len; j++) {
-      let collision = false;
-      let evt = events[j].cell;
-      let line = 1;
+      let collision = false
+        , evt = events[j].cell
+        , line = 1;
       while(!evt.line) {
         let evts = events.filter(a => { if (a.cell.line === line) return a; });
         for(let i=0,len=evts.length; i<len; i++) {

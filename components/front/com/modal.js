@@ -72,7 +72,7 @@ export default class extends Component {
       }, common)}
       :
       {endPicker: _.extend({
-        show: toggle ? !this.state.endPicker.show : this.state.startPicker.show,
+        show: toggle ? !this.state.endPicker.show : this.state.endPicker.show,
         view: "week"
       }, common)})
   }
@@ -125,13 +125,11 @@ export default class extends Component {
             <Row>
               <Col md="6">
                 {this.state.startPicker.show &&
-                  <DateTimePicker {...this.state.startPicker}
-                                  onSelect={this._onSelectStart.bind(this)}  />}
+                  <DateTimePicker {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
               </Col>
               <Col>
                 {this.state.endPicker.show &&
-                  <DateTimePicker {...this.state.endPicker}
-                                  onSelect={this._onSelectEnd.bind(this)}  />}
+                  <DateTimePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
               </Col>
             </Row>
           </Container>

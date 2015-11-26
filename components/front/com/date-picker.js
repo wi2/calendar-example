@@ -52,11 +52,13 @@ export default class extends Component {
   render() {
     let height = 30;
     return (
-      <div>
-        {this.state && <Info info={this.state.info}
-          onPrevious={this.onPrevious.bind(this)}
-          onNext={this.onNext.bind(this)} />}
-        {this.state && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
+      <div className="date-picker">
+        {this.state
+          && <Info info={this.state.info}
+                   onPrevious={this.onPrevious.bind(this)}
+                   onNext={this.onNext.bind(this)} />}
+        {this.state
+          && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
         {this.props.toggle
           && <Row><a onClick={this._toggleView.bind(this)} className="btn">toggle view</a></Row>}
         <Row>

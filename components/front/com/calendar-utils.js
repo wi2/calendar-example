@@ -19,13 +19,11 @@ export class Row extends Component {
 export class Cell extends Component {
   _handleClick(e) {
     e.preventDefault()
-    if (this.props.toggleSelection)
-      this.props.toggleSelection()
+    if (this.props.toggleSelection) this.props.toggleSelection()
   }
   _handleOver(e) {
     e.preventDefault()
-    if (this.props.moveSelection)
-      this.props.moveSelection()
+    if (this.props.moveSelection) this.props.moveSelection()
   }
   render() {
     return (
