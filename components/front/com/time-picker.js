@@ -20,7 +20,8 @@ export default class extends Component {
     }
   }
   toggle() {
-    this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' })
+    if (this.state.type === 'hour')
+      this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' })
   }
 
   onSelect(val) {

@@ -1367,7 +1367,7 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: 'toggle',
     value: function toggle() {
-      this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' });
+      if (this.state.type === 'hour') this.setState({ ampm: this.state.ampm === 'AM' ? 'PM' : 'AM' });
     }
   }, {
     key: 'onSelect',
