@@ -963,7 +963,6 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-
     this.state = {
       year: this.props.year,
       month: this.props.month,
@@ -979,22 +978,12 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: '_onSelectDate',
     value: function _onSelectDate(val) {
-      console.log(val);
-      this.setState({
-        type: "hour",
-        year: val.year,
-        month: val.month,
-        day: val.day
-      });
+      this.setState(_lodash2['default'].extend({ type: "hour" }, val));
     }
   }, {
     key: '_onSelectTime',
     value: function _onSelectTime(val) {
-      this.setState({
-        type: "date",
-        hour: val.hour,
-        minute: val.minute
-      });
+      this.setState(_lodash2['default'].extend({ type: "date" }, val));
       var date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute),
           current = _lodash2['default'].extend(this.state, val, { date: date });
       this.props.onSelect(current);
@@ -1005,10 +994,8 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'date-time-picker' },
-        this.state.type === "date" && _react2['default'].createElement(_datePicker2['default'], _extends({}, this.state, { view: 'month',
-          onSelect: this._onSelectDate.bind(this) })),
-        this.state.type === "hour" && _react2['default'].createElement(_timePicker2['default'], _extends({}, this.state, {
-          onSelect: this._onSelectTime.bind(this) }))
+        this.state.type === "date" && _react2['default'].createElement(_datePicker2['default'], _extends({}, this.state, { view: 'month', onSelect: this._onSelectDate.bind(this) })),
+        this.state.type === "hour" && _react2['default'].createElement(_timePicker2['default'], _extends({}, this.state, { onSelect: this._onSelectTime.bind(this) }))
       );
     }
   }]);
@@ -1391,6 +1378,22 @@ var _default = (function (_Component) {
       }
     }
   }, {
+    key: 'getDashItems',
+    value: function getDashItems() {
+      var except = this.props.except,
+          items = [],
+          disabled = undefined,
+          range = this.state.type === 'minute' || this.state.ampm === 'AM' ? { start: 0, end: 12 } : { start: 12, end: 24 };
+
+      for (var num = range.start; num < range.end; num++) {
+        disabled = false;
+        if (this.state.type === 'hour') for (var i = 0, len = except.length; i < len; i++) {
+          if (typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num) disabled = true;
+        }items.push({ num: num, disabled: disabled });
+      }
+      return items;
+    }
+  }, {
     key: 'render',
     value: function render() {
       var _this = this;
@@ -1401,23 +1404,12 @@ var _default = (function (_Component) {
         height: radius,
         marginTop: radius,
         marginLeft: radius
-      },
-          except = this.props.except,
-          disabled = undefined,
-          items = [],
-          range = this.state.type === 'minute' || this.state.ampm === 'AM' ? { start: 0, end: 12 } : { start: 12, end: 24 };
-
-      for (var num = range.start; num < range.end; num++) {
-        disabled = false;
-        if (this.state.type === 'hour') for (var i = 0, len = except.length; i < len; i++) {
-          if (typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num) disabled = true;
-        }items.push({ num: num, disabled: disabled });
-      }
+      };
 
       return _react2['default'].createElement(
         'div',
         { className: 'time-picker', style: style },
-        _react2['default'].createElement(Circle, null),
+        _react2['default'].createElement('div', { className: 'time-circle' }),
         _react2['default'].createElement(Pointer, { className: 'time-minute',
           minute: this.state.minute, type: 'minute' }),
         _react2['default'].createElement(Pointer, { className: 'time-hour',
@@ -1425,7 +1417,7 @@ var _default = (function (_Component) {
         _react2['default'].createElement(Choice, { className: 'time-circle time-circle-button',
           ampm: this.state.ampm,
           onToggle: this.toggle.bind(this) }),
-        items.map(function (item) {
+        this.getDashItems().map(function (item) {
           return _react2['default'].createElement(Dash, { className: 'time-dash',
             disabled: item.disabled,
             onSelect: _this.onSelect.bind(_this),
@@ -1443,27 +1435,8 @@ var _default = (function (_Component) {
 
 exports['default'] = _default;
 
-var Circle = (function (_Component2) {
-  _inherits(Circle, _Component2);
-
-  function Circle() {
-    _classCallCheck(this, Circle);
-
-    _get(Object.getPrototypeOf(Circle.prototype), 'constructor', this).apply(this, arguments);
-  }
-
-  _createClass(Circle, [{
-    key: 'render',
-    value: function render() {
-      return _react2['default'].createElement('div', { className: this.props.className || "time-circle" });
-    }
-  }]);
-
-  return Circle;
-})(_react.Component);
-
-var Choice = (function (_Circle) {
-  _inherits(Choice, _Circle);
+var Choice = (function (_Component2) {
+  _inherits(Choice, _Component2);
 
   function Choice(props) {
     _classCallCheck(this, Choice);
@@ -1494,28 +1467,21 @@ var Choice = (function (_Circle) {
   }]);
 
   return Choice;
-})(Circle);
+})(_react.Component);
 
-var Dash = (function (_Circle2) {
-  _inherits(Dash, _Circle2);
+var Dash = (function (_Component3) {
+  _inherits(Dash, _Component3);
 
   function Dash(props) {
     _classCallCheck(this, Dash);
 
     _get(Object.getPrototypeOf(Dash.prototype), 'constructor', this).call(this, props);
-    var ratio = 360 / 12,
-        angle = ratio * this.props.value,
-        value = this.props.value;
-
+    var value = this.props.value,
+        angle = 360 / 12 * value;
     value = this.props.type === 'hour' ? value : value * 5;
-
     this.state = {
-      style: {
-        transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + this.props.radius + 'px)'
-      },
-      numStyle: {
-        transform: 'translate(-50%, -50%) rotate(-' + angle + 'deg)'
-      },
+      style: { transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + this.props.radius + 'px)' },
+      numStyle: { transform: 'translate(-50%, -50%) rotate(-' + angle + 'deg)' },
       value: value
     };
   }
@@ -1523,13 +1489,9 @@ var Dash = (function (_Circle2) {
   _createClass(Dash, [{
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      var ratio = 360 / 12,
-          angle = ratio * props.value,
+      var angle = 360 / 12 * props.value,
           value = props.value;
-
-      if (props.type === 'minute') {
-        value = value * 5;
-      }
+      if (props.type === 'minute') value = value * 5;
       this.setState({ value: value });
     }
   }, {
@@ -1556,36 +1518,30 @@ var Dash = (function (_Circle2) {
   }]);
 
   return Dash;
-})(Circle);
+})(_react.Component);
 
-var Pointer = (function (_Circle3) {
-  _inherits(Pointer, _Circle3);
+var Pointer = (function (_Component4) {
+  _inherits(Pointer, _Component4);
 
   function Pointer(props) {
     _classCallCheck(this, Pointer);
 
     _get(Object.getPrototypeOf(Pointer.prototype), 'constructor', this).call(this, props);
-    var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
-        value = Number(this.props.minute || this.props.hour),
-        angle = ratio * value;
-    this.state = {
-      style: {
-        transform: 'translate(-50%, -50%) rotate(' + angle + 'deg)'
-      }
-    };
+    this.state = this.prepare(this.props);
   }
 
   _createClass(Pointer, [{
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
+      this.setState(this.prepare(props));
+    }
+  }, {
+    key: 'prepare',
+    value: function prepare(props) {
       var ratio = props.type === 'hour' ? 360 / 12 : 360 / 60,
           value = Number(props.minute || props.hour),
           angle = ratio * value;
-      this.setState({
-        style: {
-          transform: 'translate(-50%, -50%) rotate(' + angle + 'deg)'
-        }
-      });
+      return { style: { transform: 'translate(-50%, -50%) rotate(' + angle + 'deg)' } };
     }
   }, {
     key: 'render',
@@ -1595,7 +1551,7 @@ var Pointer = (function (_Circle3) {
   }]);
 
   return Pointer;
-})(Circle);
+})(_react.Component);
 
 module.exports = exports['default'];
 

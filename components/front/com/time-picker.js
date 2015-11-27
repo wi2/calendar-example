@@ -43,6 +43,22 @@ export default class extends Component {
       this.props.onSelect(current)
     }
   }
+  getDashItems() {
+    let except = this.props.except
+      , items = []
+      , disabled
+      , range = this.state.type === 'minute' || this.state.ampm === 'AM' ? {start: 0, end: 12} : {start: 12, end: 24}
+
+    for(let num=range.start; num<range.end; num++) {
+      disabled = false
+      if (this.state.type === 'hour')
+        for(let i=0, len=except.length; i<len; i++)
+          if(typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
+            disabled = true
+      items.push({num, disabled});
+    }
+    return items
+  }
 
   render() {
     let radius = this.state.diameter/2 + "px"
@@ -52,23 +68,10 @@ export default class extends Component {
           marginTop: radius,
           marginLeft: radius
         }
-      , except = this.props.except
-      , disabled
-      , items = []
-      , range = this.state.type === 'minute' || this.state.ampm === 'AM' ? {start: 0, end: 12} : {start: 12, end: 24}
-
-      for(let num=range.start; num<range.end; num++) {
-        disabled = false
-        if (this.state.type === 'hour')
-          for(let i=0, len=except.length; i<len; i++)
-            if(typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
-              disabled = true
-        items.push({num, disabled});
-      }
 
     return (
       <div className="time-picker" style={style}>
-        <Circle />
+        <div className="time-circle" />
 
         <Pointer className="time-minute"
                  minute={this.state.minute} type="minute" />
@@ -79,7 +82,7 @@ export default class extends Component {
                 ampm={this.state.ampm}
                 onToggle={this.toggle.bind(this)} />
 
-        {items.map(item =>
+        {this.getDashItems().map(item =>
           <Dash className="time-dash"
                 disabled={item.disabled}
                 onSelect={this.onSelect.bind(this)}
@@ -92,13 +95,8 @@ export default class extends Component {
   }
 }
 
-class Circle extends Component {
-  render() {
-    return <div className={this.props.className||"time-circle"} />
-  }
-}
 
-class Choice extends Circle {
+class Choice extends Component {
   constructor(props) {
     super(props)
     this.state = { ampm: this.props.ampm }
@@ -114,33 +112,22 @@ class Choice extends Circle {
   }
 }
 
-class Dash extends Circle {
+class Dash extends Component {
   constructor(props) {
     super(props)
-    let ratio = 360/12
-      , angle = ratio * this.props.value
-      , value = this.props.value
-
+    let value = this.props.value
+      , angle = 360/12 * value
     value = this.props.type === 'hour' ? value : value * 5
-
     this.state = {
-      style: {
-        transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${this.props.radius}px)`
-      },
-      numStyle: {
-        transform: `translate(-50%, -50%) rotate(-${angle}deg)`
-      },
+      style: { transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${this.props.radius}px)` },
+      numStyle: { transform: `translate(-50%, -50%) rotate(-${angle}deg)` },
       value
     }
   }
   componentWillReceiveProps(props) {
-    let ratio = 360/12
-      , angle = ratio * props.value
+    let angle = 360/12 * props.value
       , value = props.value
-
-    if (props.type === 'minute') {
-      value = value * 5
-    }
+    if (props.type === 'minute') value = value * 5
     this.setState({ value })
   }
 
@@ -149,10 +136,10 @@ class Dash extends Circle {
     if (this.props.onSelect && !this.props.disabled)
       this.props.onSelect(this.state.value)
   }
+
   render() {
     let className = this.props.className||"time-dash"
-    if (this.props.disabled)
-      className += " time-dash-disabled"
+    if (this.props.disabled) className += " time-dash-disabled"
     return (
       <div className={className} style={this.state.style}>
         <div onClick={this._handleClick.bind(this)} style={this.state.numStyle}>{this.state.value}</div>
@@ -161,27 +148,19 @@ class Dash extends Circle {
   }
 }
 
-class Pointer extends Circle {
+class Pointer extends Component {
   constructor(props) {
     super(props)
-    let ratio = props.type === 'hour' ? 360/12 : 360/60
-      , value = Number(this.props.minute||this.props.hour)
-      , angle = ratio * value
-    this.state = {
-      style: {
-        transform: `translate(-50%, -50%) rotate(${angle}deg)`
-      }
-    }
+    this.state = this.prepare(this.props)
   }
   componentWillReceiveProps(props) {
+    this.setState(this.prepare(props))
+  }
+  prepare(props) {
     let ratio = props.type === 'hour' ? 360/12 : 360/60
       , value = Number(props.minute||props.hour)
       , angle = ratio * value
-    this.setState({
-      style: {
-        transform: `translate(-50%, -50%) rotate(${angle}deg)`
-      }
-    })
+    return { style: { transform: `translate(-50%, -50%) rotate(${angle}deg)` } }
   }
   render() {
     return <div className={this.props.className} style={this.state.style} />

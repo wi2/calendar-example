@@ -8,7 +8,6 @@ import TimePicker from './time-picker'
 export default class extends Component {
   constructor(props) {
     super(props)
-
     this.state = {
       year: this.props.year,
       month: this.props.month,
@@ -21,20 +20,10 @@ export default class extends Component {
     }
   }
   _onSelectDate(val) {
-    console.log(val)
-    this.setState({
-      type: "hour",
-      year: val.year,
-      month: val.month,
-      day: val.day,
-    })
+    this.setState( _.extend({type: "hour"}, val) )
   }
   _onSelectTime(val) {
-    this.setState({
-      type: "date",
-      hour: val.hour,
-      minute: val.minute,
-    })
+    this.setState( _.extend({type: "date"}, val) )
     let date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute)
       , current = _.extend(this.state, val, {date})
     this.props.onSelect(current)
@@ -43,11 +32,9 @@ export default class extends Component {
     return (
       <div className="date-time-picker">
         {this.state.type === "date"
-          && <DatePicker {...this.state} view="month"
-                         onSelect={this._onSelectDate.bind(this)}  />}
+          && <DatePicker {...this.state} view="month" onSelect={this._onSelectDate.bind(this)}  />}
         {this.state.type === "hour"
-          && <TimePicker {...this.state}
-                         onSelect={this._onSelectTime.bind(this)} />}
+          && <TimePicker {...this.state} onSelect={this._onSelectTime.bind(this)} />}
       </div>
     )
   }
