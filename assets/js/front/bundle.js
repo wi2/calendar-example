@@ -1401,7 +1401,19 @@ var _default = (function (_Component) {
         height: radius,
         marginTop: radius,
         marginLeft: radius
-      };
+      },
+          except = this.props.except,
+          disabled = undefined,
+          items = [],
+          range = this.state.type === 'minute' || this.state.ampm === 'AM' ? { start: 0, end: 12 } : { start: 12, end: 24 };
+
+      for (var num = range.start; num < range.end; num++) {
+        disabled = false;
+        if (this.state.type === 'hour') for (var i = 0, len = except.length; i < len; i++) {
+          if (typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num) disabled = true;
+        }items.push({ num: num, disabled: disabled });
+      }
+
       return _react2['default'].createElement(
         'div',
         { className: 'time-picker', style: style },
@@ -1413,14 +1425,14 @@ var _default = (function (_Component) {
         _react2['default'].createElement(Choice, { className: 'time-circle time-circle-button',
           ampm: this.state.ampm,
           onToggle: this.toggle.bind(this) }),
-        _lodash2['default'].range(0, 12).map(function (num) {
+        items.map(function (item) {
           return _react2['default'].createElement(Dash, { className: 'time-dash',
-            except: _this.props.except,
+            disabled: item.disabled,
             onSelect: _this.onSelect.bind(_this),
             radius: _this.state.radius,
-            value: num,
+            value: item.num,
             ampm: _this.state.ampm,
-            type: _this.state.type, key: "dash-" + num });
+            type: _this.state.type, key: "dash-" + item.num });
         })
       );
     }
@@ -1495,7 +1507,7 @@ var Dash = (function (_Circle2) {
         angle = ratio * this.props.value,
         value = this.props.value;
 
-    value = this.props.type === 'hour' ? this.props.ampm === 'AM' ? value : value + 12 : value * 5;
+    value = this.props.type === 'hour' ? value : value * 5;
 
     this.state = {
       style: {
@@ -1515,9 +1527,7 @@ var Dash = (function (_Circle2) {
           angle = ratio * props.value,
           value = props.value;
 
-      if (props.type === 'hour') {
-        value = props.ampm === 'AM' ? value : value + 12;
-      } else {
+      if (props.type === 'minute') {
         value = value * 5;
       }
       this.setState({ value: value });
@@ -1526,14 +1536,16 @@ var Dash = (function (_Circle2) {
     key: '_handleClick',
     value: function _handleClick(e) {
       e.preventDefault();
-      if (this.props.onSelect) this.props.onSelect(this.state.value);
+      if (this.props.onSelect && !this.props.disabled) this.props.onSelect(this.state.value);
     }
   }, {
     key: 'render',
     value: function render() {
+      var className = this.props.className || "time-dash";
+      if (this.props.disabled) className += " time-dash-disabled";
       return _react2['default'].createElement(
         'div',
-        { className: this.props.className || "time-dash", style: this.state.style },
+        { className: className, style: this.state.style },
         _react2['default'].createElement(
           'div',
           { onClick: this._handleClick.bind(this), style: this.state.numStyle },

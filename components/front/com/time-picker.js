@@ -51,6 +51,20 @@ export default class extends Component {
           marginTop: radius,
           marginLeft: radius
         }
+      , except = this.props.except
+      , disabled
+      , items = []
+      , range = this.state.type === 'minute' || this.state.ampm === 'AM' ? {start: 0, end: 12} : {start: 12, end: 24}
+
+      for(let num=range.start; num<range.end; num++) {
+        disabled = false
+        if (this.state.type === 'hour')
+          for(let i=0, len=except.length; i<len; i++)
+            if(typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
+              disabled = true
+        items.push({num, disabled});
+      }
+
     return (
       <div className="time-picker" style={style}>
         <Circle />
@@ -64,14 +78,14 @@ export default class extends Component {
                 ampm={this.state.ampm}
                 onToggle={this.toggle.bind(this)} />
 
-        {_.range(0,12).map((num) =>
+        {items.map(item =>
           <Dash className="time-dash"
-                except={this.props.except}
+                disabled={item.disabled}
                 onSelect={this.onSelect.bind(this)}
                 radius={this.state.radius}
-                value={num}
+                value={item.num}
                 ampm={this.state.ampm}
-                type={this.state.type} key={"dash-"+num} />)}
+                type={this.state.type} key={"dash-"+item.num} />)}
       </div>
     )
   }
@@ -106,7 +120,7 @@ class Dash extends Circle {
       , angle = ratio * this.props.value
       , value = this.props.value
 
-    value = this.props.type === 'hour' ? (this.props.ampm === 'AM' ? value : value + 12) : value * 5
+    value = this.props.type === 'hour' ? value : value * 5
 
     this.state = {
       style: {
@@ -123,9 +137,7 @@ class Dash extends Circle {
       , angle = ratio * props.value
       , value = props.value
 
-    if (props.type === 'hour') {
-      value = (props.ampm === 'AM') ? value : value + 12
-    } else {
+    if (props.type === 'minute') {
       value = value * 5
     }
     this.setState({ value })
@@ -133,12 +145,15 @@ class Dash extends Circle {
 
   _handleClick(e) {
     e.preventDefault()
-    if (this.props.onSelect)
+    if (this.props.onSelect && !this.props.disabled)
       this.props.onSelect(this.state.value)
   }
   render() {
+    let className = this.props.className||"time-dash"
+    if (this.props.disabled)
+      className += " time-dash-disabled"
     return (
-      <div className={this.props.className||"time-dash"} style={this.state.style}>
+      <div className={className} style={this.state.style}>
         <div onClick={this._handleClick.bind(this)} style={this.state.numStyle}>{this.state.value}</div>
       </div>
     )
