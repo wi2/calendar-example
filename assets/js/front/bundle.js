@@ -1673,7 +1673,7 @@ var _default = (function (_Component) {
         if (id) io.socket.put("/event/" + id, data, function (res) {
           _this4.loadEvents();
         });else io.socket.post("/event", data, function (res) {
-          _this4.loadEvents();
+          if (res.error) console.log(res);else _this4.loadEvents();
         });
       }
       this.hideModal();

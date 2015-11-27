@@ -63,9 +63,16 @@ export default class extends Component {
   onSubmit(data, id) {
     if (global.io) {
       if (id)
-        io.socket.put("/event/"+id, data, ( res => { this.loadEvents() }))
+        io.socket.put("/event/"+id, data, ( res => {
+          this.loadEvents()
+        }))
       else
-        io.socket.post("/event", data, ( res => { this.loadEvents() }))
+        io.socket.post("/event", data, ( res => {
+          if (res.error)
+            console.log(res)
+          else
+            this.loadEvents()
+        }))
     }
     this.hideModal()
   }
