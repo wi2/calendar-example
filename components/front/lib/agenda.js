@@ -81,7 +81,7 @@ export default class {
           yearTmp += 1;
         }
 
-        cellDate = new Date(yearTmp, monthTmp , Math.abs(tmp))
+        cellDate = new Date(yearTmp, monthTmp , Math.abs(tmp), h)
         weeks.push({
           date: cellDate,
           day: tmp,
@@ -132,8 +132,12 @@ export default class {
               if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
                 ret = true;
               break;
-            default:
+            case 'object':
               if (date >= this.except[i].start && date <= this.except[i].end)
+                ret = true;
+              break;
+            default:
+              if (date.toString() === this.except[i].toString())
                 ret = true;
               break;
           }
@@ -141,7 +145,7 @@ export default class {
             ret = true;
           break;
         default:
-          if (date == this.except[i])
+          if (date.toString() === this.except[i].toString())
             ret = true;
           break;
 
