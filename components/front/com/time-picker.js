@@ -43,18 +43,26 @@ export default class extends Component {
       this.props.onSelect(current)
     }
   }
+
   getDashItems() {
     let except = this.props.except
       , items = []
       , disabled
       , range = this.state.type === 'minute' || this.state.ampm === 'AM' ? {start: 0, end: 12} : {start: 12, end: 24}
+      , dateHour = new Date(this.props.year, this.props.month, this.props.day, 0)
 
     for(let num=range.start; num<range.end; num++) {
       disabled = false
+      dateHour.setHours(num)
       if (this.state.type === 'hour')
         for(let i=0, len=except.length; i<len; i++)
-          if(typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
-            disabled = true
+          if(typeof except[i] === 'object')
+            if (typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
+              disabled = true
+            else if (typeof except[i].start === 'object' && except[i].start <= dateHour && except[i].end >= dateHour)
+              disabled = true
+            else if (except[i].toString() === dateHour.toString())
+              disabled = true
       items.push({num, disabled});
     }
     return items

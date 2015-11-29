@@ -10,10 +10,23 @@ import DateTimePicker from './date-time-picker'
 export default class extends Component {
   constructor(props) {
     super(props)
-    let now;
+    let startDate = this.props.start.date ? this.props.start.date : new Date(this.props.start)
+      , endDate = this.props.end.date ? this.props.end.date : new Date(this.props.end)
+      , startExcept = [...this.props.except]
+      , endExcept = [...this.props.except]
+
+    startExcept.push({
+      start: endDate,
+      end: new Date(new Date(endDate).setYear(2020))
+    })
+    endExcept.push({
+      start: new Date(new Date(startDate).setYear(2000)),
+      end: startDate
+    })
+
     this.state = {
-      startPicker: { show: false, date: now },
-      endPicker: { show: false, date: now }
+      startPicker: { show: false, date: startDate, except: startExcept },
+      endPicker: { show: false, date: endDate, except: endExcept }
     }
     this.createForm()
   }
@@ -62,19 +75,33 @@ export default class extends Component {
       hour: date.getHours(),
       minute: date.getMinutes(),
       name: name,
-      except: this.props.except||[]
     }
-    this.setState(
-      name === 'start' ?
-      {startPicker: _.extend({
-        show: toggle ? !this.state.startPicker.show : this.state.startPicker.show,
-        view: "month"
-      }, common)}
-      :
-      {endPicker: _.extend({
-        show: toggle ? !this.state.endPicker.show : this.state.endPicker.show,
-        view: "week"
-      }, common)})
+      , startPicker = this.state.startPicker
+      , endPicker = this.state.endPicker
+
+    if (name === "start") {
+      _.extend(startPicker, common)
+      endPicker.except = [...this.props.except]
+      endPicker.except.push({
+        start: new Date(new Date(date).setYear(2000)),
+        end: date
+      })
+
+    } else {
+      _.extend(endPicker, common)
+      startPicker.except = [...this.props.except]
+      startPicker.except.push({
+        start: date,
+        end: new Date(new Date(date).setYear(2020))
+      })
+    }
+
+    if (toggle) {
+      if (name === "start") startPicker.show = !this.state.startPicker.show
+      else if (name === "end") endPicker.show = !this.state.endPicker.show
+    }
+    this.setState({startPicker, endPicker})
+
   }
   _onSelectStart(val) {
     let form = this.mForm.getForm()

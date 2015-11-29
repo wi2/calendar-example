@@ -983,6 +983,7 @@ var _default = (function (_Component) {
   }, {
     key: '_onSelectTime',
     value: function _onSelectTime(val) {
+      console.log(val);
       this.setState(_lodash2['default'].extend({ type: "date" }, val));
       var date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute),
           current = _lodash2['default'].extend(this.state, val, { date: date });
@@ -1021,6 +1022,8 @@ var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_a
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
@@ -1054,10 +1057,23 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    var now = undefined;
+    var startDate = this.props.start.date ? this.props.start.date : new Date(this.props.start),
+        endDate = this.props.end.date ? this.props.end.date : new Date(this.props.end),
+        startExcept = [].concat(_toConsumableArray(this.props.except)),
+        endExcept = [].concat(_toConsumableArray(this.props.except));
+
+    startExcept.push({
+      start: endDate,
+      end: new Date(new Date(endDate).setYear(2020))
+    });
+    endExcept.push({
+      start: new Date(new Date(startDate).setYear(2000)),
+      end: startDate
+    });
+
     this.state = {
-      startPicker: { show: false, date: now },
-      endPicker: { show: false, date: now }
+      startPicker: { show: false, date: startDate, except: startExcept },
+      endPicker: { show: false, date: endDate, except: endExcept }
     };
     this.createForm();
   }
@@ -1115,16 +1131,31 @@ var _default = (function (_Component) {
         day: date.getDate(),
         hour: date.getHours(),
         minute: date.getMinutes(),
-        name: name,
-        except: this.props.except || []
-      };
-      this.setState(name === 'start' ? { startPicker: _lodash2['default'].extend({
-          show: toggle ? !this.state.startPicker.show : this.state.startPicker.show,
-          view: "month"
-        }, common) } : { endPicker: _lodash2['default'].extend({
-          show: toggle ? !this.state.endPicker.show : this.state.endPicker.show,
-          view: "week"
-        }, common) });
+        name: name
+      },
+          startPicker = this.state.startPicker,
+          endPicker = this.state.endPicker;
+
+      if (name === "start") {
+        _lodash2['default'].extend(startPicker, common);
+        endPicker.except = [].concat(_toConsumableArray(this.props.except));
+        endPicker.except.push({
+          start: new Date(new Date(date).setYear(2000)),
+          end: date
+        });
+      } else {
+        _lodash2['default'].extend(endPicker, common);
+        startPicker.except = [].concat(_toConsumableArray(this.props.except));
+        startPicker.except.push({
+          start: date,
+          end: new Date(new Date(date).setYear(2020))
+        });
+      }
+
+      if (toggle) {
+        if (name === "start") startPicker.show = !this.state.startPicker.show;else if (name === "end") endPicker.show = !this.state.endPicker.show;
+      }
+      this.setState({ startPicker: startPicker, endPicker: endPicker });
     }
   }, {
     key: '_onSelectStart',
@@ -1383,12 +1414,14 @@ var _default = (function (_Component) {
       var except = this.props.except,
           items = [],
           disabled = undefined,
-          range = this.state.type === 'minute' || this.state.ampm === 'AM' ? { start: 0, end: 12 } : { start: 12, end: 24 };
+          range = this.state.type === 'minute' || this.state.ampm === 'AM' ? { start: 0, end: 12 } : { start: 12, end: 24 },
+          dateHour = new Date(this.props.year, this.props.month, this.props.day, 0);
 
       for (var num = range.start; num < range.end; num++) {
         disabled = false;
+        dateHour.setHours(num);
         if (this.state.type === 'hour') for (var i = 0, len = except.length; i < len; i++) {
-          if (typeof except[i] === 'object' && typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num) disabled = true;
+          if (typeof except[i] === 'object') if (typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num) disabled = true;else if (typeof except[i].start === 'object' && except[i].start <= dateHour && except[i].end >= dateHour) disabled = true;else if (except[i].toString() === dateHour.toString()) disabled = true;
         }items.push({ num: num, disabled: disabled });
       }
       return items;
@@ -1602,7 +1635,7 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    this.except = ['Sun', 'Sat', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 11) }, { start: new Date(2015, 9, 15), end: new Date(2015, 9, 17) }, { start: 0, end: 6 }, { start: 20, end: 23 }, new Date(2015, 10, 7), new Date(2015, 10, 10)];
+    this.except = ['Sun', 'Sat', { start: new Date(2015, 9, 7), end: new Date(2015, 9, 11) }, { start: new Date(2015, 9, 15), end: new Date(2015, 9, 17) }, { start: new Date(2015, 11, 7, 14), end: new Date(2015, 11, 7, 17) }, { start: 0, end: 6 }, { start: 20, end: 23 }, new Date(2015, 10, 7), new Date(2015, 10, 10), new Date(2015, 11, 8, 16)];
     this.state = {
       show: false,
       rooms: this.props.rooms || [],
@@ -2046,7 +2079,7 @@ var _default = (function () {
             yearTmp += 1;
           }
 
-          cellDate = new Date(yearTmp, monthTmp, Math.abs(tmp));
+          cellDate = new Date(yearTmp, monthTmp, Math.abs(tmp), h);
           weeks.push({
             date: cellDate,
             day: tmp,
@@ -2098,14 +2131,17 @@ var _default = (function () {
               case 'number':
                 if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
                 break;
-              default:
+              case 'object':
                 if (date >= this.except[i].start && date <= this.except[i].end) ret = true;
+                break;
+              default:
+                if (date.toString() === this.except[i].toString()) ret = true;
                 break;
             }
             if (date.getDay() === this.days.indexOf(this.except[i])) ret = true;
             break;
           default:
-            if (date == this.except[i]) ret = true;
+            if (date.toString() === this.except[i].toString()) ret = true;
             break;
 
         }

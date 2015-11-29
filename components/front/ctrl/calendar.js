@@ -15,10 +15,13 @@ export default class extends Component {
       'Sat',
       {start: new Date(2015, 9, 7), end: new Date(2015, 9, 11)},
       {start: new Date(2015, 9, 15), end: new Date(2015, 9, 17)},
+      {start: new Date(2015, 11, 7, 14), end: new Date(2015, 11, 7, 17)},
       {start: 0, end: 6},
       {start: 20, end: 23},
       new Date(2015, 10, 7),
-      new Date(2015, 10, 10)
+      new Date(2015, 10, 10),
+      new Date(2015, 11, 8, 16)
+
     ];
     this.state = {
       show: false,
