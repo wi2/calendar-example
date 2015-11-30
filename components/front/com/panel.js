@@ -14,7 +14,7 @@ export default class extends Component {
   }
 
   render() {
-    let events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view === "week")
+    let events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month")
 
     return (
       <div className="agenda-panel">

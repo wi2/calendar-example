@@ -1400,7 +1400,7 @@ var _default = (function (_Component) {
     value: function render() {
       var _this = this;
 
-      var events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view === "week");
+      var events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month");
 
       return _react2['default'].createElement(
         'div',
