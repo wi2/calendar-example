@@ -1096,7 +1096,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -1118,9 +1118,9 @@ var _newformsBootstrap = require('newforms-bootstrap');
 
 var _newformsBootstrap2 = _interopRequireDefault(_newformsBootstrap);
 
-var _libAgenda = require('../lib/agenda');
+var _datePicker = require('./date-picker');
 
-var _libAgenda2 = _interopRequireDefault(_libAgenda);
+var _datePicker2 = _interopRequireDefault(_datePicker);
 
 var _default = (function (_Component) {
   _inherits(_default, _Component);
@@ -1129,19 +1129,17 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    console.log(this.props);
-
     this.state = {
       startPicker: { show: false },
       endPicker: { show: false }
     };
     this.createForm();
-    // this.agenda = new Agenda()
   }
 
   _createClass(_default, [{
     key: 'createForm',
     value: function createForm() {
+      var now = new Date();
       var MyForm = _newforms.Form.extend({
         room: (0, _newforms.MultipleChoiceField)({
           widget: _newforms.CheckboxSelectMultiple,
@@ -1153,20 +1151,20 @@ var _default = (function (_Component) {
           })
         }),
         limit: (0, _newforms.ChoiceField)({
-          choices: [10, 50, 100, 200, 500],
+          choices: [50, 100, 200, 500],
           initial: this.props.limit
         }),
         start: (0, _newforms.DateTimeField)({
-          required: false
+          required: false,
+          initial: new Date(now.getFullYear(), now.getMonth() - 1),
+          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         }),
-        // initial: this.props.start.date ? this.props.start.date : new Date(this.props.start),
-        // widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         end: (0, _newforms.DateTimeField)({
-          required: false
+          required: false,
+          initial: new Date(now.getFullYear(), now.getMonth() + 1),
+          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         })
       });
-      // initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
-      // widgetAttrs: { onClick: this._showDatePicker.bind(this) }
       this.form = new MyForm({
         controlled: true,
         onChange: this.onFormChange.bind(this),
@@ -1179,14 +1177,76 @@ var _default = (function (_Component) {
       this.forceUpdate();
     }
   }, {
+    key: '_onSelectStart',
+    value: function _onSelectStart(val) {
+      var form = this.mForm.getForm(),
+          start = new Date(val.date);
+      form.updateData({ start: start });
+      this.changeDate(start, "start");
+    }
+  }, {
+    key: '_onSelectEnd',
+    value: function _onSelectEnd(val) {
+      var form = this.mForm.getForm(),
+          end = new Date(val.date);
+      form.updateData({ end: end });
+      this.changeDate(end, "end");
+    }
+  }, {
+    key: '_showDatePicker',
+    value: function _showDatePicker(e) {
+      e.preventDefault();
+      this.changeDate(new Date(e.target.value), e.target.name);
+    }
+  }, {
+    key: 'changeDate',
+    value: function changeDate(date, name) {
+      var toggle = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
+
+      var common = {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        day: date.getDate(),
+        hour: date.getHours(),
+        minute: date.getMinutes(),
+        name: name
+      },
+          startPicker = this.state.startPicker,
+          endPicker = this.state.endPicker;
+
+      if (name === "start") {
+        _lodash2['default'].extend(startPicker, common);
+        endPicker.except = [];
+        endPicker.except.push({
+          start: new Date(new Date(date).setYear(2000)),
+          end: date
+        });
+      } else {
+        _lodash2['default'].extend(endPicker, common);
+        startPicker.except = [];
+        startPicker.except.push({
+          start: date,
+          end: new Date(new Date(date).setYear(2020))
+        });
+      }
+
+      if (toggle) {
+        if (name === "start") startPicker.show = !this.state.startPicker.show;else if (name === "end") endPicker.show = !this.state.endPicker.show;
+      }
+      this.setState({ startPicker: startPicker, endPicker: endPicker });
+    }
+  }, {
     key: '_onSubmit',
     value: function _onSubmit(e) {
       e.preventDefault();
       var form = this.mForm.getForm();
       if (form.validate()) {
         var cleanedData = _lodash2['default'].clone(form.cleanedData);
-        if (cleanedData.start === null) delete cleanedData.start;
-        if (cleanedData.end === null) delete cleanedData.end;
+        delete cleanedData.start;
+        delete cleanedData.end;
+        // TODO: filter by range date
+        // if (cleanedData.start === null) delete cleanedData.start;
+        // if (cleanedData.end === null) delete cleanedData.end;
         this.props.onChange(cleanedData);
       }
     }
@@ -1239,12 +1299,12 @@ var _default = (function (_Component) {
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 { md: '6' },
-                this.state.startPicker.show && _react2['default'].createElement(DateTimePicker, _extends({}, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
+                this.state.startPicker.show && _react2['default'].createElement(_datePicker2['default'], _extends({ view: 'month' }, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
               ),
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 null,
-                this.state.endPicker.show && _react2['default'].createElement(DateTimePicker, _extends({}, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
+                this.state.endPicker.show && _react2['default'].createElement(_datePicker2['default'], _extends({ view: 'month' }, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
               )
             )
           )
@@ -1259,7 +1319,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":15,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
+},{"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
