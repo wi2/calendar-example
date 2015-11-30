@@ -23,7 +23,6 @@ export default class extends Component {
     this.setState( _.extend({type: "hour"}, val) )
   }
   _onSelectTime(val) {
-    console.log(val)
     this.setState( _.extend({type: "date"}, val) )
     let date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute)
       , current = _.extend(this.state, val, {date})
