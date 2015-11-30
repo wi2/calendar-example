@@ -107,6 +107,7 @@ export default class {
         months.push(weeks)
 
     });
+
     if (currentDay) {
       let dayHour = []
       _.range(0, 24).map((hour) => {
@@ -142,7 +143,7 @@ export default class {
         case 'object':
           switch(typeof this.except[i].start) {
             case 'number':
-              if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
+              if (view !== 'month' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end)
                 ret = true;
               break;
             case 'object':

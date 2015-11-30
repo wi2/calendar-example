@@ -2235,6 +2235,7 @@ var _default = (function () {
 
         if (!row || weeks[0].day > 0) months.push(weeks);
       });
+
       if (currentDay) {
         var _ret = (function () {
           var dayHour = [];
@@ -2282,7 +2283,7 @@ var _default = (function () {
           case 'object':
             switch (typeof this.except[i].start) {
               case 'number':
-                if (view === 'week' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
+                if (view !== 'month' && date.getHours() >= this.except[i].start && date.getHours() <= this.except[i].end) ret = true;
                 break;
               case 'object':
                 if (date >= this.except[i].start && date <= this.except[i].end) ret = true;
