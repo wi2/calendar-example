@@ -6,10 +6,10 @@ import {Vertical, Row, Cell} from './calendar-utils';
 class ViewDefault extends Component {
   constructor(props) {
     super(props)
-    this.state = { width: this.props.width, height: this.props.height };
+    this.state = { width: this.props.width, height: this.props.height, cellClassName: "agenda-vertical" };
   }
-  setDimension(width, height) {
-    this.setState({width, height});
+  setDimension(width, height, cellClassName='') {
+    this.setState({width, height, cellClassName});
   }
 
   tetris(events) {
@@ -39,6 +39,19 @@ class ViewDefault extends Component {
     return events
   }
 
+  prepareRender(withHour=false) {
+    let events
+      , week = this.props.week
+    if (this.props.agenda && this.props.events) {
+      events = this.tetris(this.props.agenda.getEvents(week, this.props.events, withHour))
+    }
+    let selection = {
+      s: this.props.selectionStart.date,
+      e: this.props.selectionEnd.date
+    }
+    return {events, week, selection}
+  }
+
   toggleSelection(val) {
     this.props.toggleSelection(val)
   }
@@ -52,16 +65,15 @@ class ViewDefault extends Component {
 
 export class Week extends ViewDefault {
   componentDidMount() {
-    this.setDimension(this.props.width/7, this.props.height/24)
+    this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
   }
   componentWillReceiveProps(props) {
-    this.setDimension(this.props.width/7, this.props.height/24)
+    this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
   }
 
   style(evt) {
     let {room, cell} = evt
       , width = this.props.height/24;
-
     return {
       opacity: 0.8,
       left: evt.cell.line*12 + 'px',
@@ -74,18 +86,9 @@ export class Week extends ViewDefault {
   }
 
   render() {
-    let events
-      , week = this.props.week
-    if (this.props.agenda && this.props.events) {
-      events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true))
-    }
-    let selection = {
-      s: this.props.selectionStart.date,
-      e: this.props.selectionEnd.date
-    }
-
+    let {events, week, selection} = this.prepareRender(true)
     return (
-      <Vertical>
+      <Vertical className={this.state.cellClassName}>
         {events && events.map((evt, i) => <div className="event"
                                             style={this.style(evt)}
                                             onClick={this.onSelect.bind(this, evt)}
@@ -113,20 +116,17 @@ export class Week extends ViewDefault {
   }
 }
 
-
-
 export class Day extends Week {
   componentDidMount() {
-    this.setDimension(this.props.width, this.props.height/24)
+    this.setDimension(this.props.width, this.props.height/24, "agenda-vertical agenda-vertical-row")
   }
   componentWillReceiveProps(props) {
-    this.setDimension(this.props.width, this.props.height/24)
+    this.setDimension(this.props.width, this.props.height/24, "agenda-vertical agenda-vertical-row")
   }
 
   style(evt) {
     let {room, cell} = evt
       , width = this.props.height/24;
-
     return {
       opacity: 0.8,
       top: `${cell.start * width}px`,
@@ -135,45 +135,6 @@ export class Day extends Week {
       width: '120px',
       background: room.color||'grey'
     }
-  }
-
-  render() {
-    let events
-      , week = this.props.week
-    if (this.props.agenda && this.props.events) {
-      events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true))
-    }
-    let selection = {
-      s: this.props.selectionStart.date,
-      e: this.props.selectionEnd.date
-    }
-
-    return (
-      <Vertical className="agenda-vertical agenda-vertical-row">
-        {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(evt)}
-                                            onClick={this.onSelect.bind(this, evt)}
-                                            key={`event-${i}`}>{evt.title}</div> )}
-        {week.map((item) => {
-          let cond = (item.date >= selection.s && item.date <= selection.e)
-
-          let props = {
-            value: item.hour,
-            className: cond ? "col-day col-day-active" : "col-day",
-            toggleSelection: this.toggleSelection.bind(this, item),
-            moveSelection: this.moveSelection.bind(this, item),
-            disabled: item.disabled,
-            key: `hour-${item.hour}-${item.row}-${item.col}`
-          }
-          if (item.disabled) {
-            delete props.toggleSelection;
-            delete props.moveSelection;
-            props.className = "col-day col-day-disabled";
-          }
-          return <Cell {...props} {...this.state} />
-        })}
-      </Vertical>
-    )
   }
 }
 
@@ -200,13 +161,8 @@ export class Month extends ViewDefault {
   }
 
   render() {
-    let that = this
-      , week = this.props.week
-      , events = this.tetris(this.props.agenda.getEvents(week, this.props.events))
-      , selection = {
-        s: this.props.selectionStart.date,
-        e: this.props.selectionEnd.date
-      }
+    let {events, week, selection} = this.prepareRender()
+      , that = this
 
     return (
       <Row>

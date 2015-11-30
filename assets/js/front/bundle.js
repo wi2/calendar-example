@@ -331,7 +331,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -352,13 +352,15 @@ var ViewDefault = (function (_Component) {
     _classCallCheck(this, ViewDefault);
 
     _get(Object.getPrototypeOf(ViewDefault.prototype), 'constructor', this).call(this, props);
-    this.state = { width: this.props.width, height: this.props.height };
+    this.state = { width: this.props.width, height: this.props.height, cellClassName: "agenda-vertical" };
   }
 
   _createClass(ViewDefault, [{
     key: 'setDimension',
     value: function setDimension(width, height) {
-      this.setState({ width: width, height: height });
+      var cellClassName = arguments.length <= 2 || arguments[2] === undefined ? '' : arguments[2];
+
+      this.setState({ width: width, height: height, cellClassName: cellClassName });
     }
   }, {
     key: 'tetris',
@@ -393,6 +395,22 @@ var ViewDefault = (function (_Component) {
       return events;
     }
   }, {
+    key: 'prepareRender',
+    value: function prepareRender() {
+      var withHour = arguments.length <= 0 || arguments[0] === undefined ? false : arguments[0];
+
+      var events = undefined,
+          week = this.props.week;
+      if (this.props.agenda && this.props.events) {
+        events = this.tetris(this.props.agenda.getEvents(week, this.props.events, withHour));
+      }
+      var selection = {
+        s: this.props.selectionStart.date,
+        e: this.props.selectionEnd.date
+      };
+      return { events: events, week: week, selection: selection };
+    }
+  }, {
     key: 'toggleSelection',
     value: function toggleSelection(val) {
       this.props.toggleSelection(val);
@@ -424,12 +442,12 @@ var Week = (function (_ViewDefault) {
   _createClass(Week, [{
     key: 'componentDidMount',
     value: function componentDidMount() {
-      this.setDimension(this.props.width / 7, this.props.height / 24);
+      this.setDimension(this.props.width / 7, this.props.height / 24, "agenda-vertical");
     }
   }, {
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      this.setDimension(this.props.width / 7, this.props.height / 24);
+      this.setDimension(this.props.width / 7, this.props.height / 24, "agenda-vertical");
     }
   }, {
     key: 'style',
@@ -437,7 +455,6 @@ var Week = (function (_ViewDefault) {
       var room = evt.room;
       var cell = evt.cell;
       var width = this.props.height / 24;
-
       return {
         opacity: 0.8,
         left: evt.cell.line * 12 + 'px',
@@ -453,19 +470,15 @@ var Week = (function (_ViewDefault) {
     value: function render() {
       var _this = this;
 
-      var events = undefined,
-          week = this.props.week;
-      if (this.props.agenda && this.props.events) {
-        events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true));
-      }
-      var selection = {
-        s: this.props.selectionStart.date,
-        e: this.props.selectionEnd.date
-      };
+      var _prepareRender = this.prepareRender(true);
+
+      var events = _prepareRender.events;
+      var week = _prepareRender.week;
+      var selection = _prepareRender.selection;
 
       return _react2['default'].createElement(
         _calendarUtils.Vertical,
-        null,
+        { className: this.state.cellClassName },
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
             'div',
@@ -515,12 +528,12 @@ var Day = (function (_Week) {
   _createClass(Day, [{
     key: 'componentDidMount',
     value: function componentDidMount() {
-      this.setDimension(this.props.width, this.props.height / 24);
+      this.setDimension(this.props.width, this.props.height / 24, "agenda-vertical agenda-vertical-row");
     }
   }, {
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      this.setDimension(this.props.width, this.props.height / 24);
+      this.setDimension(this.props.width, this.props.height / 24, "agenda-vertical agenda-vertical-row");
     }
   }, {
     key: 'style',
@@ -528,7 +541,6 @@ var Day = (function (_Week) {
       var room = evt.room;
       var cell = evt.cell;
       var width = this.props.height / 24;
-
       return {
         opacity: 0.8,
         top: cell.start * width + 'px',
@@ -537,54 +549,6 @@ var Day = (function (_Week) {
         width: '120px',
         background: room.color || 'grey'
       };
-    }
-  }, {
-    key: 'render',
-    value: function render() {
-      var _this2 = this;
-
-      var events = undefined,
-          week = this.props.week;
-      if (this.props.agenda && this.props.events) {
-        events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true));
-      }
-      var selection = {
-        s: this.props.selectionStart.date,
-        e: this.props.selectionEnd.date
-      };
-
-      return _react2['default'].createElement(
-        _calendarUtils.Vertical,
-        { className: 'agenda-vertical agenda-vertical-row' },
-        events && events.map(function (evt, i) {
-          return _react2['default'].createElement(
-            'div',
-            { className: 'event',
-              style: _this2.style(evt),
-              onClick: _this2.onSelect.bind(_this2, evt),
-              key: 'event-' + i },
-            evt.title
-          );
-        }),
-        week.map(function (item) {
-          var cond = item.date >= selection.s && item.date <= selection.e;
-
-          var props = {
-            value: item.hour,
-            className: cond ? "col-day col-day-active" : "col-day",
-            toggleSelection: _this2.toggleSelection.bind(_this2, item),
-            moveSelection: _this2.moveSelection.bind(_this2, item),
-            disabled: item.disabled,
-            key: 'hour-' + item.hour + '-' + item.row + '-' + item.col
-          };
-          if (item.disabled) {
-            delete props.toggleSelection;
-            delete props.moveSelection;
-            props.className = "col-day col-day-disabled";
-          }
-          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
-        })
-      );
     }
   }]);
 
@@ -630,15 +594,14 @@ var Month = (function (_ViewDefault2) {
   }, {
     key: 'render',
     value: function render() {
-      var _this3 = this;
+      var _this2 = this;
 
-      var that = this,
-          week = this.props.week,
-          events = this.tetris(this.props.agenda.getEvents(week, this.props.events)),
-          selection = {
-        s: this.props.selectionStart.date,
-        e: this.props.selectionEnd.date
-      };
+      var _prepareRender2 = this.prepareRender();
+
+      var events = _prepareRender2.events;
+      var week = _prepareRender2.week;
+      var selection = _prepareRender2.selection;
+      var that = this;
 
       return _react2['default'].createElement(
         _calendarUtils.Row,
@@ -647,8 +610,8 @@ var Month = (function (_ViewDefault2) {
           return _react2['default'].createElement(
             'div',
             { className: 'event',
-              style: _this3.style(evt),
-              onClick: _this3.onSelect.bind(_this3, evt),
+              style: _this2.style(evt),
+              onClick: _this2.onSelect.bind(_this2, evt),
               key: 'event-' + i },
             evt.title
           );
@@ -658,8 +621,8 @@ var Month = (function (_ViewDefault2) {
               props = {
             value: item.day,
             className: cond ? "col col-active" : "col",
-            toggleSelection: that.toggleSelection.bind(_this3, item),
-            moveSelection: that.moveSelection.bind(_this3, item),
+            toggleSelection: that.toggleSelection.bind(_this2, item),
+            moveSelection: that.moveSelection.bind(_this2, item),
             disabled: item.disabled,
             key: 'day-' + item.day + '-' + item.col + '-' + item.row
           };
@@ -668,7 +631,7 @@ var Month = (function (_ViewDefault2) {
             delete props.moveSelection;
             props.className = "col-day col-day-disabled";
           }
-          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this3.state));
+          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
         })
       );
     }
