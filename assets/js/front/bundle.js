@@ -1092,11 +1092,9 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -1129,17 +1127,13 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    this.state = {
-      startPicker: { show: false },
-      endPicker: { show: false }
-    };
+    this.state = {};
     this.createForm();
   }
 
   _createClass(_default, [{
     key: 'createForm',
     value: function createForm() {
-      var now = new Date();
       var MyForm = _newforms.Form.extend({
         room: (0, _newforms.MultipleChoiceField)({
           widget: _newforms.CheckboxSelectMultiple,
@@ -1151,18 +1145,8 @@ var _default = (function (_Component) {
           })
         }),
         limit: (0, _newforms.ChoiceField)({
-          choices: [50, 100, 200, 500],
+          choices: [5, 10, 50, 100, 200, 500],
           initial: this.props.limit
-        }),
-        start: (0, _newforms.DateTimeField)({
-          required: false,
-          initial: new Date(now.getFullYear(), now.getMonth() - 1),
-          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
-        }),
-        end: (0, _newforms.DateTimeField)({
-          required: false,
-          initial: new Date(now.getFullYear(), now.getMonth() + 1),
-          widgetAttrs: { onClick: this._showDatePicker.bind(this) }
         })
       });
       this.form = new MyForm({
@@ -1177,76 +1161,12 @@ var _default = (function (_Component) {
       this.forceUpdate();
     }
   }, {
-    key: '_onSelectStart',
-    value: function _onSelectStart(val) {
-      var form = this.mForm.getForm(),
-          start = new Date(val.date);
-      form.updateData({ start: start });
-      this.changeDate(start, "start");
-    }
-  }, {
-    key: '_onSelectEnd',
-    value: function _onSelectEnd(val) {
-      var form = this.mForm.getForm(),
-          end = new Date(val.date);
-      form.updateData({ end: end });
-      this.changeDate(end, "end");
-    }
-  }, {
-    key: '_showDatePicker',
-    value: function _showDatePicker(e) {
-      e.preventDefault();
-      this.changeDate(new Date(e.target.value), e.target.name);
-    }
-  }, {
-    key: 'changeDate',
-    value: function changeDate(date, name) {
-      var toggle = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
-
-      var common = {
-        year: date.getFullYear(),
-        month: date.getMonth(),
-        day: date.getDate(),
-        hour: date.getHours(),
-        minute: date.getMinutes(),
-        name: name
-      },
-          startPicker = this.state.startPicker,
-          endPicker = this.state.endPicker;
-
-      if (name === "start") {
-        _lodash2['default'].extend(startPicker, common);
-        endPicker.except = [];
-        endPicker.except.push({
-          start: new Date(new Date(date).setYear(2000)),
-          end: date
-        });
-      } else {
-        _lodash2['default'].extend(endPicker, common);
-        startPicker.except = [];
-        startPicker.except.push({
-          start: date,
-          end: new Date(new Date(date).setYear(2020))
-        });
-      }
-
-      if (toggle) {
-        if (name === "start") startPicker.show = !this.state.startPicker.show;else if (name === "end") endPicker.show = !this.state.endPicker.show;
-      }
-      this.setState({ startPicker: startPicker, endPicker: endPicker });
-    }
-  }, {
     key: '_onSubmit',
     value: function _onSubmit(e) {
       e.preventDefault();
       var form = this.mForm.getForm();
       if (form.validate()) {
         var cleanedData = _lodash2['default'].clone(form.cleanedData);
-        delete cleanedData.start;
-        delete cleanedData.end;
-        // TODO: filter by range date
-        // if (cleanedData.start === null) delete cleanedData.start;
-        // if (cleanedData.end === null) delete cleanedData.end;
         this.props.onChange(cleanedData);
       }
     }
@@ -1286,26 +1206,6 @@ var _default = (function (_Component) {
               null,
               _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
               _react2['default'].createElement(_newformsBootstrap.Field, { name: 'limit' })
-            ),
-            _react2['default'].createElement(
-              _newformsBootstrap.Row,
-              null,
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
-            ),
-            _react2['default'].createElement(
-              _newformsBootstrap.Row,
-              null,
-              _react2['default'].createElement(
-                _newformsBootstrap.Col,
-                { md: '6' },
-                this.state.startPicker.show && _react2['default'].createElement(_datePicker2['default'], _extends({ view: 'month' }, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
-              ),
-              _react2['default'].createElement(
-                _newformsBootstrap.Col,
-                null,
-                this.state.endPicker.show && _react2['default'].createElement(_datePicker2['default'], _extends({ view: 'month' }, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
-              )
             )
           )
         )
@@ -1962,6 +1862,10 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 var _reactDom = require('react-dom');
 
 var _comCalendar = require('../com/calendar');
@@ -1996,7 +1900,8 @@ var _default = (function (_Component) {
       width: 1000,
       height: 700,
       filters: {
-        limit: 100
+        limit: 100,
+        where: {}
       }
     };
     this.timeout = null;
@@ -2050,7 +1955,20 @@ var _default = (function (_Component) {
     value: function loadEvents() {
       var _this3 = this;
 
-      if (global.io) io.socket.get('/event', this.state.filters, function (res) {
+      var months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"],
+          currentMonth = months.indexOf(this.props.params.month),
+          dateStart = new Date(this.props.params.year, currentMonth),
+          dateEnd = new Date(this.props.params.year, currentMonth + 1),
+          filters = {
+        where: {
+          room: this.state.filters.room,
+          or: [{ start: { '>=': dateStart }, start: { '<=': dateEnd } }, { end: { '>=': dateStart }, end: { '<=': dateEnd } }, { start: { '<=': dateStart }, end: { '>=': dateEnd }
+          }]
+        },
+        limit: this.state.filters.limit
+      };
+
+      if (global.io) io.socket.get('/event', filters, function (res) {
         _this3.setState({ events: res });
       });
     }
@@ -2157,7 +2075,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../com/calendar":4,"../com/filter":7,"../com/modal":8,"../com/panel":9,"react":"react","react-dom":"react-dom"}],12:[function(require,module,exports){
+},{"../com/calendar":4,"../com/filter":7,"../com/modal":8,"../com/panel":9,"lodash":"lodash","react":"react","react-dom":"react-dom"}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

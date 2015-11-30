@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import _ from 'lodash';
 import {findDOMNode} from 'react-dom';
 import Calendar from '../com/calendar';
 import Modal from '../com/modal';
@@ -30,7 +31,8 @@ export default class extends Component {
       width: 1000,
       height: 700,
       filters: {
-        limit: 100
+        limit: 100,
+        where: {}
       }
     }
     this.timeout = null;
@@ -63,8 +65,24 @@ export default class extends Component {
     setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 100);//need twice for window resize and show inspector (why??)
   }
   loadEvents() {
+    let months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"]
+      , currentMonth = months.indexOf(this.props.params.month)
+      , dateStart = new Date(this.props.params.year, currentMonth)
+      , dateEnd = new Date(this.props.params.year, currentMonth + 1)
+      , filters = {
+        where: {
+          room: this.state.filters.room,
+          or: [
+            { start: { '>=': dateStart }, start: { '<=': dateEnd } },
+            { end: { '>=': dateStart }, end: { '<=': dateEnd } },
+            { start: { '<=': dateStart }, end: { '>=': dateEnd }
+          }]
+        },
+        limit: this.state.filters.limit
+      }
+
     if (global.io)
-      io.socket.get('/event', this.state.filters, res => { this.setState({events: res}) });
+      io.socket.get('/event', filters, res => { this.setState({events: res}) });
   }
   hideModal() {
     this.setState({ show: false, selection: null })
