@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import _ from 'lodash';
 import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Row, Info} from './calendar-utils'
@@ -57,6 +58,15 @@ export default class extends Component {
           end: -1,
           startInit: -1
         })
+        if (this.state.view === "month") {
+          selection = {
+            start: _.clone(selection.start),
+            end: _.clone(selection.end),
+          }
+          selection.end.date = new Date(selection.end.date)
+          selection.end.date.setHours(23)
+          selection.end.hour = 23
+        }
         this.props.onSelect(selection, this.state.editor)
       } else {
         this.setState({
@@ -66,6 +76,7 @@ export default class extends Component {
         })
       }
     } else {
+      val.view = this.state.view
       this.props.onSelect(val, this.state.editor)
     }
   }
@@ -82,8 +93,8 @@ export default class extends Component {
   getSmartSelection(b) {
     let a = this.state.startInit
     return {
-      start: a.date <= b.date ? a : b,
-      end: a.date >= b.date ? a : b
+      start: a.date < b.date ? a : b,
+      end: a.date < b.date ? b : a
     }
   }
 
