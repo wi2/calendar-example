@@ -4,7 +4,6 @@ import React, {Component} from 'react';
 import _ from 'lodash'
 import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
-import Agenda from '../lib/agenda'
 import DateTimePicker from './date-time-picker'
 
 export default class extends Component {
@@ -123,6 +122,11 @@ export default class extends Component {
     if(form.validate())
       this.props.onSubmit(form.cleanedData, this.props.id)
   }
+   _onDelete(e) {
+    e.preventDefault();
+    let form = this.mForm.getForm()
+    this.props.onDelete(this.props.id)
+  }
   _onCancel(e) {
     e.preventDefault();
     this.props.onCancel()
@@ -137,6 +141,7 @@ export default class extends Component {
             <p className="text-right">
               <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
               <button className="btn btn-default" onClick={this._onCancel.bind(this)}>Cancel</button>
+              <button className="btn btn-default" onClick={this._onDelete.bind(this)}>Delete</button>
             </p>
             <Row>
               <Field name="title" md="8"/>

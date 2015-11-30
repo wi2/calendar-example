@@ -66,17 +66,19 @@ export default class extends Component {
   onSubmit(data, id) {
     if (global.io) {
       if (id)
-        io.socket.put("/event/"+id, data, ( res => {
-          this.loadEvents()
-        }))
+        io.socket.put("/event/"+id, data, ( res => this.loadEvents() ))
       else
         io.socket.post("/event", data, ( res => {
           if (res.error)
-            console.log(res)
+            console.log("Error", res)
           else
             this.loadEvents()
         }))
     }
+    this.hideModal()
+  }
+  onDelete(id) {
+    io.socket.delete("/event/"+id, ( res => this.loadEvents() ))
     this.hideModal()
   }
   onCancel() {
@@ -114,6 +116,7 @@ export default class extends Component {
                   rooms={this.state.rooms}
                   onSubmit={this.onSubmit.bind(this)}
                   onCancel={this.onCancel.bind(this)}
+                  onDelete={this.onDelete.bind(this)}
                   except={this.except}
                   {...this.props.params} />}
 
