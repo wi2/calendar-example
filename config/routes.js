@@ -44,6 +44,10 @@ module.exports.routes = {
     controller: 'HomeController',
     action: 'home'
   },
+  '/day/:year/:month/:day': {
+    controller: 'HomeController',
+    action: 'home'
+  },
 
   '/admin': {
     controller: 'AdminController',

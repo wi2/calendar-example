@@ -6,7 +6,7 @@ import Agenda from '../lib/agenda'
 
 export class Vertical extends Component {
   render() {
-    return <div className="agenda-vertical">{this.props.children}</div>
+    return <div className={this.props.className||"agenda-vertical"}>{this.props.children}</div>
   }
 }
 
@@ -39,7 +39,7 @@ export class Cell extends Component {
 export class Navigation extends Component {
   render() {
     let store = this.props.store
-      , {prevLink, nextLink, todayLink, monthLink, weekLink} = this.props.agenda.getLink(this.props.view)
+      , {prevLink, nextLink, todayLink, dayLink, monthLink, weekLink} = this.props.agenda.getLink(this.props.view)
       , className = this.props.editor ? "btn btn-success" : "btn"
 
     return (
@@ -52,6 +52,8 @@ export class Navigation extends Component {
           <div className="agenda-navigation-view">
             <Link to={monthLink}>Month</Link>
             <Link to={weekLink}>Week</Link>
+            <Link to={dayLink}>Day</Link>
+
           </div>
         </Row>
         <Row className="agenda-navigation">
@@ -70,8 +72,12 @@ export class Header extends Component {
       , view = this.props.view
     return (
       <Row>
-        {days.map((day, i) => <Cell value={day} className="col-label" key={`${day}-${i}`} />)}
-        {view === 'week' && this.props.store.map((date, i) => {
+        {view === 'day'
+          && <Cell value={this.props.day} className="col-label" />}
+        {view !== 'day'
+          && days.map((day, i) => <Cell value={day} className="col-label" key={`${day}-${i}`} />)}
+        {view === 'week'
+          && this.props.store.map((date, i) => {
           let props = {
             value: `${date[0].date.getDate()}/${date[0].date.getMonth()+1}`,
             className: "col-label",

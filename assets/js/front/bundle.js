@@ -55,7 +55,7 @@ var Vertical = (function (_Component) {
     value: function render() {
       return _react2['default'].createElement(
         'div',
-        { className: 'agenda-vertical' },
+        { className: this.props.className || "agenda-vertical" },
         this.props.children
       );
     }
@@ -153,6 +153,7 @@ var Navigation = (function (_Component4) {
       var prevLink = _props$agenda$getLink.prevLink;
       var nextLink = _props$agenda$getLink.nextLink;
       var todayLink = _props$agenda$getLink.todayLink;
+      var dayLink = _props$agenda$getLink.dayLink;
       var monthLink = _props$agenda$getLink.monthLink;
       var weekLink = _props$agenda$getLink.weekLink;
       var className = this.props.editor ? "btn btn-success" : "btn";
@@ -185,6 +186,11 @@ var Navigation = (function (_Component4) {
               _reactRouter.Link,
               { to: weekLink },
               'Week'
+            ),
+            _react2['default'].createElement(
+              _reactRouter.Link,
+              { to: dayLink },
+              'Day'
             )
           )
         ),
@@ -233,7 +239,8 @@ var Header = (function (_Component5) {
       return _react2['default'].createElement(
         Row,
         null,
-        days.map(function (day, i) {
+        view === 'day' && _react2['default'].createElement(Cell, { value: this.props.day, className: 'col-label' }),
+        view !== 'day' && days.map(function (day, i) {
           return _react2['default'].createElement(Cell, { value: day, className: 'col-label', key: day + '-' + i });
         }),
         view === 'week' && this.props.store.map(function (date, i) {
@@ -496,6 +503,96 @@ var Week = (function (_ViewDefault) {
 
 exports.Week = Week;
 
+var Day = (function (_Week) {
+  _inherits(Day, _Week);
+
+  function Day() {
+    _classCallCheck(this, Day);
+
+    _get(Object.getPrototypeOf(Day.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(Day, [{
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      this.setDimension(this.props.width, this.props.height / 24);
+    }
+  }, {
+    key: 'componentWillReceiveProps',
+    value: function componentWillReceiveProps(props) {
+      this.setDimension(this.props.width, this.props.height / 24);
+    }
+  }, {
+    key: 'style',
+    value: function style(evt) {
+      var room = evt.room;
+      var cell = evt.cell;
+      var width = this.props.height / 24;
+
+      return {
+        opacity: 0.8,
+        top: cell.start * width + 'px',
+        left: evt.cell.line * 120 + 'px',
+        height: (cell.end - cell.start + 1) * width + 'px',
+        width: '120px',
+        background: room.color || 'grey'
+      };
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this2 = this;
+
+      var events = undefined,
+          week = this.props.week;
+      if (this.props.agenda && this.props.events) {
+        events = this.tetris(this.props.agenda.getEvents(week, this.props.events, true));
+      }
+      var selection = {
+        s: this.props.selectionStart.date,
+        e: this.props.selectionEnd.date
+      };
+
+      return _react2['default'].createElement(
+        _calendarUtils.Vertical,
+        { className: 'agenda-vertical agenda-vertical-row' },
+        events && events.map(function (evt, i) {
+          return _react2['default'].createElement(
+            'div',
+            { className: 'event',
+              style: _this2.style(evt),
+              onClick: _this2.onSelect.bind(_this2, evt),
+              key: 'event-' + i },
+            evt.title
+          );
+        }),
+        week.map(function (item) {
+          var cond = item.date >= selection.s && item.date <= selection.e;
+
+          var props = {
+            value: item.hour,
+            className: cond ? "col-day col-day-active" : "col-day",
+            toggleSelection: _this2.toggleSelection.bind(_this2, item),
+            moveSelection: _this2.moveSelection.bind(_this2, item),
+            disabled: item.disabled,
+            key: 'hour-' + item.hour + '-' + item.row + '-' + item.col
+          };
+          if (item.disabled) {
+            delete props.toggleSelection;
+            delete props.moveSelection;
+            props.className = "col-day col-day-disabled";
+          }
+          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
+        })
+      );
+    }
+  }]);
+
+  return Day;
+})(Week);
+
+exports.Day = Day;
+
 var Month = (function (_ViewDefault2) {
   _inherits(Month, _ViewDefault2);
 
@@ -533,7 +630,7 @@ var Month = (function (_ViewDefault2) {
   }, {
     key: 'render',
     value: function render() {
-      var _this2 = this;
+      var _this3 = this;
 
       var that = this,
           week = this.props.week,
@@ -550,8 +647,8 @@ var Month = (function (_ViewDefault2) {
           return _react2['default'].createElement(
             'div',
             { className: 'event',
-              style: _this2.style(evt),
-              onClick: _this2.onSelect.bind(_this2, evt),
+              style: _this3.style(evt),
+              onClick: _this3.onSelect.bind(_this3, evt),
               key: 'event-' + i },
             evt.title
           );
@@ -561,8 +658,8 @@ var Month = (function (_ViewDefault2) {
               props = {
             value: item.day,
             className: cond ? "col col-active" : "col",
-            toggleSelection: that.toggleSelection.bind(_this2, item),
-            moveSelection: that.moveSelection.bind(_this2, item),
+            toggleSelection: that.toggleSelection.bind(_this3, item),
+            moveSelection: that.moveSelection.bind(_this3, item),
             disabled: item.disabled,
             key: 'day-' + item.day + '-' + item.col + '-' + item.row
           };
@@ -571,7 +668,7 @@ var Month = (function (_ViewDefault2) {
             delete props.moveSelection;
             props.className = "col-day col-day-disabled";
           }
-          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
+          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this3.state));
         })
       );
     }
@@ -757,6 +854,11 @@ var _default = (function (_Component) {
               agenda: _this.agenda, key: 'row-' + j }));
           })
         ),
+        view === 'day' && _react2['default'].createElement(_calendarView.Day, _extends({}, props, {
+          week: store,
+          height: this.props.height,
+          width: this.props.width,
+          agenda: this.agenda })),
         view === 'month' && store.map(function (week, j) {
           return _react2['default'].createElement(_calendarView.Month, _extends({}, props, {
             week: week,
@@ -2126,7 +2228,9 @@ var _default = (function () {
       var weeks;
       var day;
       var tmp;
+      var commonCell;
       var currentWeek;
+      var currentDay;
       var cellDate;
 
       _lodash2["default"].each(rows, function (row) {
@@ -2153,24 +2257,37 @@ var _default = (function () {
           }
 
           cellDate = new Date(yearTmp, monthTmp, Math.abs(tmp), h);
-          weeks.push({
+          commonCell = {
             date: cellDate,
             day: tmp,
             week: cellDate.getWeek(),
             month: cellDate.getMonth(),
             year: cellDate.getFullYear(),
-            col: col,
-            row: row,
             disabled: _this3.checkExcept(cellDate, view)
-          });
+          };
+          weeks.push(_lodash2["default"].extend({ col: col, row: row }, commonCell));
+          if (view === 'day' && cellDate.getWeek() === date.getWeek() && cellDate.getDate() === date.getDate() && !currentDay) currentDay = commonCell;
         });
         if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek) currentWeek = weeks;
 
         if (!row || weeks[0].day > 0) months.push(weeks);
       });
-
-      if (currentWeek) {
+      if (currentDay) {
         var _ret = (function () {
+          var dayHour = [];
+          _lodash2["default"].range(0, 24).map(function (hour) {
+            var date = new Date(currentDay.year, currentDay.month, Math.abs(currentDay.day), hour),
+                check = _this3.checkExcept(date, view);
+            dayHour.push(_lodash2["default"].assign({}, currentDay, { hour: hour }, { col: hour }, { date: date }, { disabled: check }));
+          });
+          return {
+            v: dayHour
+          };
+        })();
+
+        if (typeof _ret === "object") return _ret.v;
+      } else if (currentWeek) {
+        var _ret2 = (function () {
           var weekHour = [];
           _lodash2["default"].each(currentWeek, function (item) {
             var dayHour = [];
@@ -2186,7 +2303,7 @@ var _default = (function () {
           };
         })();
 
-        if (typeof _ret === "object") return _ret.v;
+        if (typeof _ret2 === "object") return _ret2.v;
       }
       return months;
     }
@@ -2268,14 +2385,15 @@ var _default = (function () {
       var nextLink = "/" + view + "/" + next.y + "/" + next.m;
       var todayLink = "/" + view + "/" + today.y + "/" + today.m;
       var monthLink = "/month/" + current.y + "/" + current.m;
-      var weekLink = "/week/" + current.y + "/" + current.m + "/2";
+      var weekLink = "/week/" + current.y + "/" + current.m + "/15";
+      var dayLink = "/day/" + current.y + "/" + current.m + "/15";
 
-      if (view === 'week') {
+      if (view === 'week' || view === 'day') {
         prevLink += "/" + previous.d;
         nextLink += "/" + next.d;
         todayLink += "/" + today.d;
       }
-      return { prevLink: prevLink, nextLink: nextLink, todayLink: todayLink, monthLink: monthLink, weekLink: weekLink };
+      return { prevLink: prevLink, nextLink: nextLink, todayLink: todayLink, dayLink: dayLink, monthLink: monthLink, weekLink: weekLink };
     }
   }, {
     key: "getLinkHelper",
@@ -2286,9 +2404,9 @@ var _default = (function () {
           h = this.date.h,
           mm = this.date.mm;
 
-      if (view === 'week') {
-        var nt = new Date(y, m, d + 7),
-            pv = new Date(y, m, d - 7);
+      if (view === 'week' || view === 'day') {
+        var nt = new Date(y, m, d + (view === 'week' ? 7 : 1)),
+            pv = new Date(y, m, d - (view === 'week' ? 7 : 1));
 
         return {
           next: this.linkHelper(nt.getFullYear(), nt.getMonth(), nt.getDate()),

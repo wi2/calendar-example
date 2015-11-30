@@ -5,7 +5,7 @@ import _ from 'lodash';
 import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Row, Info} from './calendar-utils'
-import {Week, Month} from './calendar-view'
+import {Day, Week, Month} from './calendar-view'
 
 
 export default class extends Component {
@@ -133,6 +133,12 @@ export default class extends Component {
                       width={this.props.width}
                       agenda={this.agenda} key={`row-${j}`} />)}
              </Row>}
+        {view === 'day'
+          && <Day {...props}
+                    week={store}
+                    height={this.props.height}
+                    width={this.props.width}
+                    agenda={this.agenda} />}
         {view === 'month'
           && store.map((week, j) =>
             <Month  {...props}

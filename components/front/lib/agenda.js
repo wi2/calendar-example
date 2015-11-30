@@ -56,7 +56,9 @@ export default class {
       , weeks
       , day
       , tmp
+      , commonCell
       , currentWeek
+      , currentDay
       , cellDate
 
     _.each(rows, (row) => {
@@ -86,17 +88,17 @@ export default class {
         }
 
         cellDate = new Date(yearTmp, monthTmp , Math.abs(tmp), h)
-        weeks.push({
+        commonCell = {
           date: cellDate,
           day: tmp,
           week: cellDate.getWeek(),
           month: cellDate.getMonth(),
           year: cellDate.getFullYear(),
-          col: col,
-          row: row,
           disabled: this.checkExcept(cellDate, view)
-        })
-
+        }
+        weeks.push(_.extend({col, row}, commonCell))
+        if (view === 'day' && cellDate.getWeek() === date.getWeek() && cellDate.getDate() === date.getDate() && !currentDay)
+          currentDay = commonCell
       });
       if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek)
         currentWeek = weeks
@@ -105,8 +107,15 @@ export default class {
         months.push(weeks)
 
     });
-
-    if (currentWeek) {
+    if (currentDay) {
+      let dayHour = []
+      _.range(0, 24).map((hour) => {
+        let date = new Date(currentDay.year, currentDay.month , Math.abs(currentDay.day), hour)
+          , check = this.checkExcept(date, view)
+        dayHour.push(_.assign({}, currentDay, {hour}, {col: hour}, {date}, {disabled: check}))
+      })
+      return dayHour;
+    } else if (currentWeek) {
       let weekHour = []
       _.each(currentWeek, (item) => {
         let dayHour = []
@@ -193,14 +202,15 @@ export default class {
       , nextLink = `/${view}/${next.y}/${next.m}`
       , todayLink = `/${view}/${today.y}/${today.m}`
       , monthLink = `/month/${current.y}/${current.m}`
-      , weekLink = `/week/${current.y}/${current.m}/2`
+      , weekLink = `/week/${current.y}/${current.m}/15`
+      , dayLink = `/day/${current.y}/${current.m}/15`
 
-    if (view === 'week') {
+    if (view === 'week' || view === 'day') {
       prevLink += `/${previous.d}`
       nextLink += `/${next.d}`
       todayLink += `/${today.d}`
     }
-    return {prevLink, nextLink, todayLink, monthLink, weekLink}
+    return {prevLink, nextLink, todayLink, dayLink, monthLink, weekLink}
   }
 
   getLinkHelper(view) {
@@ -210,9 +220,9 @@ export default class {
       , h = this.date.h
       , mm = this.date.mm
 
-    if (view === 'week') {
-      let nt = new Date(y, m, d + 7)
-        , pv = new Date(y, m, d - 7)
+    if (view === 'week' || view === 'day') {
+      let nt = new Date(y, m, d + (view === 'week' ? 7 : 1))
+        , pv = new Date(y, m, d - (view === 'week' ? 7 : 1))
 
       return {
         next: this.linkHelper(nt.getFullYear(), nt.getMonth(), nt.getDate()),
