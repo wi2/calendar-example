@@ -5,6 +5,7 @@ import {findDOMNode} from 'react-dom';
 import Calendar from '../com/calendar';
 import Modal from '../com/modal';
 import Panel from '../com/panel';
+import Filter from '../com/filter';
 
 
 export default class extends Component {
@@ -27,7 +28,10 @@ export default class extends Component {
       show: false,
       rooms: this.props.rooms||[],
       width: 1000,
-      height: 700
+      height: 700,
+      filters: {
+        limit: 100
+      }
     }
     this.timeout = null;
     this.loadEvents()
@@ -38,7 +42,10 @@ export default class extends Component {
     this.setState({width:findDOMNode(this).offsetWidth})
     window.addEventListener('resize', this.handleResize.bind(this));
   }
-
+  componentDidUpdate(props, state) {
+    if (this.state.filters !== state.filters)
+      this.loadEvents()
+  }
   componentWillReceiveProps(props) {
     this.loadEvents()
   }
@@ -55,13 +62,15 @@ export default class extends Component {
     setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 50);
     setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 100);//need twice for window resize and show inspector (why??)
   }
-
   loadEvents() {
     if (global.io)
-      io.socket.get('/event?limit=100', res => { this.setState({events: res}) });
+      io.socket.get('/event', this.state.filters, res => { this.setState({events: res}) });
   }
   hideModal() {
     this.setState({ show: false, selection: null })
+  }
+  onFilterChange(filters) {
+    this.setState({filters})
   }
   onSubmit(data, id) {
     if (global.io) {
@@ -107,6 +116,10 @@ export default class extends Component {
   render() {
     return (
       <div className="app">
+        {this.state.filters &&
+          <Filter {...this.state.filters}
+                  rooms={this.state.rooms}
+                  onChange={this.onFilterChange.bind(this)} />}
 
         {this.state.current &&
           <Panel {...this.state.current}

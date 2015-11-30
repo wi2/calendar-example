@@ -14,7 +14,7 @@ delete global.__ReactInitState__;
 // window.React = React
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./index":12,"react-dom":"react-dom"}],2:[function(require,module,exports){
+},{"./index":13,"react-dom":"react-dom"}],2:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -320,7 +320,7 @@ var Info = (function (_Component6) {
 
 exports.Info = Info;
 
-},{"../lib/agenda":14,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
+},{"../lib/agenda":15,"react":"react","react-router":"react-router"}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -839,7 +839,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"./calendar-utils":2,"./calendar-view":3,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":15,"./calendar-utils":2,"./calendar-view":3,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1000,7 +1000,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
+},{"../lib/agenda":15,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1085,7 +1085,181 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"./time-picker":9,"lodash":"lodash","react":"react"}],7:[function(require,module,exports){
+},{"./date-picker":5,"./time-picker":10,"lodash":"lodash","react":"react"}],7:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
+var _newforms = require('newforms');
+
+var _newformsBootstrap = require('newforms-bootstrap');
+
+var _newformsBootstrap2 = _interopRequireDefault(_newformsBootstrap);
+
+var _libAgenda = require('../lib/agenda');
+
+var _libAgenda2 = _interopRequireDefault(_libAgenda);
+
+var _default = (function (_Component) {
+  _inherits(_default, _Component);
+
+  function _default(props) {
+    _classCallCheck(this, _default);
+
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+    console.log(this.props);
+
+    this.state = {
+      startPicker: { show: false },
+      endPicker: { show: false }
+    };
+    this.createForm();
+    // this.agenda = new Agenda()
+  }
+
+  _createClass(_default, [{
+    key: 'createForm',
+    value: function createForm() {
+      var MyForm = _newforms.Form.extend({
+        room: (0, _newforms.MultipleChoiceField)({
+          widget: _newforms.CheckboxSelectMultiple,
+          choices: this.props.rooms.map(function (r) {
+            return [r.id, r.name];
+          }),
+          initial: this.props.rooms.map(function (r) {
+            return r.id;
+          })
+        }),
+        limit: (0, _newforms.ChoiceField)({
+          choices: [10, 50, 100, 200, 500],
+          initial: this.props.limit
+        }),
+        start: (0, _newforms.DateTimeField)({
+          required: false
+        }),
+        // initial: this.props.start.date ? this.props.start.date : new Date(this.props.start),
+        // widgetAttrs: { onClick: this._showDatePicker.bind(this) }
+        end: (0, _newforms.DateTimeField)({
+          required: false
+        })
+      });
+      // initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
+      // widgetAttrs: { onClick: this._showDatePicker.bind(this) }
+      this.form = new MyForm({
+        controlled: true,
+        onChange: this.onFormChange.bind(this),
+        validation: 'auto'
+      });
+    }
+  }, {
+    key: 'onFormChange',
+    value: function onFormChange() {
+      this.forceUpdate();
+    }
+  }, {
+    key: '_onSubmit',
+    value: function _onSubmit(e) {
+      e.preventDefault();
+      var form = this.mForm.getForm();
+      if (form.validate()) {
+        var cleanedData = _lodash2['default'].clone(form.cleanedData);
+        if (cleanedData.start === null) delete cleanedData.start;
+        if (cleanedData.end === null) delete cleanedData.end;
+        this.props.onChange(cleanedData);
+      }
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this = this;
+
+      return _react2['default'].createElement(
+        'form',
+        { encType: 'multipart/form-data', className: 'agenda-filter' },
+        _react2['default'].createElement(
+          _newforms.RenderForm,
+          { form: this.form, ref: function (ref) {
+              return _this.mForm = ref;
+            } },
+          _react2['default'].createElement(
+            _newformsBootstrap.Container,
+            { autoColumns: 'md' },
+            _react2['default'].createElement(
+              'h1',
+              null,
+              'Filter'
+            ),
+            _react2['default'].createElement('hr', null),
+            _react2['default'].createElement(
+              'p',
+              { className: 'text-right' },
+              _react2['default'].createElement(
+                'button',
+                { className: 'btn btn-default', onClick: this._onSubmit.bind(this) },
+                'Save'
+              )
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'limit' })
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(
+                _newformsBootstrap.Col,
+                { md: '6' },
+                this.state.startPicker.show && _react2['default'].createElement(DateTimePicker, _extends({}, this.state.startPicker, { onSelect: this._onSelectStart.bind(this) }))
+              ),
+              _react2['default'].createElement(
+                _newformsBootstrap.Col,
+                null,
+                this.state.endPicker.show && _react2['default'].createElement(DateTimePicker, _extends({}, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
+              )
+            )
+          )
+        )
+      );
+    }
+  }]);
+
+  return _default;
+})(_react.Component);
+
+exports['default'] = _default;
+module.exports = exports['default'];
+
+},{"../lib/agenda":15,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1351,7 +1525,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-time-picker":6,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
+},{"./date-time-picker":6,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1452,7 +1626,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"./date-picker":5,"react":"react"}],9:[function(require,module,exports){
+},{"../lib/agenda":15,"./date-picker":5,"react":"react"}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1704,7 +1878,7 @@ var Pointer = (function (_Component4) {
 
 module.exports = exports['default'];
 
-},{"lodash":"lodash","react":"react"}],10:[function(require,module,exports){
+},{"lodash":"lodash","react":"react"}],11:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -1742,6 +1916,10 @@ var _comPanel = require('../com/panel');
 
 var _comPanel2 = _interopRequireDefault(_comPanel);
 
+var _comFilter = require('../com/filter');
+
+var _comFilter2 = _interopRequireDefault(_comFilter);
+
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -1756,7 +1934,10 @@ var _default = (function (_Component) {
       show: false,
       rooms: this.props.rooms || [],
       width: 1000,
-      height: 700
+      height: 700,
+      filters: {
+        limit: 100
+      }
     };
     this.timeout = null;
     this.loadEvents();
@@ -1770,6 +1951,11 @@ var _default = (function (_Component) {
     value: function componentDidMount() {
       this.setState({ width: (0, _reactDom.findDOMNode)(this).offsetWidth });
       window.addEventListener('resize', this.handleResize.bind(this));
+    }
+  }, {
+    key: 'componentDidUpdate',
+    value: function componentDidUpdate(props, state) {
+      if (this.state.filters !== state.filters) this.loadEvents();
     }
   }, {
     key: 'componentWillReceiveProps',
@@ -1804,7 +1990,7 @@ var _default = (function (_Component) {
     value: function loadEvents() {
       var _this3 = this;
 
-      if (global.io) io.socket.get('/event?limit=100', function (res) {
+      if (global.io) io.socket.get('/event', this.state.filters, function (res) {
         _this3.setState({ events: res });
       });
     }
@@ -1812,6 +1998,11 @@ var _default = (function (_Component) {
     key: 'hideModal',
     value: function hideModal() {
       this.setState({ show: false, selection: null });
+    }
+  }, {
+    key: 'onFilterChange',
+    value: function onFilterChange(filters) {
+      this.setState({ filters: filters });
     }
   }, {
     key: 'onSubmit',
@@ -1875,6 +2066,9 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
+        this.state.filters && _react2['default'].createElement(_comFilter2['default'], _extends({}, this.state.filters, {
+          rooms: this.state.rooms,
+          onChange: this.onFilterChange.bind(this) })),
         this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
           except: this.except,
           events: this.state.events || this.props.events || [] })),
@@ -1903,7 +2097,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../com/calendar":4,"../com/modal":7,"../com/panel":8,"react":"react","react-dom":"react-dom"}],11:[function(require,module,exports){
+},{"../com/calendar":4,"../com/filter":7,"../com/modal":8,"../com/panel":9,"react":"react","react-dom":"react-dom"}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1968,7 +2162,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"react":"react","react-router":"react-router"}],12:[function(require,module,exports){
+},{"../lib/agenda":15,"react":"react","react-router":"react-router"}],13:[function(require,module,exports){
 "use strict";
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -2023,7 +2217,7 @@ module.exports = {
   Routes: Routes
 };
 
-},{"./ctrl/calendar":10,"./ctrl/home":11,"./layout":13,"history":"history","react":"react","react-router":"react-router"}],13:[function(require,module,exports){
+},{"./ctrl/calendar":11,"./ctrl/home":12,"./layout":14,"history":"history","react":"react","react-router":"react-router"}],14:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -2080,7 +2274,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./nav":15,"react":"react"}],14:[function(require,module,exports){
+},{"./nav":16,"react":"react"}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2469,7 +2663,7 @@ Date.prototype.getWeek = function () {
 };
 module.exports = exports["default"];
 
-},{"lodash":"lodash"}],15:[function(require,module,exports){
+},{"lodash":"lodash"}],16:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -2561,4 +2755,4 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./lib/agenda":14,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
+},{"./lib/agenda":15,"react":"react","react-router":"react-router"}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
