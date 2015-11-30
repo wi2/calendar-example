@@ -1627,7 +1627,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 },{"react":"react","react-router":"react-router"}],18:[function(require,module,exports){
-'use strict';
+"use strict";
 
 module.exports = {
   ZERO: 48,
@@ -1648,11 +1648,11 @@ module.exports = {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var React = require('react');
 var KEYCODE = require('./KeyCode');
@@ -1672,75 +1672,15 @@ var Options = (function (_React$Component) {
       _current: props.current
     };
 
-    ['_handleChange', '_changeSize', '_go'].forEach(function (method) {
+    ['_handleChange', '_changeSize', '_go', '_buildOptionText'].forEach(function (method) {
       return _this[method] = _this[method].bind(_this);
     });
   }
 
   _createClass(Options, [{
-    key: 'render',
-    value: function render() {
-      var props = this.props;
-      var state = this.state;
-      var prefixCls = props.rootPrefixCls + '-options';
-      var changeSize = props.changeSize;
-      var quickGo = props.quickGo;
-      var Select = props.selectComponentClass;
-      var changeSelect = null;
-      var goInput = null;
-
-      if (!(changeSize || quickGo)) {
-        return null;
-      }
-
-      if (changeSize && Select) {
-        var _Option = Select.Option;
-        changeSelect = React.createElement(
-          Select,
-          {
-            prefixCls: props.selectPrefixCls, showSearch: false,
-            className: prefixCls + '-size-changer',
-            optionLabelProp: 'children',
-            defaultValue: '10', onChange: this._changeSize },
-          React.createElement(
-            _Option,
-            { value: '10' },
-            '10 条/页'
-          ),
-          React.createElement(
-            _Option,
-            { value: '20' },
-            '20 条/页'
-          ),
-          React.createElement(
-            _Option,
-            { value: '30' },
-            '30 条/页'
-          ),
-          React.createElement(
-            _Option,
-            { value: '40' },
-            '40 条/页'
-          )
-        );
-      }
-
-      if (quickGo) {
-        goInput = React.createElement(
-          'div',
-          { title: 'Quick jump to page', className: prefixCls + '-quick-jumper' },
-          '跳至',
-          React.createElement('input', { type: 'text', value: state._current, onChange: this._handleChange.bind(this), onKeyUp: this._go.bind(this) }),
-          '页'
-        );
-      }
-
-      return React.createElement(
-        'div',
-        { className: '' + prefixCls },
-        changeSelect,
-        goInput
-      );
+    key: '_buildOptionText',
+    value: function _buildOptionText(value) {
+      return value + ' ' + this.props.locale.items_per_page;
     }
   }, {
     key: '_changeSize',
@@ -1775,6 +1715,67 @@ var Options = (function (_React$Component) {
         });
       }
     }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this2 = this;
+
+      var props = this.props;
+      var state = this.state;
+      var locale = props.locale;
+      var prefixCls = props.rootPrefixCls + '-options';
+      var changeSize = props.changeSize;
+      var quickGo = props.quickGo;
+      var buildOptionText = props.buildOptionText || this._buildOptionText;
+      var Select = props.selectComponentClass;
+      var changeSelect = null;
+      var goInput = null;
+
+      if (!(changeSize || quickGo)) {
+        return null;
+      }
+
+      if (changeSize && Select) {
+        (function () {
+          var Option = Select.Option;
+          var defaultOption = props.pageSizeOptions[0];
+          var options = props.pageSizeOptions.map(function (opt, i) {
+            return React.createElement(
+              Option,
+              { key: i, value: opt },
+              buildOptionText(opt)
+            );
+          });
+
+          changeSelect = React.createElement(
+            Select,
+            {
+              prefixCls: props.selectPrefixCls, showSearch: false,
+              className: prefixCls + '-size-changer',
+              optionLabelProp: 'children',
+              defaultValue: defaultOption, onChange: _this2._changeSize },
+            options
+          );
+        })();
+      }
+
+      if (quickGo) {
+        goInput = React.createElement(
+          'div',
+          { title: 'Quick jump to page', className: prefixCls + '-quick-jumper' },
+          locale.jump_to,
+          React.createElement('input', { type: 'text', value: state._current, onChange: this._handleChange.bind(this), onKeyUp: this._go.bind(this) }),
+          locale.page
+        );
+      }
+
+      return React.createElement(
+        'div',
+        { className: '' + prefixCls },
+        changeSelect,
+        goInput
+      );
+    }
   }]);
 
   return Options;
@@ -1783,9 +1784,15 @@ var Options = (function (_React$Component) {
 Options.propTypes = {
   changeSize: React.PropTypes.func,
   quickGo: React.PropTypes.func,
-
   selectComponentClass: React.PropTypes.func,
-  current: React.PropTypes.number
+  current: React.PropTypes.number,
+  pageSizeOptions: React.PropTypes.arrayOf(React.PropTypes.string),
+  buildOptionText: React.PropTypes.func,
+  locale: React.PropTypes.object
+};
+
+Options.defaultProps = {
+  pageSizeOptions: ['10', '20', '30', '40']
 };
 
 module.exports = Options;
@@ -1794,11 +1801,11 @@ module.exports = Options;
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var React = require('react');
 
@@ -1815,6 +1822,7 @@ var Pager = (function (_React$Component) {
     key: 'render',
     value: function render() {
       var props = this.props;
+      var locale = props.locale;
       var prefixCls = props.rootPrefixCls + '-item';
       var cls = prefixCls + ' ' + prefixCls + '-' + props.page;
 
@@ -1822,7 +1830,14 @@ var Pager = (function (_React$Component) {
         cls = cls + ' ' + prefixCls + '-active';
       }
 
-      var title = props.page === 1 ? 'First Page' : props.last ? 'Last Page: ' + props.page : 'Page ' + props.page;
+      var title = undefined;
+      if (props.page === 1) {
+        title = locale.first_page;
+      } else if (props.last) {
+        title = locale.last_page + ': ' + props.page;
+      } else {
+        title = props.page;
+      }
       return React.createElement(
         'li',
         { title: title, className: cls, onClick: props.onClick },
@@ -1841,7 +1856,8 @@ var Pager = (function (_React$Component) {
 Pager.propTypes = {
   page: React.PropTypes.number,
   active: React.PropTypes.bool,
-  last: React.PropTypes.bool
+  last: React.PropTypes.bool,
+  locale: React.PropTypes.object
 };
 
 module.exports = Pager;
@@ -1850,16 +1866,17 @@ module.exports = Pager;
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var React = require('react');
 var Pager = require('./Pager');
 var Options = require('./Options');
 var KEYCODE = require('./KeyCode');
+var LOCALE = require('./locale/zh_CN');
 
 function noop() {}
 
@@ -1873,9 +1890,20 @@ var Pagination = (function (_React$Component) {
 
     _get(Object.getPrototypeOf(Pagination.prototype), 'constructor', this).call(this, props);
 
+    var hasOnChange = props.onChange !== noop;
+    var hasCurrent = ('current' in props);
+    if (hasCurrent && !hasOnChange) {
+      console.warn('Warning: You provided a `current` prop to a Pagination component without an `onChange` handler. This will render a read-only component.');
+    }
+
+    var current = props.defaultCurrent;
+    if ('current' in props) {
+      current = props.current;
+    }
+
     this.state = {
-      current: props.current,
-      _current: props.current,
+      current: current,
+      _current: current,
       pageSize: props.pageSize
     };
 
@@ -1899,128 +1927,13 @@ var Pagination = (function (_React$Component) {
         });
       }
     }
-  }, {
-    key: 'render',
-    value: function render() {
-      var props = this.props;
-
-      var prefixCls = props.prefixCls;
-      var allPages = this._calcPage();
-      var pagerList = [];
-      var jumpPrev = null;
-      var jumpNext = null;
-      var firstPager = null;
-      var lastPager = null;
-
-      if (props.simple) {
-        return React.createElement(
-          'ul',
-          { className: prefixCls + ' ' + prefixCls + '-simple ' + props.className },
-          React.createElement(
-            'li',
-            { title: 'Previous Page', onClick: this._prev, className: (this._hasPrev() ? '' : prefixCls + '-disabled ') + (prefixCls + '-prev') },
-            React.createElement('a', null)
-          ),
-          React.createElement(
-            'div',
-            { title: 'Page ' + this.state.current + ' of ' + allPages, className: prefixCls + '-simple-pager' },
-            React.createElement('input', { type: 'text', value: this.state._current, onKeyDown: this._handleKeyDown, onKeyUp: this._handleKeyUp, onChange: this._handleKeyUp }),
-            React.createElement(
-              'span',
-              { className: prefixCls + '-slash' },
-              '／'
-            ),
-            allPages
-          ),
-          React.createElement(
-            'li',
-            { title: 'Next Page', onClick: this._next, className: (this._hasNext() ? '' : prefixCls + '-disabled ') + (prefixCls + '-next') },
-            React.createElement('a', null)
-          )
-        );
-      }
-
-      if (allPages <= 9) {
-        for (var i = 1; i <= allPages; i++) {
-          var active = this.state.current === i;
-          pagerList.push(React.createElement(Pager, { rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, i), key: i, page: i, active: active }));
-        }
-      } else {
-        jumpPrev = React.createElement(
-          'li',
-          { title: 'Previous 5 Page', key: 'prev', onClick: this._jumpPrev, className: prefixCls + '-jump-prev' },
-          React.createElement('a', null)
-        );
-        jumpNext = React.createElement(
-          'li',
-          { title: 'Next 5 Page', key: 'next', onClick: this._jumpNext, className: prefixCls + '-jump-next' },
-          React.createElement('a', null)
-        );
-        lastPager = React.createElement(Pager, { last: true, rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, allPages), key: allPages, page: allPages, active: false });
-        firstPager = React.createElement(Pager, { rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, 1), key: 1, page: 1, active: false });
-
-        var current = this.state.current;
-
-        var left = Math.max(1, current - 2),
-            right = Math.min(current + 2, allPages);
-
-        if (current - 1 <= 2) {
-          right = 1 + 4;
-        }
-
-        if (allPages - current <= 2) {
-          left = allPages - 4;
-        }
-
-        for (var i = left; i <= right; i++) {
-          var active = current === i;
-          pagerList.push(React.createElement(Pager, { rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, i), key: i, page: i, active: active }));
-        }
-
-        if (current - 1 >= 4) {
-          pagerList.unshift(jumpPrev);
-        }
-        if (allPages - current >= 4) {
-          pagerList.push(jumpNext);
-        }
-
-        if (left !== 1) {
-          pagerList.unshift(firstPager);
-        }
-        if (right !== allPages) {
-          pagerList.push(lastPager);
-        }
-      }
-
-      return React.createElement(
-        'ul',
-        { className: prefixCls + ' ' + props.className,
-          unselectable: 'unselectable' },
-        React.createElement(
-          'li',
-          { title: 'Previous Page', onClick: this._prev, className: (this._hasPrev() ? '' : prefixCls + '-disabled ') + (prefixCls + '-prev') },
-          React.createElement('a', null)
-        ),
-        pagerList,
-        React.createElement(
-          'li',
-          { title: 'Next Page', onClick: this._next, className: (this._hasNext() ? '' : prefixCls + '-disabled ') + (prefixCls + '-next') },
-          React.createElement('a', null)
-        ),
-        React.createElement(Options, { rootPrefixCls: prefixCls,
-          selectComponentClass: props.selectComponentClass,
-          selectPrefixCls: props.selectPrefixCls,
-          changeSize: this.props.showSizeChanger ? this._changePageSize.bind(this) : null,
-          current: this.state.current,
-          quickGo: this.props.showQuickJumper ? this._handleChange.bind(this) : null })
-      );
-    }
-  }, {
-    key: '_calcPage',
 
     // private methods
 
-    value: function _calcPage(pageSize) {
+  }, {
+    key: '_calcPage',
+    value: function _calcPage(p) {
+      var pageSize = p;
       if (typeof pageSize === 'undefined') {
         pageSize = this.state.pageSize;
       }
@@ -2087,15 +2000,20 @@ var Pagination = (function (_React$Component) {
     }
   }, {
     key: '_handleChange',
-    value: function _handleChange(page) {
+    value: function _handleChange(p) {
+      var page = p;
       if (this._isValid(page)) {
         if (page > this._calcPage()) {
           page = this._calcPage();
         }
-        this.setState({
-          current: page,
-          _current: page
-        });
+
+        if (!('current' in this.props)) {
+          this.setState({
+            current: page,
+            _current: page
+          });
+        }
+
         this.props.onChange(page);
 
         return page;
@@ -2137,6 +2055,132 @@ var Pagination = (function (_React$Component) {
     value: function _hasNext() {
       return this.state.current < this._calcPage();
     }
+  }, {
+    key: 'render',
+    value: function render() {
+      var props = this.props;
+      var locale = props.locale;
+
+      var prefixCls = props.prefixCls;
+      var allPages = this._calcPage();
+      var pagerList = [];
+      var jumpPrev = null;
+      var jumpNext = null;
+      var firstPager = null;
+      var lastPager = null;
+
+      if (props.simple) {
+        return React.createElement(
+          'ul',
+          { className: prefixCls + ' ' + prefixCls + '-simple ' + props.className },
+          React.createElement(
+            'li',
+            { title: locale.prev_page, onClick: this._prev, className: (this._hasPrev() ? '' : prefixCls + '-disabled ') + (prefixCls + '-prev') },
+            React.createElement('a', null)
+          ),
+          React.createElement(
+            'div',
+            { title: this.state.current + '/' + allPages, className: prefixCls + '-simple-pager' },
+            React.createElement('input', { type: 'text', value: this.state._current, onKeyDown: this._handleKeyDown, onKeyUp: this._handleKeyUp, onChange: this._handleKeyUp }),
+            React.createElement(
+              'span',
+              { className: prefixCls + '-slash' },
+              '／'
+            ),
+            allPages
+          ),
+          React.createElement(
+            'li',
+            { title: locale.next_page, onClick: this._next, className: (this._hasNext() ? '' : prefixCls + '-disabled ') + (prefixCls + '-next') },
+            React.createElement('a', null)
+          )
+        );
+      }
+
+      if (allPages <= 9) {
+        for (var i = 1; i <= allPages; i++) {
+          var active = this.state.current === i;
+          pagerList.push(React.createElement(Pager, { locale: locale, rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, i), key: i, page: i, active: active }));
+        }
+      } else {
+        jumpPrev = React.createElement(
+          'li',
+          { title: locale.prev_5, key: 'prev', onClick: this._jumpPrev, className: prefixCls + '-jump-prev' },
+          React.createElement('a', null)
+        );
+        jumpNext = React.createElement(
+          'li',
+          { title: locale.next_5, key: 'next', onClick: this._jumpNext, className: prefixCls + '-jump-next' },
+          React.createElement('a', null)
+        );
+        lastPager = React.createElement(Pager, {
+          locale: props.locale,
+          last: true, rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, allPages), key: allPages, page: allPages, active: false });
+        firstPager = React.createElement(Pager, {
+          locale: props.locale,
+          rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, 1), key: 1, page: 1, active: false });
+
+        var current = this.state.current;
+
+        var left = Math.max(1, current - 2);
+        var right = Math.min(current + 2, allPages);
+
+        if (current - 1 <= 2) {
+          right = 1 + 4;
+        }
+
+        if (allPages - current <= 2) {
+          left = allPages - 4;
+        }
+
+        for (var i = left; i <= right; i++) {
+          var active = current === i;
+          pagerList.push(React.createElement(Pager, {
+            locale: props.locale,
+            rootPrefixCls: prefixCls, onClick: this._handleChange.bind(this, i), key: i, page: i, active: active }));
+        }
+
+        if (current - 1 >= 4) {
+          pagerList.unshift(jumpPrev);
+        }
+        if (allPages - current >= 4) {
+          pagerList.push(jumpNext);
+        }
+
+        if (left !== 1) {
+          pagerList.unshift(firstPager);
+        }
+        if (right !== allPages) {
+          pagerList.push(lastPager);
+        }
+      }
+
+      return React.createElement(
+        'ul',
+        { className: prefixCls + ' ' + props.className,
+          unselectable: 'unselectable' },
+        React.createElement(
+          'li',
+          { title: locale.prev_page, onClick: this._prev, className: (this._hasPrev() ? '' : prefixCls + '-disabled ') + (prefixCls + '-prev') },
+          React.createElement('a', null)
+        ),
+        pagerList,
+        React.createElement(
+          'li',
+          { title: locale.next_page, onClick: this._next, className: (this._hasNext() ? '' : prefixCls + '-disabled ') + (prefixCls + '-next') },
+          React.createElement('a', null)
+        ),
+        React.createElement(Options, {
+          locale: props.locale,
+          rootPrefixCls: prefixCls,
+          selectComponentClass: props.selectComponentClass,
+          selectPrefixCls: props.selectPrefixCls,
+          changeSize: this.props.showSizeChanger ? this._changePageSize.bind(this) : null,
+          current: this.state.current,
+          pageSizeOptions: this.props.pageSizeOptions,
+          quickGo: this.props.showQuickJumper ? this._handleChange.bind(this) : null })
+      );
+    }
   }]);
 
   return Pagination;
@@ -2144,17 +2188,21 @@ var Pagination = (function (_React$Component) {
 
 Pagination.propTypes = {
   current: React.PropTypes.number,
+  defaultCurrent: React.PropTypes.number,
   total: React.PropTypes.number,
   pageSize: React.PropTypes.number,
   onChange: React.PropTypes.func,
   showSizeChanger: React.PropTypes.bool,
   onShowSizeChange: React.PropTypes.func,
   selectComponentClass: React.PropTypes.func,
-  showQuickJumper: React.PropTypes.bool
+  showQuickJumper: React.PropTypes.bool,
+  pageSizeOptions: React.PropTypes.arrayOf(React.PropTypes.string),
+
+  locale: React.PropTypes.object
 };
 
 Pagination.defaultProps = {
-  current: 1,
+  defaultCurrent: 1,
   total: 0,
   pageSize: 10,
   onChange: noop,
@@ -2164,13 +2212,37 @@ Pagination.defaultProps = {
   selectComponentClass: null,
   showQuickJumper: false,
   showSizeChanger: false,
-  onShowSizeChange: noop
+  onShowSizeChange: noop,
+  locale: LOCALE
 };
 
 module.exports = Pagination;
-},{"./KeyCode":18,"./Options":19,"./Pager":20,"react":"react"}],22:[function(require,module,exports){
+},{"./KeyCode":18,"./Options":19,"./Pager":20,"./locale/zh_CN":23,"react":"react"}],22:[function(require,module,exports){
 // export this package's api
 'use strict';
 
 module.exports = require('./Pagination');
-},{"./Pagination":21}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]);
+},{"./Pagination":21}],23:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports['default'] = {
+  // Options.jsx
+  items_per_page: '条/页',
+  jump_to: '跳至',
+  page: '页',
+
+  // Pager.jsx
+  first_page: '第一页',
+  last_page: '最后一页',
+
+  // Pagination.jsx
+  prev_page: '上一页',
+  next_page: '下一页',
+  prev_5: '向前 5 页',
+  next_5: '向后 5 页'
+};
+module.exports = exports['default'];
+},{}]},{},[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]);

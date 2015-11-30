@@ -43,6 +43,10 @@ export default class {
       .sort( (a, b) => b.cell.end - b.cell.start - (a.cell.end - a.cell.start) )
   }
 
+  getEventsByDate(date, events, withHour) {
+    return events.filter( evt  => this.compare(date, new Date(evt.start), withHour) || this.compare(date, new Date(evt.end), withHour) || (date >= new Date(evt.start) && date <= new Date(evt.end)) )
+  }
+
   matrix(view='month') {
     let {y,m,d,h,mm} = this.date
     var {rows, cols} = this.getRange(6,7)

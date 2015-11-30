@@ -605,6 +605,10 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 var _reactDom = require('react-dom');
 
 var _libAgenda = require('../lib/agenda');
@@ -672,6 +676,15 @@ var _default = (function (_Component) {
             end: -1,
             startInit: -1
           });
+          if (this.state.view === "month") {
+            selection = {
+              start: _lodash2['default'].clone(selection.start),
+              end: _lodash2['default'].clone(selection.end)
+            };
+            selection.end.date = new Date(selection.end.date);
+            selection.end.date.setHours(23);
+            selection.end.hour = 23;
+          }
           this.props.onSelect(selection, this.state.editor);
         } else {
           this.setState({
@@ -681,6 +694,7 @@ var _default = (function (_Component) {
           });
         }
       } else {
+        val.view = this.state.view;
         this.props.onSelect(val, this.state.editor);
       }
     }
@@ -699,8 +713,8 @@ var _default = (function (_Component) {
     value: function getSmartSelection(b) {
       var a = this.state.startInit;
       return {
-        start: a.date <= b.date ? a : b,
-        end: a.date >= b.date ? a : b
+        start: a.date < b.date ? a : b,
+        end: a.date < b.date ? b : a
       };
     }
   }, {
@@ -760,7 +774,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"./calendar-utils":2,"./calendar-view":3,"react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":14,"./calendar-utils":2,"./calendar-view":3,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -983,7 +997,6 @@ var _default = (function (_Component) {
   }, {
     key: '_onSelectTime',
     value: function _onSelectTime(val) {
-      console.log(val);
       this.setState(_lodash2['default'].extend({ type: "date" }, val));
       var date = new Date(this.state.year, this.state.month, this.state.day, val.hour, val.minute),
           current = _lodash2['default'].extend(this.state, val, { date: date });
@@ -1041,10 +1054,6 @@ var _newforms = require('newforms');
 var _newformsBootstrap = require('newforms-bootstrap');
 
 var _newformsBootstrap2 = _interopRequireDefault(_newformsBootstrap);
-
-var _libAgenda = require('../lib/agenda');
-
-var _libAgenda2 = _interopRequireDefault(_libAgenda);
 
 var _dateTimePicker = require('./date-time-picker');
 
@@ -1181,6 +1190,13 @@ var _default = (function (_Component) {
       if (form.validate()) this.props.onSubmit(form.cleanedData, this.props.id);
     }
   }, {
+    key: '_onDelete',
+    value: function _onDelete(e) {
+      e.preventDefault();
+      var form = this.mForm.getForm();
+      this.props.onDelete(this.props.id);
+    }
+  }, {
     key: '_onCancel',
     value: function _onCancel(e) {
       e.preventDefault();
@@ -1220,6 +1236,11 @@ var _default = (function (_Component) {
                 'button',
                 { className: 'btn btn-default', onClick: this._onCancel.bind(this) },
                 'Cancel'
+              ),
+              _react2['default'].createElement(
+                'button',
+                { className: 'btn btn-default', onClick: this._onDelete.bind(this) },
+                'Delete'
               )
             ),
             _react2['default'].createElement(
@@ -1265,7 +1286,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":14,"./date-time-picker":6,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
+},{"./date-time-picker":6,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1290,13 +1311,18 @@ var _datePicker = require('./date-picker');
 
 var _datePicker2 = _interopRequireDefault(_datePicker);
 
+var _libAgenda = require('../lib/agenda');
+
+var _libAgenda2 = _interopRequireDefault(_libAgenda);
+
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
-  function _default() {
+  function _default(props) {
     _classCallCheck(this, _default);
 
-    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
+    this.agenda = new _libAgenda2['default']();
   }
 
   _createClass(_default, [{
@@ -1309,6 +1335,8 @@ var _default = (function (_Component) {
     value: function render() {
       var _this = this;
 
+      var events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view === "week");
+
       return _react2['default'].createElement(
         'div',
         { className: 'agenda-panel' },
@@ -1319,6 +1347,29 @@ var _default = (function (_Component) {
           except: this.props.except,
           onSelect: this._onSelect.bind(this) }),
         _react2['default'].createElement('hr', null),
+        events.map(function (evt) {
+          return _react2['default'].createElement(
+            'div',
+            { className: 'panel-event', key: "evt" + evt.id, style: { background: evt.room.color } },
+            _react2['default'].createElement(
+              'span',
+              { className: 'panel-event-title' },
+              evt.title
+            ),
+            _react2['default'].createElement(
+              'span',
+              { className: 'panel-event-date' },
+              evt.start,
+              ' to ',
+              evt.end
+            ),
+            _react2['default'].createElement(
+              'p',
+              { className: 'panel-event-content' },
+              evt.content
+            )
+          );
+        }),
         Object.keys(this.props).map(function (key) {
           return _react2['default'].createElement(
             'div',
@@ -1336,7 +1387,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"react":"react"}],9:[function(require,module,exports){
+},{"../lib/agenda":14,"./date-picker":5,"react":"react"}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1704,11 +1755,21 @@ var _default = (function (_Component) {
 
       if (global.io) {
         if (id) io.socket.put("/event/" + id, data, function (res) {
-          _this4.loadEvents();
+          return _this4.loadEvents();
         });else io.socket.post("/event", data, function (res) {
-          if (res.error) console.log(res);else _this4.loadEvents();
+          if (res.error) console.log("Error", res);else _this4.loadEvents();
         });
       }
+      this.hideModal();
+    }
+  }, {
+    key: 'onDelete',
+    value: function onDelete(id) {
+      var _this5 = this;
+
+      io.socket['delete']("/event/" + id, function (res) {
+        return _this5.loadEvents();
+      });
       this.hideModal();
     }
   }, {
@@ -1719,7 +1780,7 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelect',
     value: function onSelect(data) {
-      var _this5 = this;
+      var _this6 = this;
 
       var edition = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
@@ -1733,7 +1794,7 @@ var _default = (function (_Component) {
           width: document.body.offsetWidth * 0.8
         });
         setTimeout(function () {
-          _this5.setState({ width: document.body.offsetWidth * 0.8 });
+          _this6.setState({ width: document.body.offsetWidth * 0.8 });
         }); // twice : why?
       }
     }
@@ -1749,11 +1810,14 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
-        this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, { except: this.except })),
+        this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
+          except: this.except,
+          events: this.state.events || this.props.events || [] })),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {
           rooms: this.state.rooms,
           onSubmit: this.onSubmit.bind(this),
           onCancel: this.onCancel.bind(this),
+          onDelete: this.onDelete.bind(this),
           except: this.except
         }, this.props.params)),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
@@ -2026,9 +2090,18 @@ var _default = (function () {
       });
     }
   }, {
+    key: "getEventsByDate",
+    value: function getEventsByDate(date, events, withHour) {
+      var _this2 = this;
+
+      return events.filter(function (evt) {
+        return _this2.compare(date, new Date(evt.start), withHour) || _this2.compare(date, new Date(evt.end), withHour) || date >= new Date(evt.start) && date <= new Date(evt.end);
+      });
+    }
+  }, {
     key: "matrix",
     value: function matrix() {
-      var _this2 = this;
+      var _this3 = this;
 
       var view = arguments.length <= 0 || arguments[0] === undefined ? 'month' : arguments[0];
       var _date = this.date;
@@ -2088,7 +2161,7 @@ var _default = (function () {
             year: cellDate.getFullYear(),
             col: col,
             row: row,
-            disabled: _this2.checkExcept(cellDate, view)
+            disabled: _this3.checkExcept(cellDate, view)
           });
         });
         if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek) currentWeek = weeks;
@@ -2103,7 +2176,7 @@ var _default = (function () {
             var dayHour = [];
             _lodash2["default"].range(0, 24).map(function (hour) {
               var date = new Date(item.year, item.month, Math.abs(item.day), hour),
-                  check = _this2.checkExcept(date, view);
+                  check = _this3.checkExcept(date, view);
               dayHour.push(_lodash2["default"].assign({}, item, { hour: hour }, { col: hour }, { date: date }, { disabled: check }));
             });
             weekHour.push(dayHour);
@@ -2238,18 +2311,18 @@ var _default = (function () {
   }, {
     key: "getLimit",
     value: function getLimit(line, evt, withHour) {
-      var _this3 = this;
+      var _this4 = this;
 
       var eventDate = {
         start: new Date(evt.start),
         end: new Date(evt.end)
       };
       var start = _lodash2["default"].find(line, function (item) {
-        return _this3.compare(item.date, eventDate.start, withHour);
+        return _this4.compare(item.date, eventDate.start, withHour);
       });
 
       var end = _lodash2["default"].find(line, function (item) {
-        return _this3.compare(item.date, eventDate.end, withHour);
+        return _this4.compare(item.date, eventDate.end, withHour);
       });
 
       if (!(start || end || line[0].date > eventDate.start && line[line.length - 1].date < eventDate.end)) return { start: start, end: end };
