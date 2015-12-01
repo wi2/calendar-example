@@ -679,6 +679,10 @@ var _calendarUtils = require('./calendar-utils');
 
 var _calendarView = require('./calendar-view');
 
+var _filter = require('./filter');
+
+var _filter2 = _interopRequireDefault(_filter);
+
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -769,6 +773,11 @@ var _default = (function (_Component) {
       this.props.onSelect(val, this.state.editor);
     }
   }, {
+    key: 'onFilterChange',
+    value: function onFilterChange(val) {
+      this.props.onFilterChange(val);
+    }
+  }, {
     key: 'getSmartSelection',
     value: function getSmartSelection(b) {
       var a = this.state.startInit;
@@ -799,6 +808,9 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'agenda', style: { width: this.props.width } },
+        this.props.filters && _react2['default'].createElement(_filter2['default'], _extends({}, this.props.filters, {
+          rooms: this.props.rooms,
+          onChange: this.onFilterChange.bind(this) })),
         _react2['default'].createElement(_calendarUtils.Navigation, { store: store,
           agenda: this.agenda,
           view: view,
@@ -839,7 +851,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":15,"./calendar-utils":2,"./calendar-view":3,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":15,"./calendar-utils":2,"./calendar-view":3,"./filter":7,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1892,9 +1904,7 @@ var _comPanel = require('../com/panel');
 
 var _comPanel2 = _interopRequireDefault(_comPanel);
 
-var _comFilter = require('../com/filter');
-
-var _comFilter2 = _interopRequireDefault(_comFilter);
+// import Filter from '../com/filter';
 
 var _default = (function (_Component) {
   _inherits(_default, _Component);
@@ -2057,9 +2067,6 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'app' },
-        this.state.filters && _react2['default'].createElement(_comFilter2['default'], _extends({}, this.state.filters, {
-          rooms: this.state.rooms,
-          onChange: this.onFilterChange.bind(this) })),
         this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
           except: this.except,
           events: this.state.events || this.props.events || [] })),
@@ -2071,12 +2078,12 @@ var _default = (function (_Component) {
           except: this.except
         }, this.props.params)),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
+          except: this.except,
           onSelect: this.onSelect.bind(this),
           onChange: this.onChange.bind(this),
-          onLoad: this.onLoad.bind(this)
-        }, this.state, {
-          except: this.except
-        }, this.props.params))
+          onLoad: this.onLoad.bind(this),
+          onFilterChange: this.onFilterChange.bind(this)
+        }, this.state, this.props.params))
       );
     }
   }]);
@@ -2088,7 +2095,7 @@ exports['default'] = _default;
 module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../com/calendar":4,"../com/filter":7,"../com/modal":8,"../com/panel":9,"lodash":"lodash","react":"react","react-dom":"react-dom"}],12:[function(require,module,exports){
+},{"../com/calendar":4,"../com/modal":8,"../com/panel":9,"lodash":"lodash","react":"react","react-dom":"react-dom"}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

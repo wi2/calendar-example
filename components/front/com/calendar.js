@@ -6,6 +6,7 @@ import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
 import {Header, Navigation, Row, Info} from './calendar-utils'
 import {Day, Week, Month} from './calendar-view'
+import Filter from './filter';
 
 
 export default class extends Component {
@@ -90,6 +91,10 @@ export default class extends Component {
     this.props.onSelect(val, this.state.editor)
   }
 
+  onFilterChange(val) {
+    this.props.onFilterChange(val)
+  }
+
   getSmartSelection(b) {
     let a = this.state.startInit
     return {
@@ -116,6 +121,11 @@ export default class extends Component {
 
     return (
       <div className="agenda" style={{width: this.props.width}}>
+
+        {this.props.filters &&
+          <Filter {...this.props.filters}
+                  rooms={this.props.rooms}
+                  onChange={this.onFilterChange.bind(this)} />}
 
         <Navigation store={store}
                     agenda={this.agenda}

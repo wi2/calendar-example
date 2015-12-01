@@ -6,7 +6,7 @@ import {findDOMNode} from 'react-dom';
 import Calendar from '../com/calendar';
 import Modal from '../com/modal';
 import Panel from '../com/panel';
-import Filter from '../com/filter';
+// import Filter from '../com/filter';
 
 
 export default class extends Component {
@@ -134,10 +134,7 @@ export default class extends Component {
   render() {
     return (
       <div className="app">
-        {this.state.filters &&
-          <Filter {...this.state.filters}
-                  rooms={this.state.rooms}
-                  onChange={this.onFilterChange.bind(this)} />}
+
 
         {this.state.current &&
           <Panel {...this.state.current}
@@ -154,11 +151,12 @@ export default class extends Component {
                   {...this.props.params} />}
 
         <Calendar events={this.props.events||[]}
+                  except={this.except}
                   onSelect={this.onSelect.bind(this)}
                   onChange={this.onChange.bind(this)}
                   onLoad={this.onLoad.bind(this)}
+                  onFilterChange={this.onFilterChange.bind(this)}
                   {...this.state}
-                  except={this.except}
                   {...this.props.params} />
       </div>
     );
