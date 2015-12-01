@@ -100,14 +100,14 @@ export class Info extends Component {
     this.props.onNext(this.props.info)
   }
   shouldComponentUpdate(props, state) {
-    return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m
+    return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m || props.info.d !== this.props.info.d
   }
 
   render() {
     return (
       <Row>
         {this.props.onPrevious && <a onClick={this._handlePrevious.bind(this)} className="btn"> {"<"} </a>}
-        <div>{this.props.info.m+" "+this.props.info.y}</div>
+        <div>{this.props.info.d+" "+this.props.info.m+" "+this.props.info.y}</div>
         {this.props.onNext && <a onClick={this._handleNext.bind(this)} className="btn"> {">"} </a>}
       </Row>
     )

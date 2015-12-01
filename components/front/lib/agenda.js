@@ -193,8 +193,8 @@ export default class {
   }
 
   getInfo() {
-    let info = new Date(this.date.y, this.date.m)
-    return this.linkHelper(info.getFullYear(), info.getMonth())
+    let info = new Date(this.date.y, this.date.m, this.date.d)
+    return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate())
   }
 
   getLink(view) {

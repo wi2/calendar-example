@@ -6,8 +6,6 @@ import {findDOMNode} from 'react-dom';
 import Calendar from '../com/calendar';
 import Modal from '../com/modal';
 import Panel from '../com/panel';
-// import Filter from '../com/filter';
-
 
 export default class extends Component {
   constructor(props) {

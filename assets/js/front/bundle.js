@@ -284,7 +284,7 @@ var Info = (function (_Component6) {
   }, {
     key: 'shouldComponentUpdate',
     value: function shouldComponentUpdate(props, state) {
-      return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m;
+      return props.info.y !== this.props.info.y || props.info.m !== this.props.info.m || props.info.d !== this.props.info.d;
     }
   }, {
     key: 'render',
@@ -302,7 +302,7 @@ var Info = (function (_Component6) {
         _react2['default'].createElement(
           'div',
           null,
-          this.props.info.m + " " + this.props.info.y
+          this.props.info.d + " " + this.props.info.m + " " + this.props.info.y
         ),
         this.props.onNext && _react2['default'].createElement(
           'a',
@@ -817,7 +817,7 @@ var _default = (function (_Component) {
           editor: this.state.editor,
           toggleEditor: this.toggleEditor.bind(this) }),
         _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info }),
-        _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: this.agenda }),
+        view !== 'day' && _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: this.agenda }),
         view === 'week' && _react2['default'].createElement(
           _calendarUtils.Row,
           null,
@@ -1890,8 +1890,6 @@ var _comPanel = require('../com/panel');
 
 var _comPanel2 = _interopRequireDefault(_comPanel);
 
-// import Filter from '../com/filter';
-
 var _default = (function (_Component) {
   _inherits(_default, _Component);
 
@@ -2513,8 +2511,8 @@ var _default = (function () {
   }, {
     key: "getInfo",
     value: function getInfo() {
-      var info = new Date(this.date.y, this.date.m);
-      return this.linkHelper(info.getFullYear(), info.getMonth());
+      var info = new Date(this.date.y, this.date.m, this.date.d);
+      return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate());
     }
   }, {
     key: "getLink",
