@@ -2,14 +2,14 @@
 
 import React, {Component} from 'react';
 import _ from 'lodash';
-import {RenderForm, Form, ChoiceField, MultipleChoiceField, CheckboxSelectMultiple, DateTimeField, BooleanField, IntegerField} from 'newforms'
+import {RenderForm, Form, ChoiceField, MultipleChoiceField, CheckboxSelectMultiple, RadioSelect} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
 import DatePicker from './date-picker'
 
 export default class extends Component {
   constructor(props) {
     super(props)
-    this.state = {}
+    this.state = {show: false}
     this.createForm()
   }
 
@@ -18,11 +18,20 @@ export default class extends Component {
       room: MultipleChoiceField({
         widget: CheckboxSelectMultiple,
         choices: this.props.rooms.map(r => [r.id, r.name]),
-        initial: this.props.rooms.map(r => r.id)
+        initial: this.props.rooms.map(r => r.id),
+        widgetAttrs: {
+          onFocus: this._onFocus.bind(this),
+          onBlur: this._onSubmit.bind(this)
+        }
       }),
       limit: ChoiceField({
+        widget: RadioSelect,
         choices: [10, 50, 100, 200, 500],
-        initial: this.props.limit
+        initial: this.props.limit,
+        widgetAttrs: {
+          onClick: this._onFocus.bind(this),
+          onBlur: this._onSubmit.bind(this)
+        }
       })
     })
     this.form = new MyForm({
@@ -35,31 +44,34 @@ export default class extends Component {
     this.forceUpdate()
   }
 
-  _onSubmit(e) {
+  _onFocus(e) {
     e.preventDefault();
+    setTimeout(() => {e.target.blur(), 500});
+  }
+  _onSubmit(e) {
+    if (e) e.preventDefault();
     let form = this.mForm.getForm()
     if(form.validate()) {
       let cleanedData = _.clone(form.cleanedData)
       this.props.onChange(cleanedData)
     }
   }
+  toggle() {
+    this.setState({show: !this.state.show})
+  }
 
   render() {
     return (
-      <form encType="multipart/form-data" className="agenda-filter">
-        <RenderForm form={this.form} ref={ref => this.mForm = ref}>
+      <form className="agenda-filter">
+        {!this.state.show && <a onClick={this.toggle.bind(this)} className="btn">Filter</a>}
+        {this.state.show && <RenderForm form={this.form} ref={ref => this.mForm = ref}>
           <Container autoColumns="md">
-            <h1>Filter</h1>
-            <hr />
-            <p className="text-right">
-              <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
-            </p>
             <Row>
               <Field name="room" md="8"/>
               <Field name="limit"/>
             </Row>
           </Container>
-        </RenderForm>
+        </RenderForm>}
       </form>
     )
   }}

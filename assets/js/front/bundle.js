@@ -1127,7 +1127,7 @@ var _default = (function (_Component) {
     _classCallCheck(this, _default);
 
     _get(Object.getPrototypeOf(_default.prototype), 'constructor', this).call(this, props);
-    this.state = {};
+    this.state = { show: false };
     this.createForm();
   }
 
@@ -1142,11 +1142,20 @@ var _default = (function (_Component) {
           }),
           initial: this.props.rooms.map(function (r) {
             return r.id;
-          })
+          }),
+          widgetAttrs: {
+            onFocus: this._onFocus.bind(this),
+            onBlur: this._onSubmit.bind(this)
+          }
         }),
         limit: (0, _newforms.ChoiceField)({
+          widget: _newforms.RadioSelect,
           choices: [10, 50, 100, 200, 500],
-          initial: this.props.limit
+          initial: this.props.limit,
+          widgetAttrs: {
+            onClick: this._onFocus.bind(this),
+            onBlur: this._onSubmit.bind(this)
+          }
         })
       });
       this.form = new MyForm({
@@ -1161,14 +1170,27 @@ var _default = (function (_Component) {
       this.forceUpdate();
     }
   }, {
+    key: '_onFocus',
+    value: function _onFocus(e) {
+      e.preventDefault();
+      setTimeout(function () {
+        e.target.blur(), 500;
+      });
+    }
+  }, {
     key: '_onSubmit',
     value: function _onSubmit(e) {
-      e.preventDefault();
+      if (e) e.preventDefault();
       var form = this.mForm.getForm();
       if (form.validate()) {
         var cleanedData = _lodash2['default'].clone(form.cleanedData);
         this.props.onChange(cleanedData);
       }
+    }
+  }, {
+    key: 'toggle',
+    value: function toggle() {
+      this.setState({ show: !this.state.show });
     }
   }, {
     key: 'render',
@@ -1177,8 +1199,13 @@ var _default = (function (_Component) {
 
       return _react2['default'].createElement(
         'form',
-        { encType: 'multipart/form-data', className: 'agenda-filter' },
-        _react2['default'].createElement(
+        { className: 'agenda-filter' },
+        !this.state.show && _react2['default'].createElement(
+          'a',
+          { onClick: this.toggle.bind(this), className: 'btn' },
+          'Filter'
+        ),
+        this.state.show && _react2['default'].createElement(
           _newforms.RenderForm,
           { form: this.form, ref: function (ref) {
               return _this.mForm = ref;
@@ -1186,21 +1213,6 @@ var _default = (function (_Component) {
           _react2['default'].createElement(
             _newformsBootstrap.Container,
             { autoColumns: 'md' },
-            _react2['default'].createElement(
-              'h1',
-              null,
-              'Filter'
-            ),
-            _react2['default'].createElement('hr', null),
-            _react2['default'].createElement(
-              'p',
-              { className: 'text-right' },
-              _react2['default'].createElement(
-                'button',
-                { className: 'btn btn-default', onClick: this._onSubmit.bind(this) },
-                'Save'
-              )
-            ),
             _react2['default'].createElement(
               _newformsBootstrap.Row,
               null,
