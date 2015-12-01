@@ -76,7 +76,7 @@ export class Week extends ViewDefault {
       , width = this.props.height/24;
     return {
       opacity: 0.8,
-      left: evt.cell.line*12 + 'px',
+      left: (evt.cell.line + 1.5) * 18 + 'px',
       top: `${cell.start * width}px`,
       width: `${(cell.end - cell.start + 1) * width}px`,
       transform: 'rotate(90deg)',
@@ -97,7 +97,7 @@ export class Week extends ViewDefault {
           let cond = (item.date >= selection.s && item.date <= selection.e)
 
           let props = {
-            value: item.hour,
+            value: item.hour + "h",
             className: cond ? "col-day col-day-active" : "col-day",
             toggleSelection: this.toggleSelection.bind(this, item),
             moveSelection: this.moveSelection.bind(this, item),
@@ -125,14 +125,15 @@ export class Day extends Week {
   }
 
   style(evt) {
-    let {room, cell} = evt
+    let eventWidth = 180
+      , {room, cell} = evt
       , width = this.props.height/24;
     return {
       opacity: 0.8,
       top: `${cell.start * width}px`,
-      left: evt.cell.line*120 + 'px',
+      left: (evt.cell.line - 0.5) * eventWidth + 'px',
       height: `${(cell.end - cell.start + 1) * width}px`,
-      width: '120px',
+      width: eventWidth + 'px',
       background: room.color||'grey'
     }
   }
@@ -153,7 +154,7 @@ export class Month extends ViewDefault {
 
     return {
       opacity: 0.8,
-      top: evt.cell.line*12 + 'px',
+      top: (evt.cell.line + 0.5) * 12 + 'px',
       left: `${cell.start * width}px`,
       width: `${(cell.end - cell.start + 1) * width}px`,
       background: room.color||'grey'

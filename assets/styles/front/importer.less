@@ -2,6 +2,8 @@ body { padding-top: 50px; font-family: Arial }
 
 @agendaCell: calc(100% / 7);
 
+@import 'info';
+@import 'header';
 @import 'filter';
 @import 'modal';
 @import 'panel';
@@ -20,15 +22,20 @@ body { padding-top: 50px; font-family: Arial }
   flex-flow: row wrap;
   -webkit-align-content: flex-end;
   align-content: flex-end;
-  background: #CCC;
 
   .col, .col-label, .col-day {
     box-sizing: border-box;
     width: @agendaCell;
     .col-content {
-      border: 1px solid #111;
-      background: #FFF;
+      padding: 1px 5px;
+      border-top: 1px solid #FFF;
+      border-right: 1px solid #FFF;
       height: 100%;
+     }
+  }
+  .col, .col-day {
+    .col-content {
+      background: #F8F8F8;
      }
   }
   .col-active, .col-day-active {
@@ -36,15 +43,7 @@ body { padding-top: 50px; font-family: Arial }
       background: #FFC156;
     }
   }
-  .col-label {
-    .col-content {
-      height: 20px;
-      line-height: 20px;
-      text-align: center;
-      border: 1px solid #CCC;
-      background: #DDD;
-    }
-  }
+
   .event {
     position: absolute;
     background: #AAA;
@@ -71,29 +70,25 @@ body { padding-top: 50px; font-family: Arial }
   flex-flow: column wrap;
   -webkit-align-content: center;
   align-content: center;
-  background: #CCC;
 
   .col, .col-label, .col-day {
     box-sizing: border-box;
     width: 100%;
     .col-content {
-      border: 1px solid #111;
-      background: #FFF;
-     }
-  }
-  .col-day-active {
-    .col-content {
-      background: #FFC156;
       height: 100%;
+      padding: 1px 5px;
+      border-top: 1px solid #FFF;
+      border-right: 1px solid #FFF;
     }
   }
-  .col-label {
+  .col, .col-day {
     .col-content {
-      height: 20px;
-      line-height: 20px;
-      text-align: center;
-      border: 1px solid #CCC;
-      background: #DDD;
+      background: #F8F8F8;
+     }
+  }
+  .col-active, .col-day-active {
+    .col-content {
+      background: #FFC156;
     }
   }
   .event {
@@ -102,7 +97,7 @@ body { padding-top: 50px; font-family: Arial }
     width: @agendaCell;
     background: #FF0000;
     color: #FFF;
-    font: 0.7em arial;
+    font: 1em arial;
     text-align: center;
     z-index: 5;
   }
@@ -110,9 +105,9 @@ body { padding-top: 50px; font-family: Arial }
 
 .col-day-disabled {
   z-index: 10;
-  opacity: 0.9;
+  opacity: 0.95;
   .col-content {
-    background: #333!important;
+    background: #DDD!important;
     color: #fff;
     height: 100%;
   }

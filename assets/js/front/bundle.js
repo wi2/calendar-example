@@ -238,7 +238,7 @@ var Header = (function (_Component5) {
           view = this.props.view;
       return _react2['default'].createElement(
         Row,
-        null,
+        { className: 'agenda-row agenda-header' },
         view === 'day' && _react2['default'].createElement(Cell, { value: this.props.day, className: 'col-label' }),
         view !== 'day' && days.map(function (day, i) {
           return _react2['default'].createElement(Cell, { value: day, className: 'col-label', key: day + '-' + i });
@@ -291,7 +291,7 @@ var Info = (function (_Component6) {
     value: function render() {
       return _react2['default'].createElement(
         Row,
-        null,
+        { className: 'agenda-row agenda-info' },
         this.props.onPrevious && _react2['default'].createElement(
           'a',
           { onClick: this._handlePrevious.bind(this), className: 'btn' },
@@ -457,7 +457,7 @@ var Week = (function (_ViewDefault) {
       var width = this.props.height / 24;
       return {
         opacity: 0.8,
-        left: evt.cell.line * 12 + 'px',
+        left: (evt.cell.line + 1.5) * 18 + 'px',
         top: cell.start * width + 'px',
         width: (cell.end - cell.start + 1) * width + 'px',
         transform: 'rotate(90deg)',
@@ -493,7 +493,7 @@ var Week = (function (_ViewDefault) {
           var cond = item.date >= selection.s && item.date <= selection.e;
 
           var props = {
-            value: item.hour,
+            value: item.hour + "h",
             className: cond ? "col-day col-day-active" : "col-day",
             toggleSelection: _this.toggleSelection.bind(_this, item),
             moveSelection: _this.moveSelection.bind(_this, item),
@@ -538,15 +538,16 @@ var Day = (function (_Week) {
   }, {
     key: 'style',
     value: function style(evt) {
+      var eventWidth = 180;
       var room = evt.room;
       var cell = evt.cell;
       var width = this.props.height / 24;
       return {
         opacity: 0.8,
         top: cell.start * width + 'px',
-        left: evt.cell.line * 120 + 'px',
+        left: (evt.cell.line - 0.5) * eventWidth + 'px',
         height: (cell.end - cell.start + 1) * width + 'px',
-        width: '120px',
+        width: eventWidth + 'px',
         background: room.color || 'grey'
       };
     }
@@ -585,7 +586,7 @@ var Month = (function (_ViewDefault2) {
 
       return {
         opacity: 0.8,
-        top: evt.cell.line * 12 + 'px',
+        top: (evt.cell.line + 0.5) * 12 + 'px',
         left: cell.start * width + 'px',
         width: (cell.end - cell.start + 1) * width + 'px',
         background: room.color || 'grey'

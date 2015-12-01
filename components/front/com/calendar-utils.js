@@ -71,7 +71,7 @@ export class Header extends Component {
     let days = this.props.agenda.getDays()
       , view = this.props.view
     return (
-      <Row>
+      <Row className="agenda-row agenda-header">
         {view === 'day'
           && <Cell value={this.props.day} className="col-label" />}
         {view !== 'day'
@@ -105,7 +105,7 @@ export class Info extends Component {
 
   render() {
     return (
-      <Row>
+      <Row className="agenda-row agenda-info">
         {this.props.onPrevious && <a onClick={this._handlePrevious.bind(this)} className="btn"> {"<"} </a>}
         <div>{this.props.info.d+" "+this.props.info.m+" "+this.props.info.y}</div>
         {this.props.onNext && <a onClick={this._handleNext.bind(this)} className="btn"> {">"} </a>}
