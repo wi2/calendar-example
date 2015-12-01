@@ -1431,28 +1431,28 @@ var _default = (function (_Component) {
             _react2['default'].createElement(
               'h1',
               null,
-              'Event'
-            ),
-            _react2['default'].createElement('hr', null),
-            _react2['default'].createElement(
-              'p',
-              { className: 'text-right' },
+              'Add event',
               _react2['default'].createElement(
-                'button',
-                { className: 'btn btn-default', onClick: this._onSubmit.bind(this) },
-                'Save'
-              ),
-              _react2['default'].createElement(
-                'button',
-                { className: 'btn btn-default', onClick: this._onCancel.bind(this) },
-                'Cancel'
-              ),
-              _react2['default'].createElement(
-                'button',
-                { className: 'btn btn-default', onClick: this._onDelete.bind(this) },
-                'Delete'
+                'span',
+                { className: 'float-right' },
+                _react2['default'].createElement(
+                  'button',
+                  { className: 'btn btn-default', onClick: this._onSubmit.bind(this) },
+                  'Save'
+                ),
+                _react2['default'].createElement(
+                  'button',
+                  { className: 'btn btn-default', onClick: this._onCancel.bind(this) },
+                  'Cancel'
+                ),
+                _react2['default'].createElement(
+                  'button',
+                  { className: 'btn btn-default', onClick: this._onDelete.bind(this) },
+                  'Delete'
+                )
               )
             ),
+            _react2['default'].createElement('hr', null),
             _react2['default'].createElement(
               _newformsBootstrap.Row,
               null,
@@ -1467,12 +1467,6 @@ var _default = (function (_Component) {
             _react2['default'].createElement(
               _newformsBootstrap.Row,
               null,
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
-            ),
-            _react2['default'].createElement(
-              _newformsBootstrap.Row,
-              null,
               _react2['default'].createElement(
                 _newformsBootstrap.Col,
                 { md: '6' },
@@ -1483,6 +1477,12 @@ var _default = (function (_Component) {
                 null,
                 this.state.endPicker.show && _react2['default'].createElement(_dateTimePicker2['default'], _extends({}, this.state.endPicker, { onSelect: this._onSelectEnd.bind(this) }))
               )
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
             )
           )
         )

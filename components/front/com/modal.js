@@ -136,23 +136,21 @@ export default class extends Component {
       <form encType="multipart/form-data" className="agenda-modal">
         <RenderForm form={this.form} ref={(ref) => this.mForm = ref}>
           <Container autoColumns="md">
-            <h1>Event</h1>
+            <h1>
+              Add event
+              <span className="float-right">
+                <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
+                <button className="btn btn-default" onClick={this._onCancel.bind(this)}>Cancel</button>
+                <button className="btn btn-default" onClick={this._onDelete.bind(this)}>Delete</button>
+              </span>
+            </h1>
             <hr />
-            <p className="text-right">
-              <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
-              <button className="btn btn-default" onClick={this._onCancel.bind(this)}>Cancel</button>
-              <button className="btn btn-default" onClick={this._onDelete.bind(this)}>Delete</button>
-            </p>
             <Row>
               <Field name="title" md="8"/>
               <Field name="room"/>
             </Row>
             <Row>
               <Field name="content"/>
-            </Row>
-            <Row>
-              <Field name="start" md="6" />
-              <Field name="end" />
             </Row>
             <Row>
               <Col md="6">
@@ -163,6 +161,10 @@ export default class extends Component {
                 {this.state.endPicker.show &&
                   <DateTimePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
               </Col>
+            </Row>
+            <Row>
+              <Field name="start" md="6" />
+              <Field name="end" />
             </Row>
           </Container>
         </RenderForm>
