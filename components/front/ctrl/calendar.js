@@ -30,6 +30,7 @@ export default class extends Component {
       rooms: this.props.rooms||[],
       width: 1000,
       height: 700,
+      right: '-500px',
       filters: { where: {} }
     }
     this.timeout = null;
@@ -113,14 +114,18 @@ export default class extends Component {
       this.setState({
         show: true,
         selection: data,
-        width: document.body.offsetWidth
+        width: document.body.offsetWidth,
+        right: '-500px'
       })
     else {
       this.setState({
         current: data,
-        width: document.body.offsetWidth*0.8
+        width: document.body.offsetWidth*0.8,
+        right: 0
       })
-      setTimeout(() => { this.setState({ width: document.body.offsetWidth*0.8 }) })// twice : why?
+      setTimeout(() => { this.setState({
+        width: document.body.offsetWidth*0.8
+      }) })// twice : why?
     }
   }
 
@@ -132,6 +137,7 @@ export default class extends Component {
       <div className="app">
         {this.state.current &&
           <Panel {...this.state.current}
+                  right={this.state.right||0}
                   except={this.except}
                   events={this.state.events||this.props.events||[]}  />}
 

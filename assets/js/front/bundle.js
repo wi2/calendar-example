@@ -808,7 +808,7 @@ var _default = (function (_Component) {
       return _react2['default'].createElement(
         'div',
         { className: 'agenda', style: { width: this.props.width } },
-        this.props.filters && _react2['default'].createElement(_filter2['default'], _extends({}, this.props.filters, {
+        _react2['default'].createElement(_filter2['default'], _extends({}, this.props.filters, {
           rooms: this.props.rooms,
           onChange: this.onFilterChange.bind(this) })),
         _react2['default'].createElement(_calendarUtils.Navigation, { store: store,
@@ -1548,7 +1548,7 @@ var _default = (function (_Component) {
 
       return _react2['default'].createElement(
         'div',
-        { className: 'agenda-panel' },
+        { className: 'agenda-panel', style: { right: this.props.right } },
         this.props.date && _react2['default'].createElement(_datePicker2['default'], { view: 'month',
           year: this.props.date.getFullYear(),
           month: this.props.date.getMonth(),
@@ -1907,6 +1907,7 @@ var _default = (function (_Component) {
       rooms: this.props.rooms || [],
       width: 1000,
       height: 700,
+      right: '-500px',
       filters: { where: {} }
     };
     this.timeout = null;
@@ -2026,14 +2027,18 @@ var _default = (function (_Component) {
       if (edition) this.setState({
         show: true,
         selection: data,
-        width: document.body.offsetWidth
+        width: document.body.offsetWidth,
+        right: '-500px'
       });else {
         this.setState({
           current: data,
-          width: document.body.offsetWidth * 0.8
+          width: document.body.offsetWidth * 0.8,
+          right: 0
         });
         setTimeout(function () {
-          _this6.setState({ width: document.body.offsetWidth * 0.8 });
+          _this6.setState({
+            width: document.body.offsetWidth * 0.8
+          });
         }); // twice : why?
       }
     }
@@ -2050,6 +2055,7 @@ var _default = (function (_Component) {
         'div',
         { className: 'app' },
         this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
+          right: this.state.right || 0,
           except: this.except,
           events: this.state.events || this.props.events || [] })),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {

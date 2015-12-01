@@ -17,7 +17,7 @@ export default class extends Component {
     let events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month")
 
     return (
-      <div className="agenda-panel">
+      <div className="agenda-panel" style={{right: this.props.right}}>
         {this.props.date &&
           <DatePicker view="month"
                       year={this.props.date.getFullYear()}

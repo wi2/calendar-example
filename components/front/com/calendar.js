@@ -122,10 +122,9 @@ export default class extends Component {
     return (
       <div className="agenda" style={{width: this.props.width}}>
 
-        {this.props.filters &&
-          <Filter {...this.props.filters}
-                  rooms={this.props.rooms}
-                  onChange={this.onFilterChange.bind(this)} />}
+        <Filter {...this.props.filters}
+                rooms={this.props.rooms}
+                onChange={this.onFilterChange.bind(this)} />
 
         <Navigation store={store}
                     agenda={this.agenda}
@@ -134,8 +133,7 @@ export default class extends Component {
                     toggleEditor={this.toggleEditor.bind(this)} />
         <Info info={this.state.info} />
         <Header view={view} store={store} agenda={this.agenda} />
-        {view === 'week'
-          && <Row>
+        {view === 'week' && <Row>
               {store.map((week, j) =>
                 <Week {...props}
                       week={week}
@@ -143,14 +141,12 @@ export default class extends Component {
                       width={this.props.width}
                       agenda={this.agenda} key={`row-${j}`} />)}
              </Row>}
-        {view === 'day'
-          && <Day {...props}
+        {view === 'day' && <Day {...props}
                     week={store}
                     height={this.props.height}
                     width={this.props.width}
                     agenda={this.agenda} />}
-        {view === 'month'
-          && store.map((week, j) =>
+        {view === 'month' && store.map((week, j) =>
             <Month  {...props}
                     week={week}
                     height={this.props.height}
