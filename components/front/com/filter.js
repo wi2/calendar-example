@@ -23,15 +23,6 @@ export default class extends Component {
           onFocus: this._onFocus.bind(this),
           onBlur: this._onSubmit.bind(this)
         }
-      }),
-      limit: ChoiceField({
-        widget: RadioSelect,
-        choices: [10, 50, 100, 200, 500],
-        initial: this.props.limit,
-        widgetAttrs: {
-          onClick: this._onFocus.bind(this),
-          onBlur: this._onSubmit.bind(this)
-        }
       })
     })
     this.form = new MyForm({
@@ -46,7 +37,7 @@ export default class extends Component {
 
   _onFocus(e) {
     e.preventDefault();
-    setTimeout(() => {e.target.blur(), 500});
+    setTimeout(() => e.target.blur(), 50);
   }
   _onSubmit(e) {
     if (e) e.preventDefault();
@@ -65,12 +56,7 @@ export default class extends Component {
       <form className="agenda-filter">
         {!this.state.show && <a onClick={this.toggle.bind(this)} className="btn">Filter</a>}
         {this.state.show && <RenderForm form={this.form} ref={ref => this.mForm = ref}>
-          <Container autoColumns="md">
-            <Row>
-              <Field name="room" md="8"/>
-              <Field name="limit"/>
-            </Row>
-          </Container>
+            <Row><Field name="room" /></Row>
         </RenderForm>}
       </form>
     )

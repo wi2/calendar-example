@@ -30,10 +30,7 @@ export default class extends Component {
       rooms: this.props.rooms||[],
       width: 1000,
       height: 700,
-      filters: {
-        limit: 100,
-        where: {}
-      }
+      filters: { where: {} }
     }
     this.timeout = null;
     this.loadEvents()
@@ -77,8 +74,7 @@ export default class extends Component {
             {end: { '>=': dateStart, '<=': dateEnd }},
             {start: { '<=': dateStart }, end: { '>=': dateEnd }}
           ]
-        },
-        limit: this.state.filters.limit
+        }
       }
 
     if (global.io)
@@ -134,8 +130,6 @@ export default class extends Component {
   render() {
     return (
       <div className="app">
-
-
         {this.state.current &&
           <Panel {...this.state.current}
                   except={this.except}

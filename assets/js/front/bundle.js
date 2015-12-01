@@ -1159,15 +1159,6 @@ var _default = (function (_Component) {
             onFocus: this._onFocus.bind(this),
             onBlur: this._onSubmit.bind(this)
           }
-        }),
-        limit: (0, _newforms.ChoiceField)({
-          widget: _newforms.RadioSelect,
-          choices: [10, 50, 100, 200, 500],
-          initial: this.props.limit,
-          widgetAttrs: {
-            onClick: this._onFocus.bind(this),
-            onBlur: this._onSubmit.bind(this)
-          }
         })
       });
       this.form = new MyForm({
@@ -1186,8 +1177,8 @@ var _default = (function (_Component) {
     value: function _onFocus(e) {
       e.preventDefault();
       setTimeout(function () {
-        e.target.blur(), 500;
-      });
+        return e.target.blur();
+      }, 50);
     }
   }, {
     key: '_onSubmit',
@@ -1223,14 +1214,9 @@ var _default = (function (_Component) {
               return _this.mForm = ref;
             } },
           _react2['default'].createElement(
-            _newformsBootstrap.Container,
-            { autoColumns: 'md' },
-            _react2['default'].createElement(
-              _newformsBootstrap.Row,
-              null,
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
-              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'limit' })
-            )
+            _newformsBootstrap.Row,
+            null,
+            _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
           )
         )
       );
@@ -1921,10 +1907,7 @@ var _default = (function (_Component) {
       rooms: this.props.rooms || [],
       width: 1000,
       height: 700,
-      filters: {
-        limit: 100,
-        where: {}
-      }
+      filters: { where: {} }
     };
     this.timeout = null;
     this.loadEvents();
@@ -1987,8 +1970,7 @@ var _default = (function (_Component) {
         where: {
           room: this.state.filters.room,
           or: [{ start: { '>=': dateStart, '<=': dateEnd } }, { end: { '>=': dateStart, '<=': dateEnd } }, { start: { '<=': dateStart }, end: { '>=': dateEnd } }]
-        },
-        limit: this.state.filters.limit
+        }
       };
 
       if (global.io) io.socket.get('/event', filters, function (res) {
