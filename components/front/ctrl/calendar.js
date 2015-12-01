@@ -49,7 +49,7 @@ export default class extends Component {
       this.loadEvents()
   }
   componentWillReceiveProps(props) {
-    this.loadEvents()
+    this.loadEvents(props)
   }
   shouldComponentUpdate(props, state) {
     return this.state && this.state !== state
@@ -64,25 +64,25 @@ export default class extends Component {
     setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 50);
     setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 100);//need twice for window resize and show inspector (why??)
   }
-  loadEvents() {
+  loadEvents(props=this.props) {
     let months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"]
-      , currentMonth = months.indexOf(this.props.params.month)
-      , dateStart = new Date(this.props.params.year, currentMonth)
-      , dateEnd = new Date(this.props.params.year, currentMonth + 1)
+      , currentMonth = months.indexOf(props.params.month)
+      , dateStart = new Date(props.params.year, currentMonth)
+      , dateEnd = new Date(props.params.year, currentMonth + 1)
       , filters = {
         where: {
           room: this.state.filters.room,
           or: [
-            { start: { '>=': dateStart }, start: { '<=': dateEnd } },
-            { end: { '>=': dateStart }, end: { '<=': dateEnd } },
-            { start: { '<=': dateStart }, end: { '>=': dateEnd }
-          }]
+            {start: { '>=': dateStart, '<=': dateEnd }},
+            {end: { '>=': dateStart, '<=': dateEnd }},
+            {start: { '<=': dateStart }, end: { '>=': dateEnd }}
+          ]
         },
         limit: this.state.filters.limit
       }
 
     if (global.io)
-      io.socket.get('/event', filters, res => { this.setState({events: res}) });
+      io.socket.get('/event', filters, res => this.setState({ events: res }) );
   }
   hideModal() {
     this.setState({ show: false, selection: null })

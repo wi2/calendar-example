@@ -21,7 +21,7 @@ export default class extends Component {
         initial: this.props.rooms.map(r => r.id)
       }),
       limit: ChoiceField({
-        choices: [5, 10, 50, 100, 200, 500],
+        choices: [10, 50, 100, 200, 500],
         initial: this.props.limit
       })
     })
