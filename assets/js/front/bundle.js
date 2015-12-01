@@ -1965,7 +1965,7 @@ var _default = (function (_Component) {
 
       var months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"],
           currentMonth = months.indexOf(props.params.month),
-          dateStart = new Date(props.params.year, currentMonth),
+          dateStart = new Date(props.params.year, currentMonth - 1),
           dateEnd = new Date(props.params.year, currentMonth + 1),
           filters = {
         where: {

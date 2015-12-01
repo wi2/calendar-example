@@ -1,24 +1,15 @@
 module.exports = function(req, res, next) {
-  var query = {
-    room: req.param('room'),
-    or: [
-      {
-        start: {
-          '<=': new Date(req.param('start'))
-        },
-        end: {
-          '>=': new Date(req.param('start'))
-        }
-      }, {
-        start: {
-          '<=': new Date(req.param('end'))
-        },
-        end: {
-          '>=': new Date(req.param('end'))
-        }
-      }
-    ]
-  };
+  // console.log(req.allParams())
+  var dateStart = new Date(req.param('start'))
+    , dateEnd = new Date(req.param('end'))
+    , query = {
+        room: req.param('room'),
+        or: [
+          {start: { '>=': dateStart, '<=': dateEnd }},
+          {end: { '>=': dateStart, '<=': dateEnd }},
+          {start: { '<=': dateStart }, end: { '>=': dateEnd }}
+        ]
+      };
 
   switch(req.method) {
     case 'PUT': _.extend(query, { id: {'!' : req.param('id')} })
