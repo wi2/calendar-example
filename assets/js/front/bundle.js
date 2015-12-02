@@ -1115,6 +1115,8 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _reactMotion = require('react-motion');
+
 var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
@@ -1206,15 +1208,25 @@ var _default = (function (_Component) {
           'Filter'
         ),
         this.state.show && _react2['default'].createElement(
-          _newforms.RenderForm,
-          { form: this.form, ref: function (ref) {
-              return _this.mForm = ref;
-            } },
-          _react2['default'].createElement(
-            _newformsBootstrap.Row,
-            null,
-            _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
-          )
+          _reactMotion.Motion,
+          { defaultStyle: { opacity: 0, height: 0 }, style: { opacity: (0, _reactMotion.spring)(1), height: 50 } },
+          function (value) {
+            return _react2['default'].createElement(
+              'div',
+              { style: value },
+              _react2['default'].createElement(
+                _newforms.RenderForm,
+                { form: _this.form, ref: function (ref) {
+                    return _this.mForm = ref;
+                  } },
+                _react2['default'].createElement(
+                  _newformsBootstrap.Row,
+                  null,
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
+                )
+              )
+            );
+          }
         )
       );
     }
@@ -1226,7 +1238,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],8:[function(require,module,exports){
+},{"./date-picker":5,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react","react-motion":27}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

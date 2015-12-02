@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {Motion, spring} from 'react-motion';
 import _ from 'lodash';
 import {RenderForm, Form, ChoiceField, MultipleChoiceField, CheckboxSelectMultiple, RadioSelect} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
@@ -55,9 +56,14 @@ export default class extends Component {
     return (
       <form className="agenda-filter">
         {!this.state.show && <a onClick={this.toggle.bind(this)} className="btn">Filter</a>}
-        {this.state.show && <RenderForm form={this.form} ref={ref => this.mForm = ref}>
-          <Row><Field name="room" /></Row>
-        </RenderForm>}
+        {this.state.show && <Motion defaultStyle={{opacity: 0, height:0}} style={{opacity: spring(1), height: 50}}>
+          {value =>
+          <div style={value}>
+            <RenderForm form={this.form} ref={ref => this.mForm = ref}>
+              <Row><Field name="room" /></Row>
+            </RenderForm>
+          </div>}
+        </Motion>}
       </form>
     )
   }}
