@@ -1927,8 +1927,8 @@ var _default = (function (_Component) {
       rooms: this.props.rooms || [],
       width: 1000,
       height: 700,
-      defaultRight: -document.body.offsetWidth * 0.2,
-      right: -document.body.offsetWidth * 0.2,
+      defaultRight: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
+      right: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
       filters: { where: {} }
     };
     this.timeout = null;
