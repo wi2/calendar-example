@@ -363,46 +363,15 @@ var ViewDefault = (function (_Component) {
       this.setState({ width: width, height: height, cellClassName: cellClassName });
     }
   }, {
-    key: 'tetris',
-    value: function tetris(events) {
-      if (events.length === 0) return [];
-      events[0].cell.line = 1;
-
-      var _loop = function (j, len) {
-        var collision = false,
-            evt = events[j].cell,
-            line = 1;
-        while (!evt.line) {
-          var evts = events.filter(function (a) {
-            if (a.cell.line === line) return a;
-          });
-          for (var i = 0, _len = evts.length; i < _len; i++) {
-            var c = evts[i].cell;
-            if (evt.start >= c.start && evt.start <= c.end || evt.end >= c.start && evt.end <= c.end) collision = true;
-          }
-          if (collision) {
-            collision = false;
-            line++;
-          } else {
-            evt.line = line;
-          }
-        }
-      };
-
-      for (var j = 0, len = events.length; j < len; j++) {
-        _loop(j, len);
-      }
-      return events;
-    }
-  }, {
     key: 'prepareRender',
     value: function prepareRender() {
       var withHour = arguments.length <= 0 || arguments[0] === undefined ? false : arguments[0];
 
       var events = undefined,
+          agenda = this.props.agenda,
           week = this.props.week;
       if (this.props.agenda && this.props.events) {
-        events = this.tetris(this.props.agenda.getEvents(week, this.props.events, withHour));
+        events = agenda.tetris(agenda.getEvents(week, this.props.events, withHour));
       }
       var selection = {
         s: this.props.selectionStart.date,
@@ -470,6 +439,8 @@ var Week = (function (_ViewDefault) {
     value: function render() {
       var _this = this;
 
+      var agenda = this.props.agenda;
+
       var _prepareRender = this.prepareRender(true);
 
       var events = _prepareRender.events;
@@ -490,8 +461,7 @@ var Week = (function (_ViewDefault) {
           );
         }),
         week.map(function (item) {
-          var cond = item.date >= selection.s && item.date <= selection.e;
-
+          var cond = item.date >= selection.s && item.date <= selection.e || !_this.props.editor && _this.props.current && agenda.compare(new Date(item.date), new Date(_this.props.current.year, _this.props.current.month, Math.abs(_this.props.current.day), _this.props.current.hour), true);
           var props = {
             value: item.hour + "h",
             className: cond ? "col-day col-day-active" : "col-day",
@@ -583,7 +553,6 @@ var Month = (function (_ViewDefault2) {
       var room = evt.room;
       var cell = evt.cell;
       var width = this.state.width;
-
       return {
         opacity: 0.8,
         top: (evt.cell.line + 0.5) * 12 + 'px',
@@ -597,13 +566,14 @@ var Month = (function (_ViewDefault2) {
     value: function render() {
       var _this2 = this;
 
+      var agenda = this.props.agenda;
+
       var _prepareRender2 = this.prepareRender();
 
       var events = _prepareRender2.events;
       var week = _prepareRender2.week;
       var selection = _prepareRender2.selection;
       var that = this;
-
       return _react2['default'].createElement(
         _calendarUtils.Row,
         null,
@@ -618,7 +588,7 @@ var Month = (function (_ViewDefault2) {
           );
         }),
         week.map(function (item) {
-          var cond = item.date >= selection.s && item.date <= selection.e,
+          var cond = item.date >= selection.s && item.date <= selection.e || !_this2.props.editor && _this2.props.current && agenda.compare(new Date(item.date), new Date(_this2.props.current.year, _this2.props.current.month, Math.abs(_this2.props.current.day))),
               props = {
             value: item.day,
             className: cond ? "col col-active" : "col",
@@ -711,6 +681,7 @@ var _default = (function (_Component) {
     value: function componentWillReceiveProps(props) {
       this.agenda.changeDate(props.year, props.month, props.day);
       this.setState({
+        current: props.current || {},
         view: props.view,
         events: props.events || [],
         agenda: this.agenda,
@@ -803,7 +774,8 @@ var _default = (function (_Component) {
         onSelect: this.onSelectEvent.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end,
-        editor: this.state.editor
+        editor: this.state.editor,
+        current: this.props.current
       };
 
       return _react2['default'].createElement(
@@ -2286,14 +2258,11 @@ var _default = (function () {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
     this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     this.except = [];
-
     if (!y) {
       var now = new Date();
       y = now.getFullYear();
       m = this.months[now.getMonth()];
     }
-
-    if (typeof Number(m) === 'number') m = this.months[m];
     this.changeDate(y, m, d, h, mm);
   }
 
@@ -2326,7 +2295,6 @@ var _default = (function () {
           return evt;
         }
       });
-
       return allevents.sort(function (a, b) {
         return b.cell.start - a.cell.start;
       }).sort(function (a, b) {
@@ -2343,6 +2311,38 @@ var _default = (function () {
       });
     }
   }, {
+    key: "tetris",
+    value: function tetris(events) {
+      if (events.length === 0) return [];
+      events[0].cell.line = 1;
+
+      var _loop = function (j, len) {
+        var collision = false,
+            evt = events[j].cell,
+            line = 1;
+        while (!evt.line) {
+          var evts = events.filter(function (a) {
+            if (a.cell.line === line) return a;
+          });
+          for (var i = 0, _len = evts.length; i < _len; i++) {
+            var c = evts[i].cell;
+            if (evt.start >= c.start && evt.start <= c.end || evt.end >= c.start && evt.end <= c.end) collision = true;
+          }
+          if (collision) {
+            collision = false;
+            line++;
+          } else {
+            evt.line = line;
+          }
+        }
+      };
+
+      for (var j = 0, len = events.length; j < len; j++) {
+        _loop(j, len);
+      }
+      return events;
+    }
+  }, {
     key: "matrix",
     value: function matrix() {
       var _this3 = this;
@@ -2350,7 +2350,7 @@ var _default = (function () {
       var view = arguments.length <= 0 || arguments[0] === undefined ? 'month' : arguments[0];
       var _date = this.date;
       var y = _date.y;
-      var m = _date.m;
+      var month = _date.month;
       var d = _date.d;
       var h = _date.h;
       var mm = _date.mm;
@@ -2374,21 +2374,19 @@ var _default = (function () {
       var currentWeek;
       var currentDay;
       var cellDate;
-
       _lodash2["default"].each(rows, function (row) {
         weeks = [];
         _lodash2["default"].each(cols, function (col) {
           if (row === 0) {
             day = col - start.getDay() + 1;
-            tmp = col < start.getDay() ? -new Date(y, m, -(start.getDay() - 1 - col)).getDate() : day;
+            tmp = col < start.getDay() ? -new Date(y, month, -(start.getDay() - 1 - col)).getDate() : day;
           } else {
             day = _lodash2["default"].last(months)[6].day + col + 1;
             tmp = day <= days ? day : -(day - days);
           }
-
           //adjust month and year
           var yearTmp = Number(y),
-              monthTmp = Number(m);
+              monthTmp = Number(month);
           if (tmp < -20) monthTmp -= 1;else if (tmp < 0) monthTmp += 1;
           if (monthTmp < 0) {
             monthTmp = 11;
@@ -2397,7 +2395,6 @@ var _default = (function () {
             monthTmp = 0;
             yearTmp += 1;
           }
-
           cellDate = new Date(yearTmp, monthTmp, Math.abs(tmp), h);
           commonCell = {
             date: cellDate,
@@ -2411,12 +2408,11 @@ var _default = (function () {
           if (view === 'day' && cellDate.getWeek() === date.getWeek() && cellDate.getDate() === date.getDate() && !currentDay) currentDay = commonCell;
         });
         if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek) currentWeek = weeks;
-
         if (!row || weeks[0].day > 0) months.push(weeks);
       });
 
       if (currentDay) {
-        var _ret = (function () {
+        var _ret2 = (function () {
           var dayHour = [];
           _lodash2["default"].range(0, 24).map(function (hour) {
             var date = new Date(currentDay.year, currentDay.month, Math.abs(currentDay.day), hour),
@@ -2428,9 +2424,9 @@ var _default = (function () {
           };
         })();
 
-        if (typeof _ret === "object") return _ret.v;
+        if (typeof _ret2 === "object") return _ret2.v;
       } else if (currentWeek) {
-        var _ret2 = (function () {
+        var _ret3 = (function () {
           var weekHour = [];
           _lodash2["default"].each(currentWeek, function (item) {
             var dayHour = [];
@@ -2446,7 +2442,7 @@ var _default = (function () {
           };
         })();
 
-        if (typeof _ret2 === "object") return _ret2.v;
+        if (typeof _ret3 === "object") return _ret3.v;
       }
       return months;
     }
@@ -2476,7 +2472,6 @@ var _default = (function () {
           default:
             if (date.toString() === this.except[i].toString()) ret = true;
             break;
-
         }
       }
       return ret;
@@ -2493,9 +2488,9 @@ var _default = (function () {
     key: "getInitDates",
     value: function getInitDates() {
       return {
-        start: new Date(this.date.y, this.date.m),
-        next: new Date(this.date.y, this.date.m + 1, 0),
-        date: new Date(this.date.y, this.date.m, this.date.d)
+        start: new Date(this.date.y, this.date.month),
+        next: new Date(this.date.y, this.date.month + 1, 0),
+        date: new Date(this.date.y, this.date.month, this.date.d)
       };
     }
   }, {
@@ -2512,7 +2507,7 @@ var _default = (function () {
   }, {
     key: "getInfo",
     value: function getInfo() {
-      var info = new Date(this.date.y, this.date.m, this.date.d);
+      var info = new Date(this.date.y, this.date.month, this.date.d);
       return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate());
     }
   }, {
@@ -2530,7 +2525,6 @@ var _default = (function () {
       var monthLink = "/month/" + current.y + "/" + current.m;
       var weekLink = "/week/" + current.y + "/" + current.m + "/15";
       var dayLink = "/day/" + current.y + "/" + current.m + "/15";
-
       if (view === 'week' || view === 'day') {
         prevLink += "/" + previous.d;
         nextLink += "/" + next.d;
@@ -2542,15 +2536,13 @@ var _default = (function () {
     key: "getLinkHelper",
     value: function getLinkHelper(view) {
       var y = this.date.y,
-          m = this.date.m * 1,
+          m = this.date.month * 1,
           d = this.date.d * 1,
           h = this.date.h,
           mm = this.date.mm;
-
       if (view === 'week' || view === 'day') {
         var nt = new Date(y, m, d + (view === 'week' ? 7 : 1)),
             pv = new Date(y, m, d - (view === 'week' ? 7 : 1));
-
         return {
           next: this.linkHelper(nt.getFullYear(), nt.getMonth(), nt.getDate()),
           previous: this.linkHelper(pv.getFullYear(), pv.getMonth(), pv.getDate()),
@@ -2560,7 +2552,6 @@ var _default = (function () {
       } else {
         var nt = new Date(y, m + 1),
             pv = new Date(y, m - 1);
-
         return {
           next: this.linkHelper(nt.getFullYear(), nt.getMonth()),
           previous: this.linkHelper(pv.getFullYear(), pv.getMonth()),
@@ -2581,16 +2572,12 @@ var _default = (function () {
       var start = _lodash2["default"].find(line, function (item) {
         return _this4.compare(item.date, eventDate.start, withHour);
       });
-
       var end = _lodash2["default"].find(line, function (item) {
         return _this4.compare(item.date, eventDate.end, withHour);
       });
-
       if (!(start || end || line[0].date > eventDate.start && line[line.length - 1].date < eventDate.end)) return { start: start, end: end };
-
       if (!start) start = line[0];
       if (!end) end = line[line.length - 1];
-
       return { start: start, end: end };
     }
   }, {
@@ -2615,21 +2602,21 @@ var _default = (function () {
       var h = arguments.length <= 3 || arguments[3] === undefined ? 0 : arguments[3];
       var mm = arguments.length <= 4 || arguments[4] === undefined ? 0 : arguments[4];
 
-      var mo = m * 1;
-      if (mo >= -1) {
-        if (mo == -1) {
-          mo = 11;
-          y--;
-        } else if (mo == 12) {
-          mo = 0;
-          y++;
-        }
-        m = this.months[mo];
-      } else {
-        m = this.months.indexOf(m);
+      var month = undefined; //number
+      if (typeof m === 'string') month = this.months.indexOf(m);else {
+        month = m;
+        m = this.months[month];
       }
+      if (m == -1) {
+        month = 11;
+        y--;
+      } else if (month == 12) {
+        month = 0;
+        y++;
+      }
+      m = this.months[month];
       d = d || 1;
-      return { y: y, m: m, d: d, h: h, mm: mm, month: this.months.indexOf(m) };
+      return { y: y, m: m, d: d, h: h, mm: mm, month: month };
     }
   }]);
 

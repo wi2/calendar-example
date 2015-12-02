@@ -31,6 +31,7 @@ export default class extends Component {
   componentWillReceiveProps(props) {
     this.agenda.changeDate(props.year, props.month, props.day)
     this.setState({
+      current: props.current||{},
       view: props.view,
       events: props.events||[],
       agenda: this.agenda,
@@ -115,17 +116,15 @@ export default class extends Component {
         onSelect: this.onSelectEvent.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end,
-        editor: this.state.editor
+        editor: this.state.editor,
+        current: this.props.current
       };
-
 
     return (
       <div className="agenda" style={{width: this.props.width}}>
-
         <Filter {...this.props.filters}
                 rooms={this.props.rooms}
                 onChange={this.onFilterChange.bind(this)} />
-
         <Navigation store={store}
                     agenda={this.agenda}
                     view={view}

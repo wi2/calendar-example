@@ -7,15 +7,11 @@ export default class {
     this.months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"];
     this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     this.except = [];
-
     if (!y) {
       let now = new Date()
       y = now.getFullYear()
       m = this.months[now.getMonth()]
     }
-
-    if (typeof Number(m) === 'number')
-      m = this.months[m]
     this.changeDate(y,m,d,h,mm)
   }
 
@@ -24,8 +20,7 @@ export default class {
   }
 
   changeDate(y,m,d,h,mm) {
-    if (typeof m === 'number')
-      m = this.months[m]
+    if (typeof m === 'number') m = this.months[m]
     this.date = this.linkHelper(y,m,d,h,mm)
   }
 
@@ -37,7 +32,6 @@ export default class {
         return evt;
       }
     })
-
     return allevents
       .sort( (a, b) => b.cell.start - a.cell.start )
       .sort( (a, b) => b.cell.end - b.cell.start - (a.cell.end - a.cell.start) )
@@ -47,8 +41,35 @@ export default class {
     return events.filter( evt  => this.compare(date, new Date(evt.start), withHour) || this.compare(date, new Date(evt.end), withHour) || (date >= new Date(evt.start) && date <= new Date(evt.end)) )
   }
 
+  tetris(events) {
+    if (events.length===0)
+      return [];
+    events[0].cell.line = 1;
+
+    for (let j=0,len=events.length; j<len; j++) {
+      let collision = false
+        , evt = events[j].cell
+        , line = 1;
+      while(!evt.line) {
+        let evts = events.filter(a => { if (a.cell.line === line) return a; });
+        for(let i=0,len=evts.length; i<len; i++) {
+          let c = evts[i].cell
+          if ( evt.start >= c.start && evt.start <= c.end || evt.end >= c.start && evt.end <= c.end)
+            collision = true;
+        }
+        if (collision) {
+          collision = false;
+          line++;
+        } else {
+          evt.line = line
+        }
+      }
+    }
+    return events
+  }
+
   matrix(view='month') {
-    let {y,m,d,h,mm} = this.date
+    let {y,month,d,h,mm} = this.date
     var {rows, cols} = this.getRange(6,7)
       , {start, next, date} = this.getInitDates()
       , days = next.getDate()
@@ -60,23 +81,21 @@ export default class {
       , currentWeek
       , currentDay
       , cellDate
-
     _.each(rows, (row) => {
       weeks = [];
       _.each(cols, (col) => {
         if (row === 0) {
           day = col - start.getDay() + 1
           tmp = (col < start.getDay()
-              ? -(new Date(y, m, -(start.getDay() - 1 - col)).getDate())
+              ? -(new Date(y, month, -(start.getDay() - 1 - col)).getDate())
               : day)
         } else {
           day = _.last(months)[6].day + col + 1
           tmp = (day <= days ? day : -(day - days))
         }
-
         //adjust month and year
         let yearTmp = Number(y)
-          , monthTmp = Number(m)
+          , monthTmp = Number(month)
         if (tmp < -20) monthTmp -= 1
         else if (tmp < 0) monthTmp += 1
         if (monthTmp < 0) {
@@ -86,7 +105,6 @@ export default class {
           monthTmp = 0;
           yearTmp += 1;
         }
-
         cellDate = new Date(yearTmp, monthTmp , Math.abs(tmp), h)
         commonCell = {
           date: cellDate,
@@ -102,10 +120,7 @@ export default class {
       });
       if (view === 'week' && cellDate.getWeek() === date.getWeek() && !currentWeek)
         currentWeek = weeks
-
-      if (!row || weeks[0].day > 0)
-        months.push(weeks)
-
+      if (!row || weeks[0].day > 0) months.push(weeks)
     });
 
     if (currentDay) {
@@ -162,7 +177,6 @@ export default class {
           if (date.toString() === this.except[i].toString())
             ret = true;
           break;
-
       }
     }
     return ret;
@@ -177,9 +191,9 @@ export default class {
 
   getInitDates() {
     return {
-      start: new Date(this.date.y, this.date.m),
-      next: new Date(this.date.y, this.date.m + 1, 0),
-      date: new Date(this.date.y, this.date.m, this.date.d)
+      start: new Date(this.date.y, this.date.month),
+      next: new Date(this.date.y, this.date.month + 1, 0),
+      date: new Date(this.date.y, this.date.month, this.date.d)
     }
   }
 
@@ -193,7 +207,7 @@ export default class {
   }
 
   getInfo() {
-    let info = new Date(this.date.y, this.date.m, this.date.d)
+    let info = new Date(this.date.y, this.date.month, this.date.d)
     return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate())
   }
 
@@ -205,7 +219,6 @@ export default class {
       , monthLink = `/month/${current.y}/${current.m}`
       , weekLink = `/week/${current.y}/${current.m}/15`
       , dayLink = `/day/${current.y}/${current.m}/15`
-
     if (view === 'week' || view === 'day') {
       prevLink += `/${previous.d}`
       nextLink += `/${next.d}`
@@ -216,15 +229,13 @@ export default class {
 
   getLinkHelper(view) {
     let y = this.date.y
-      , m = this.date.m * 1
+      , m = this.date.month * 1
       , d = this.date.d * 1
       , h = this.date.h
       , mm = this.date.mm
-
     if (view === 'week' || view === 'day') {
       let nt = new Date(y, m, d + (view === 'week' ? 7 : 1))
         , pv = new Date(y, m, d - (view === 'week' ? 7 : 1))
-
       return {
         next: this.linkHelper(nt.getFullYear(), nt.getMonth(), nt.getDate()),
         previous: this.linkHelper(pv.getFullYear(), pv.getMonth(), pv.getDate()),
@@ -234,7 +245,6 @@ export default class {
     } else {
       let nt = new Date(y, m + 1)
         , pv = new Date(y, m - 1)
-
       return {
         next: this.linkHelper(nt.getFullYear(), nt.getMonth()),
         previous: this.linkHelper(pv.getFullYear(), pv.getMonth()),
@@ -242,7 +252,6 @@ export default class {
         current: this.linkHelper(y,m,d,h,mm)
       }
     }
-
   }
 
   getLimit(line, evt, withHour) {
@@ -250,20 +259,12 @@ export default class {
       start: new Date(evt.start),
       end: new Date(evt.end)
     }
-    let start = _.find(line, (item) => {
-      return this.compare(item.date, eventDate.start, withHour)
-    });
-
-    let end = _.find(line, (item) => {
-      return this.compare(item.date, eventDate.end, withHour)
-    });
-
+    let start = _.find(line, item => this.compare(item.date, eventDate.start, withHour));
+    let end = _.find(line, item => this.compare(item.date, eventDate.end, withHour));
     if ( !(start || end || (line[0].date > eventDate.start && line[line.length-1].date < eventDate.end)) )
       return {start, end}
-
     if (!start) start = line[0];
     if (!end) end = line[line.length-1];
-
     return {start, end}
   }
 
@@ -274,8 +275,7 @@ export default class {
   }
 
   compareWithHour(date1, date2) {
-    return date1.getHours() === date2.getHours()
-        && this.compareDate(date1, date2)
+    return date1.getHours() === date2.getHours() && this.compareDate(date1, date2)
   }
 
   compareDate(date1, date2) {
@@ -285,21 +285,23 @@ export default class {
   }
 
   linkHelper(y, m, d, h=0, mm=0) {
-    let mo = m*1
-    if (mo >= -1) {
-      if (mo == -1) {
-        mo = 11;
-        y--;
-      } else if (mo == 12) {
-        mo = 0;
-        y++;
-      }
-      m = this.months[mo];
-    } else {
-      m = this.months.indexOf(m);
+    let month;//number
+    if (typeof m === 'string')
+      month = this.months.indexOf(m)
+    else {
+      month = m;
+      m = this.months[month]
     }
+    if (m == -1) {
+      month = 11;
+      y--;
+    } else if (month == 12) {
+      month = 0;
+      y++;
+    }
+    m = this.months[month];
     d = d||1;
-    return {y, m, d, h, mm, month: this.months.indexOf(m)};
+    return {y, m, d, h, mm, month};
   }
 
 }

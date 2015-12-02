@@ -8,42 +8,17 @@ class ViewDefault extends Component {
     super(props)
     this.state = { width: this.props.width, height: this.props.height, cellClassName: "agenda-vertical" };
   }
+
   setDimension(width, height, cellClassName='') {
     this.setState({width, height, cellClassName});
   }
 
-  tetris(events) {
-    if (events.length===0)
-      return [];
-    events[0].cell.line = 1;
-
-    for (let j=0,len=events.length; j<len; j++) {
-      let collision = false
-        , evt = events[j].cell
-        , line = 1;
-      while(!evt.line) {
-        let evts = events.filter(a => { if (a.cell.line === line) return a; });
-        for(let i=0,len=evts.length; i<len; i++) {
-          let c = evts[i].cell
-          if ( evt.start >= c.start && evt.start <= c.end || evt.end >= c.start && evt.end <= c.end)
-            collision = true;
-        }
-        if (collision) {
-          collision = false;
-          line++;
-        } else {
-          evt.line = line
-        }
-      }
-    }
-    return events
-  }
-
   prepareRender(withHour=false) {
     let events
+      , agenda = this.props.agenda
       , week = this.props.week
     if (this.props.agenda && this.props.events) {
-      events = this.tetris(this.props.agenda.getEvents(week, this.props.events, withHour))
+      events = agenda.tetris(agenda.getEvents(week, this.props.events, withHour))
     }
     let selection = {
       s: this.props.selectionStart.date,
@@ -86,7 +61,8 @@ export class Week extends ViewDefault {
   }
 
   render() {
-    let {events, week, selection} = this.prepareRender(true)
+    let agenda = this.props.agenda
+      , {events, week, selection} = this.prepareRender(true)
     return (
       <Vertical className={this.state.cellClassName}>
         {events && events.map((evt, i) => <div className="event"
@@ -95,7 +71,7 @@ export class Week extends ViewDefault {
                                             key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
-
+                      || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day), this.props.current.hour), true ) )
           let props = {
             value: item.hour + "h",
             className: cond ? "col-day col-day-active" : "col-day",
@@ -139,7 +115,6 @@ export class Day extends Week {
   }
 }
 
-
 export class Month extends ViewDefault {
   componentDidMount() {
     this.setDimension(this.props.width/7, this.props.height/7)
@@ -151,7 +126,6 @@ export class Month extends ViewDefault {
   style(evt) {
     let {room, cell} = evt
       , width = this.state.width
-
     return {
       opacity: 0.8,
       top: (evt.cell.line + 0.5) * 12 + 'px',
@@ -162,9 +136,9 @@ export class Month extends ViewDefault {
   }
 
   render() {
+    let agenda = this.props.agenda
     let {events, week, selection} = this.prepareRender()
       , that = this
-
     return (
       <Row>
         {events &&
@@ -174,6 +148,7 @@ export class Month extends ViewDefault {
                                       key={`event-${i}`}>{evt.title}</div> )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
+                      || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day)) ) )
             , props = {
               value: item.day,
               className: cond ? "col col-active" : "col",
