@@ -113,8 +113,10 @@ export default class extends Component {
   onCancel() {
     this.hideModal()
   }
-  onSelectDatePanel(url) {
+  onSelectDatePanel(val) {
+    let url = `/day/${val.year}/${val.monthName}/${Math.abs(val.day)}`;
     this.props.history.pushState(null, url, {force: true});
+    this.setState({current: val})
   }
 
   onSelect(data, edition=false) {

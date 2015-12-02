@@ -1556,7 +1556,7 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: '_onSelect',
     value: function _onSelect(val) {
-      this.props.onSelectDate('/day/' + val.year + '/' + val.monthName + '/' + Math.abs(val.day));
+      this.props.onSelectDate(val);
     }
   }, {
     key: 'format',
@@ -2046,8 +2046,12 @@ var _default = (function (_Component) {
     }
   }, {
     key: 'onSelectDatePanel',
-    value: function onSelectDatePanel(url) {
+    value: function onSelectDatePanel(val) {
+      var url = '/day/' + val.year + '/' + val.monthName + '/' + Math.abs(val.day);
       this.props.history.pushState(null, url, { force: true });
+      this.setState({
+        current: val
+      });
     }
   }, {
     key: 'onSelect',

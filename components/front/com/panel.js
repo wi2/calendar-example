@@ -11,7 +11,7 @@ export default class extends Component {
     this.agenda = new Agenda()
   }
   _onSelect(val) {
-    this.props.onSelectDate(`/day/${val.year}/${val.monthName}/${Math.abs(val.day)}`);
+    this.props.onSelectDate(val);
   }
   format(dateStr) {
     let date = new Date(dateStr);
