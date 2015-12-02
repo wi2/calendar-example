@@ -642,6 +642,8 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _reactMotion = require('react-motion');
+
 var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
@@ -785,41 +787,47 @@ var _default = (function (_Component) {
       };
 
       return _react2['default'].createElement(
-        'div',
-        { className: 'agenda', style: { width: this.props.width } },
-        _react2['default'].createElement(_filter2['default'], _extends({}, this.props.filters, {
-          rooms: this.props.rooms,
-          onChange: this.onFilterChange.bind(this) })),
-        _react2['default'].createElement(_calendarUtils.Navigation, { store: store,
-          agenda: this.agenda,
-          view: view,
-          editor: this.state.editor,
-          toggleEditor: this.toggleEditor.bind(this) }),
-        _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info, view: view }),
-        view !== 'day' && _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: this.agenda }),
-        view === 'week' && _react2['default'].createElement(
-          _calendarUtils.Row,
-          null,
-          store.map(function (week, j) {
-            return _react2['default'].createElement(_calendarView.Week, _extends({}, props, {
-              week: week,
+        _reactMotion.Motion,
+        { style: { width: (0, _reactMotion.spring)(this.props.width) } },
+        function (value) {
+          return _react2['default'].createElement(
+            'div',
+            { className: 'agenda', style: { width: value.width } },
+            _react2['default'].createElement(_filter2['default'], _extends({}, _this.props.filters, {
+              rooms: _this.props.rooms,
+              onChange: _this.onFilterChange.bind(_this) })),
+            _react2['default'].createElement(_calendarUtils.Navigation, { store: store,
+              agenda: _this.agenda,
+              view: view,
+              editor: _this.state.editor,
+              toggleEditor: _this.toggleEditor.bind(_this) }),
+            _react2['default'].createElement(_calendarUtils.Info, { info: _this.state.info, view: view }),
+            view !== 'day' && _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: _this.agenda }),
+            view === 'week' && _react2['default'].createElement(
+              _calendarUtils.Row,
+              null,
+              store.map(function (week, j) {
+                return _react2['default'].createElement(_calendarView.Week, _extends({}, props, {
+                  week: week,
+                  height: _this.props.height,
+                  width: _this.props.width,
+                  agenda: _this.agenda, key: 'row-' + j }));
+              })
+            ),
+            view === 'day' && _react2['default'].createElement(_calendarView.Day, _extends({}, props, {
+              week: store,
               height: _this.props.height,
               width: _this.props.width,
-              agenda: _this.agenda, key: 'row-' + j }));
-          })
-        ),
-        view === 'day' && _react2['default'].createElement(_calendarView.Day, _extends({}, props, {
-          week: store,
-          height: this.props.height,
-          width: this.props.width,
-          agenda: this.agenda })),
-        view === 'month' && store.map(function (week, j) {
-          return _react2['default'].createElement(_calendarView.Month, _extends({}, props, {
-            week: week,
-            height: _this.props.height,
-            width: _this.props.width,
-            agenda: _this.agenda, key: 'row-' + j }));
-        })
+              agenda: _this.agenda })),
+            view === 'month' && store.map(function (week, j) {
+              return _react2['default'].createElement(_calendarView.Month, _extends({}, props, {
+                week: week,
+                height: _this.props.height,
+                width: _this.props.width,
+                agenda: _this.agenda, key: 'row-' + j }));
+            })
+          );
+        }
       );
     }
   }]);
@@ -830,7 +838,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":15,"./calendar-utils":2,"./calendar-view":3,"./filter":7,"lodash":"lodash","react":"react","react-dom":"react-dom"}],5:[function(require,module,exports){
+},{"../lib/agenda":15,"./calendar-utils":2,"./calendar-view":3,"./filter":7,"lodash":"lodash","react":"react","react-dom":"react-dom","react-motion":27}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1413,7 +1421,7 @@ var _default = (function (_Component) {
         function (value) {
           return _react2['default'].createElement(
             'form',
-            { encType: 'multipart/form-data', className: 'agenda-modal', style: { left: value.x } },
+            { encType: 'multipart/form-data', className: 'agenda-modal', key: 'modal', style: { left: value.x } },
             _react2['default'].createElement(
               _newforms.RenderForm,
               { form: _this.form, ref: function (ref) {
@@ -1513,6 +1521,8 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _reactMotion = require('react-motion');
+
 var _datePicker = require('./date-picker');
 
 var _datePicker2 = _interopRequireDefault(_datePicker);
@@ -1542,47 +1552,45 @@ var _default = (function (_Component) {
       var _this = this;
 
       var events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month");
-
       return _react2['default'].createElement(
-        'div',
-        { className: 'agenda-panel', style: { right: this.props.right } },
-        this.props.date && _react2['default'].createElement(_datePicker2['default'], { view: 'month',
-          year: this.props.date.getFullYear(),
-          month: this.props.date.getMonth(),
-          day: this.props.date.getDate(),
-          except: this.props.except,
-          onSelect: this._onSelect.bind(this) }),
-        _react2['default'].createElement('hr', null),
-        events.map(function (evt) {
+        _reactMotion.Motion,
+        { defaultStyle: { x: this.props.defaultRight }, style: { x: (0, _reactMotion.spring)(this.props.right) } },
+        function (value) {
           return _react2['default'].createElement(
             'div',
-            { className: 'panel-event', key: "evt" + evt.id, style: { background: evt.room.color } },
-            _react2['default'].createElement(
-              'span',
-              { className: 'panel-event-title' },
-              evt.title
-            ),
-            _react2['default'].createElement(
-              'span',
-              { className: 'panel-event-date' },
-              evt.start,
-              ' to ',
-              evt.end
-            ),
-            _react2['default'].createElement(
-              'p',
-              { className: 'panel-event-content' },
-              evt.content
-            )
+            { className: 'agenda-panel', style: { right: value.x }, key: 'panel' },
+            _this.props.date && _react2['default'].createElement(_datePicker2['default'], { view: 'month',
+              year: _this.props.date.getFullYear(),
+              month: _this.props.date.getMonth(),
+              day: _this.props.date.getDate(),
+              except: _this.props.except,
+              onSelect: _this._onSelect.bind(_this) }),
+            _react2['default'].createElement('hr', null),
+            events.map(function (evt) {
+              return _react2['default'].createElement(
+                'div',
+                { className: 'panel-event', key: "evt" + evt.id, style: { background: evt.room.color } },
+                _react2['default'].createElement(
+                  'span',
+                  { className: 'panel-event-title' },
+                  evt.title
+                ),
+                _react2['default'].createElement(
+                  'span',
+                  { className: 'panel-event-date' },
+                  evt.start,
+                  ' to ',
+                  evt.end
+                ),
+                _react2['default'].createElement(
+                  'p',
+                  { className: 'panel-event-content' },
+                  evt.content
+                )
+              );
+            })
           );
-        }),
-        Object.keys(this.props).map(function (key) {
-          return _react2['default'].createElement(
-            'div',
-            { key: key },
-            _this.props[key].toString()
-          );
-        })
+        }
       );
     }
   }]);
@@ -1593,7 +1601,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"../lib/agenda":15,"./date-picker":5,"react":"react"}],10:[function(require,module,exports){
+},{"../lib/agenda":15,"./date-picker":5,"react":"react","react-motion":27}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {
@@ -1902,7 +1910,8 @@ var _default = (function (_Component) {
       rooms: this.props.rooms || [],
       width: 1000,
       height: 700,
-      right: '-500px',
+      defaultRight: -document.body.offsetWidth * 0.2,
+      right: -document.body.offsetWidth * 0.2,
       filters: { where: {} }
     };
     this.timeout = null;
@@ -1945,10 +1954,16 @@ var _default = (function (_Component) {
       var _this2 = this;
 
       setTimeout(function () {
-        _this2.setState({ width: e.target.innerWidth });
+        _this2.setState({
+          width: e.target.innerWidth,
+          right: -e.target.innerWidth * 0.2
+        });
       }, 50);
       setTimeout(function () {
-        _this2.setState({ width: e.target.innerWidth });
+        _this2.setState({
+          width: e.target.innerWidth,
+          right: -e.target.innerWidth * 0.2
+        });
       }, 100); //need twice for window resize and show inspector (why??)
     }
   }, {
@@ -2023,11 +2038,12 @@ var _default = (function (_Component) {
         show: true,
         selection: data,
         width: document.body.offsetWidth,
-        right: '-500px'
+        right: -document.body.offsetWidth * 0.2
       });else {
         this.setState({
           current: data,
           width: document.body.offsetWidth * 0.8,
+          defaultRight: -document.body.offsetWidth * 0.2,
           right: 0
         });
         setTimeout(function () {
@@ -2051,6 +2067,7 @@ var _default = (function (_Component) {
         { className: 'app' },
         this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
           right: this.state.right || 0,
+          defaultRight: this.state.defaultRight,
           except: this.except,
           events: this.state.events || this.props.events || [] })),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {

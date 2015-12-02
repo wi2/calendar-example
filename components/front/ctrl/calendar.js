@@ -28,7 +28,8 @@ export default class extends Component {
       rooms: this.props.rooms||[],
       width: 1000,
       height: 700,
-      right: '-500px',
+      defaultRight: -document.body.offsetWidth*0.2,
+      right: -document.body.offsetWidth*0.2,
       filters: { where: {} }
     }
     this.timeout = null;
@@ -57,8 +58,14 @@ export default class extends Component {
   }
 
   handleResize(e) {
-    setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 50);
-    setTimeout(() => { this.setState({width:e.target.innerWidth}) }, 100);//need twice for window resize and show inspector (why??)
+    setTimeout(() => { this.setState({
+      width:e.target.innerWidth,
+      right: -e.target.innerWidth*0.2
+    }) }, 50);
+    setTimeout(() => { this.setState({
+      width:e.target.innerWidth,
+      right: -e.target.innerWidth*0.2
+    }) }, 100);//need twice for window resize and show inspector (why??)
   }
   loadEvents(props=this.props) {
     let months = ["jan", "feb", "mar", "apr", "may", "june", "july", "aug", "sep", "oct", "nov", "dec"]
@@ -113,12 +120,13 @@ export default class extends Component {
         show: true,
         selection: data,
         width: document.body.offsetWidth,
-        right: '-500px'
+        right: -document.body.offsetWidth*0.2,
       })
     else {
       this.setState({
         current: data,
         width: document.body.offsetWidth*0.8,
+        defaultRight: -document.body.offsetWidth*0.2,
         right: 0
       })
       setTimeout(() => { this.setState({
@@ -136,6 +144,7 @@ export default class extends Component {
         {this.state.current &&
           <Panel {...this.state.current}
                   right={this.state.right||0}
+                  defaultRight={this.state.defaultRight}
                   except={this.except}
                   events={this.state.events||this.props.events||[]}  />}
 

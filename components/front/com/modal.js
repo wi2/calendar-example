@@ -136,7 +136,7 @@ export default class extends Component {
     return (
       <Motion defaultStyle={{x: 2000}} style={{x: spring(15)}}>
         {value =>
-        <form encType="multipart/form-data" className="agenda-modal" style={{left: value.x}}>
+        <form encType="multipart/form-data" className="agenda-modal" key="modal" style={{left: value.x}}>
           <RenderForm form={this.form} ref={(ref) => this.mForm = ref}>
             <Container autoColumns="md">
               <h1>

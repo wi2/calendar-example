@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {Motion, spring} from 'react-motion';
 import _ from 'lodash';
 import {findDOMNode} from 'react-dom';
 import Agenda from '../lib/agenda'
@@ -121,37 +122,41 @@ export default class extends Component {
       };
 
     return (
-      <div className="agenda" style={{width: this.props.width}}>
-        <Filter {...this.props.filters}
-                rooms={this.props.rooms}
-                onChange={this.onFilterChange.bind(this)} />
-        <Navigation store={store}
-                    agenda={this.agenda}
-                    view={view}
-                    editor={this.state.editor}
-                    toggleEditor={this.toggleEditor.bind(this)} />
-        <Info info={this.state.info} view={view} />
-        {view !== 'day' && <Header view={view} store={store} agenda={this.agenda} />}
-        {view === 'week' && <Row>
-              {store.map((week, j) =>
-                <Week {...props}
+      <Motion style={{width: spring(this.props.width)}}>
+        {value =>
+
+        <div className="agenda" style={{width: value.width}}>
+          <Filter {...this.props.filters}
+                  rooms={this.props.rooms}
+                  onChange={this.onFilterChange.bind(this)} />
+          <Navigation store={store}
+                      agenda={this.agenda}
+                      view={view}
+                      editor={this.state.editor}
+                      toggleEditor={this.toggleEditor.bind(this)} />
+          <Info info={this.state.info} view={view} />
+          {view !== 'day' && <Header view={view} store={store} agenda={this.agenda} />}
+          {view === 'week' && <Row>
+                {store.map((week, j) =>
+                  <Week {...props}
+                        week={week}
+                        height={this.props.height}
+                        width={this.props.width}
+                        agenda={this.agenda} key={`row-${j}`} />)}
+               </Row>}
+          {view === 'day' && <Day {...props}
+                      week={store}
+                      height={this.props.height}
+                      width={this.props.width}
+                      agenda={this.agenda} />}
+          {view === 'month' && store.map((week, j) =>
+              <Month  {...props}
                       week={week}
                       height={this.props.height}
                       width={this.props.width}
                       agenda={this.agenda} key={`row-${j}`} />)}
-             </Row>}
-        {view === 'day' && <Day {...props}
-                    week={store}
-                    height={this.props.height}
-                    width={this.props.width}
-                    agenda={this.agenda} />}
-        {view === 'month' && store.map((week, j) =>
-            <Month  {...props}
-                    week={week}
-                    height={this.props.height}
-                    width={this.props.width}
-                    agenda={this.agenda} key={`row-${j}`} />)}
-      </div>
+        </div>}
+      </Motion>
     )
   }
 }
