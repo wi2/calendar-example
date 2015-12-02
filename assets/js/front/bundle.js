@@ -1014,6 +1014,8 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _reactMotion = require('react-motion');
+
 var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
@@ -1061,11 +1063,19 @@ var _default = (function (_Component) {
   }, {
     key: 'render',
     value: function render() {
+      var _this = this;
+
       return _react2['default'].createElement(
-        'div',
-        { className: 'date-time-picker' },
-        this.state.type === "date" && _react2['default'].createElement(_datePicker2['default'], _extends({}, this.state, { view: 'month', onSelect: this._onSelectDate.bind(this) })),
-        this.state.type === "hour" && _react2['default'].createElement(_timePicker2['default'], _extends({}, this.state, { onSelect: this._onSelectTime.bind(this) }))
+        _reactMotion.Motion,
+        { defaultStyle: { alpha: 0 }, style: { alpha: (0, _reactMotion.spring)(1) } },
+        function (value) {
+          return _react2['default'].createElement(
+            'div',
+            { className: 'date-time-picker', style: { opacity: value.alpha } },
+            _this.state.type === "date" && _react2['default'].createElement(_datePicker2['default'], _extends({}, _this.state, { view: 'month', onSelect: _this._onSelectDate.bind(_this) })),
+            _this.state.type === "hour" && _react2['default'].createElement(_timePicker2['default'], _extends({}, _this.state, { onSelect: _this._onSelectTime.bind(_this) }))
+          );
+        }
       );
     }
   }]);
@@ -1076,7 +1086,7 @@ var _default = (function (_Component) {
 exports['default'] = _default;
 module.exports = exports['default'];
 
-},{"./date-picker":5,"./time-picker":10,"lodash":"lodash","react":"react"}],7:[function(require,module,exports){
+},{"./date-picker":5,"./time-picker":10,"lodash":"lodash","react":"react","react-motion":27}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

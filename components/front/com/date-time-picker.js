@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {Motion, spring} from 'react-motion';
 import _ from 'lodash';
 import DatePicker from './date-picker'
 import TimePicker from './time-picker'
@@ -30,12 +31,15 @@ export default class extends Component {
   }
   render() {
     return (
-      <div className="date-time-picker">
-        {this.state.type === "date"
-          && <DatePicker {...this.state} view="month" onSelect={this._onSelectDate.bind(this)}  />}
-        {this.state.type === "hour"
-          && <TimePicker {...this.state} onSelect={this._onSelectTime.bind(this)} />}
-      </div>
+      <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(1)}}>
+      {value =>
+        <div className="date-time-picker" style={{opacity: value.alpha}}>
+          {this.state.type === "date"
+            && <DatePicker {...this.state} view="month" onSelect={this._onSelectDate.bind(this)}  />}
+          {this.state.type === "hour"
+            && <TimePicker {...this.state} onSelect={this._onSelectTime.bind(this)} />}
+        </div>}
+      </Motion>
     )
   }
 }

@@ -56,7 +56,7 @@ export default class extends Component {
       <form className="agenda-filter">
         {!this.state.show && <a onClick={this.toggle.bind(this)} className="btn">Filter</a>}
         {this.state.show && <RenderForm form={this.form} ref={ref => this.mForm = ref}>
-            <Row><Field name="room" /></Row>
+          <Row><Field name="room" /></Row>
         </RenderForm>}
       </form>
     )
