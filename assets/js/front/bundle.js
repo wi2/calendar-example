@@ -1556,7 +1556,7 @@ var _default = (function (_Component) {
   _createClass(_default, [{
     key: '_onSelect',
     value: function _onSelect(val) {
-      console.log(val);
+      this.props.onSelectDate('/day/' + val.year + '/' + val.monthName + '/' + Math.abs(val.day));
     }
   }, {
     key: 'format',
@@ -2045,6 +2045,11 @@ var _default = (function (_Component) {
       this.hideModal();
     }
   }, {
+    key: 'onSelectDatePanel',
+    value: function onSelectDatePanel(url) {
+      this.props.history.pushState(null, url, { force: true });
+    }
+  }, {
     key: 'onSelect',
     value: function onSelect(data) {
       var _this6 = this;
@@ -2083,6 +2088,7 @@ var _default = (function (_Component) {
         'div',
         { className: 'app' },
         this.state.current && _react2['default'].createElement(_comPanel2['default'], _extends({}, this.state.current, {
+          onSelectDate: this.onSelectDatePanel.bind(this),
           right: this.state.right || 0,
           defaultRight: this.state.defaultRight,
           except: this.except,
@@ -2459,6 +2465,7 @@ var _default = (function () {
             day: tmp,
             week: cellDate.getWeek(),
             month: cellDate.getMonth(),
+            monthName: _this3.months[cellDate.getMonth()],
             year: cellDate.getFullYear(),
             disabled: _this3.checkExcept(cellDate, view)
           };

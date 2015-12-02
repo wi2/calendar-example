@@ -111,6 +111,7 @@ export default class {
           day: tmp,
           week: cellDate.getWeek(),
           month: cellDate.getMonth(),
+          monthName: this.months[cellDate.getMonth()],
           year: cellDate.getFullYear(),
           disabled: this.checkExcept(cellDate, view)
         }

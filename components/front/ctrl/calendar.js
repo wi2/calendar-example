@@ -113,6 +113,9 @@ export default class extends Component {
   onCancel() {
     this.hideModal()
   }
+  onSelectDatePanel(url) {
+    this.props.history.pushState(null, url, {force: true});
+  }
 
   onSelect(data, edition=false) {
     if (edition)
@@ -143,6 +146,7 @@ export default class extends Component {
       <div className="app">
         {this.state.current &&
           <Panel {...this.state.current}
+                  onSelectDate={this.onSelectDatePanel.bind(this)}
                   right={this.state.right||0}
                   defaultRight={this.state.defaultRight}
                   except={this.except}
