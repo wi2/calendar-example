@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {Motion, spring} from 'react-motion';
 import _ from 'lodash'
 import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
@@ -133,42 +134,45 @@ export default class extends Component {
   }
   render() {
     return (
-      <form encType="multipart/form-data" className="agenda-modal">
-        <RenderForm form={this.form} ref={(ref) => this.mForm = ref}>
-          <Container autoColumns="md">
-            <h1>
-              Add event
-              <span className="float-right">
-                <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
-                <button className="btn btn-default" onClick={this._onCancel.bind(this)}>Cancel</button>
-                <button className="btn btn-default" onClick={this._onDelete.bind(this)}>Delete</button>
-              </span>
-            </h1>
-            <hr />
-            <Row>
-              <Field name="title" md="8"/>
-              <Field name="room"/>
-            </Row>
-            <Row>
-              <Field name="content"/>
-            </Row>
-            <Row>
-              <Col md="6">
-                {this.state.startPicker.show &&
-                  <DateTimePicker {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
-              </Col>
-              <Col>
-                {this.state.endPicker.show &&
-                  <DateTimePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
-              </Col>
-            </Row>
-            <Row>
-              <Field name="start" md="6" />
-              <Field name="end" />
-            </Row>
-          </Container>
-        </RenderForm>
-      </form>
+      <Motion defaultStyle={{x: 2000}} style={{x: spring(15)}}>
+        {value =>
+        <form encType="multipart/form-data" className="agenda-modal" style={{left: value.x}}>
+          <RenderForm form={this.form} ref={(ref) => this.mForm = ref}>
+            <Container autoColumns="md">
+              <h1>
+                Add event
+                <span className="float-right">
+                  <button className="btn btn-default" onClick={this._onSubmit.bind(this)}>Save</button>
+                  <button className="btn btn-default" onClick={this._onCancel.bind(this)}>Cancel</button>
+                  <button className="btn btn-default" onClick={this._onDelete.bind(this)}>Delete</button>
+                </span>
+              </h1>
+              <hr />
+              <Row>
+                <Field name="title" md="8"/>
+                <Field name="room"/>
+              </Row>
+              <Row>
+                <Field name="content"/>
+              </Row>
+              <Row>
+                <Col md="6">
+                  {this.state.startPicker.show &&
+                    <DateTimePicker {...this.state.startPicker} onSelect={this._onSelectStart.bind(this)}  />}
+                </Col>
+                <Col>
+                  {this.state.endPicker.show &&
+                    <DateTimePicker {...this.state.endPicker} onSelect={this._onSelectEnd.bind(this)}  />}
+                </Col>
+              </Row>
+              <Row>
+                <Field name="start" md="6" />
+                <Field name="end" />
+              </Row>
+            </Container>
+          </RenderForm>
+        </form>}
+      </Motion>
     )
   }
 }
