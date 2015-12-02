@@ -13,6 +13,10 @@ export default class extends Component {
   _onSelect(val) {
     console.log(val)
   }
+  format(dateStr) {
+    let date = new Date(dateStr);
+    return date.toLocaleString()
+  }
 
   render() {
     let events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month")
@@ -27,12 +31,12 @@ export default class extends Component {
                         day={this.props.date.getDate()}
                         except={this.props.except}
                         onSelect={this._onSelect.bind(this)} />}
-          <hr />
+
           {events.map(evt => {
             return (
               <div className="panel-event" key={"evt"+evt.id} style={{background: evt.room.color} }>
-                <span className="panel-event-title">{evt.title}</span>
-                <span className="panel-event-date">{evt.start} to {evt.end}</span>
+                <div className="panel-event-date">{this.format(evt.start)} to {this.format(evt.end)}</div>
+                <div className="panel-event-title">{evt.title}</div>
                 <p className="panel-event-content">{evt.content}</p>
               </div>
             )}

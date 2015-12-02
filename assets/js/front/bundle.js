@@ -1559,6 +1559,12 @@ var _default = (function (_Component) {
       console.log(val);
     }
   }, {
+    key: 'format',
+    value: function format(dateStr) {
+      var date = new Date(dateStr);
+      return date.toLocaleString();
+    }
+  }, {
     key: 'render',
     value: function render() {
       var _this = this;
@@ -1577,22 +1583,21 @@ var _default = (function (_Component) {
               day: _this.props.date.getDate(),
               except: _this.props.except,
               onSelect: _this._onSelect.bind(_this) }),
-            _react2['default'].createElement('hr', null),
             events.map(function (evt) {
               return _react2['default'].createElement(
                 'div',
                 { className: 'panel-event', key: "evt" + evt.id, style: { background: evt.room.color } },
                 _react2['default'].createElement(
-                  'span',
-                  { className: 'panel-event-title' },
-                  evt.title
+                  'div',
+                  { className: 'panel-event-date' },
+                  _this.format(evt.start),
+                  ' to ',
+                  _this.format(evt.end)
                 ),
                 _react2['default'].createElement(
-                  'span',
-                  { className: 'panel-event-date' },
-                  evt.start,
-                  ' to ',
-                  evt.end
+                  'div',
+                  { className: 'panel-event-title' },
+                  evt.title
                 ),
                 _react2['default'].createElement(
                   'p',
