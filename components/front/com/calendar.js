@@ -130,7 +130,7 @@ export default class extends Component {
                     view={view}
                     editor={this.state.editor}
                     toggleEditor={this.toggleEditor.bind(this)} />
-        <Info info={this.state.info} />
+        <Info info={this.state.info} view={view} />
         {view !== 'day' && <Header view={view} store={store} agenda={this.agenda} />}
         {view === 'week' && <Row>
               {store.map((week, j) =>

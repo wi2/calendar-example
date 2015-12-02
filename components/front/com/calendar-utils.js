@@ -46,7 +46,7 @@ export class Navigation extends Component {
       <div>
         <Row>
           <div className="agenda-navigation-editor">
-            <button className={className}
+            <button className={className+" btn-editor"}
               onClick={this.props.toggleEditor.bind(this)}>Editor</button>
           </div>
           <div className="agenda-navigation-view">
@@ -106,9 +106,11 @@ export class Info extends Component {
   render() {
     return (
       <Row className="agenda-row agenda-info">
-        {this.props.onPrevious && <a onClick={this._handlePrevious.bind(this)} className="btn"> {"<"} </a>}
-        <div>{this.props.info.d+" "+this.props.info.m+" "+this.props.info.y}</div>
-        {this.props.onNext && <a onClick={this._handleNext.bind(this)} className="btn"> {">"} </a>}
+        {this.props.onPrevious && <a onClick={this._handlePrevious.bind(this)} className="btn">{"<"}</a>}
+        {this.props.view !== 'month' && <span>{this.props.info.d}</span>}
+        <span>{this.props.info.m}</span>
+        <span>{this.props.info.y}</span>
+        {this.props.onNext && <a onClick={this._handleNext.bind(this)} className="btn">{">"}</a>}
       </Row>
     )
   }

@@ -169,7 +169,7 @@ var Navigation = (function (_Component4) {
             { className: 'agenda-navigation-editor' },
             _react2['default'].createElement(
               'button',
-              { className: className,
+              { className: className + " btn-editor",
                 onClick: this.props.toggleEditor.bind(this) },
               'Editor'
             )
@@ -295,21 +295,27 @@ var Info = (function (_Component6) {
         this.props.onPrevious && _react2['default'].createElement(
           'a',
           { onClick: this._handlePrevious.bind(this), className: 'btn' },
-          ' ',
-          "<",
-          ' '
+          "<"
+        ),
+        this.props.view !== 'month' && _react2['default'].createElement(
+          'span',
+          null,
+          this.props.info.d
         ),
         _react2['default'].createElement(
-          'div',
+          'span',
           null,
-          this.props.info.d + " " + this.props.info.m + " " + this.props.info.y
+          this.props.info.m
+        ),
+        _react2['default'].createElement(
+          'span',
+          null,
+          this.props.info.y
         ),
         this.props.onNext && _react2['default'].createElement(
           'a',
           { onClick: this._handleNext.bind(this), className: 'btn' },
-          ' ',
-          ">",
-          ' '
+          ">"
         )
       );
     }
@@ -789,7 +795,7 @@ var _default = (function (_Component) {
           view: view,
           editor: this.state.editor,
           toggleEditor: this.toggleEditor.bind(this) }),
-        _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info }),
+        _react2['default'].createElement(_calendarUtils.Info, { info: this.state.info, view: view }),
         view !== 'day' && _react2['default'].createElement(_calendarUtils.Header, { view: view, store: store, agenda: this.agenda }),
         view === 'week' && _react2['default'].createElement(
           _calendarUtils.Row,
