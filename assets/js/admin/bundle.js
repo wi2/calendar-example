@@ -798,7 +798,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -814,16 +814,6 @@ var _admin = require('./admin');
 
 var _admin2 = _interopRequireDefault(_admin);
 
-var _newforms = require('newforms');
-
-var _newformsBootstrap = require('newforms-bootstrap');
-
-var _newformsBootstrap2 = _interopRequireDefault(_newformsBootstrap);
-
-var _libMakeForm = require('../lib/make-form');
-
-var _libMakeForm2 = _interopRequireDefault(_libMakeForm);
-
 var _default = (function (_AdminComponent) {
   _inherits(_default, _AdminComponent);
 
@@ -838,7 +828,6 @@ var _default = (function (_AdminComponent) {
     value: function componentWillMount() {
       this.identity = this.props.identity;
       if (this.props.params && this.props.params.identity) this.identity = this.props.params.identity;
-
       this.getItem(this.identity);
     }
   }, {
@@ -865,37 +854,24 @@ var _default = (function (_AdminComponent) {
       }
     }
   }, {
-    key: 'saving',
-    value: function saving(data, url, cb) {
+    key: '_onSaving',
+    value: function _onSaving() {
       var _this2 = this;
 
-      if (typeof io !== "undefined") {
-        if (typeof url === 'function') {
-          cb = url;
-          url = "";
-        }
-        this.multipart(data, binaries, function (result) {
-          io.socket['delete']("/" + _this2.identity + url, result, function (res) {
-            if (cb) cb(res);
-          });
-        });
-      }
+      var id = this.props.params ? this.props.params.id : this.props.id;
+      io.socket['delete']("/" + this.identity + "/" + id, {}, function (res) {
+        _this2.props.history.pushState(null, _this2.identity, { force: true });
+      });
     }
   }, {
-    key: 'makeForm',
-    value: function makeForm() {
-      var formItem = arguments.length <= 0 || arguments[0] === undefined ? this.props.formItem : arguments[0];
-      var data = arguments.length <= 1 || arguments[1] === undefined ? this.props.item : arguments[1];
-
-      return (0, _libMakeForm2['default'])(formItem, data);
+    key: '_onCancel',
+    value: function _onCancel() {
+      this.props.history.pushState(null, this.identity, { force: true });
     }
   }, {
     key: 'render',
     value: function render() {
-      if (!this.state) return _react2['default'].createElement('div', null);
-
-      var mForm = this.makeForm(),
-          item = this.state.item;
+      var item = this.state ? this.state.item : {};
       return _react2['default'].createElement(
         'div',
         null,
@@ -912,12 +888,12 @@ var _default = (function (_AdminComponent) {
           _react2['default'].createElement('hr', null),
           _react2['default'].createElement(
             'button',
-            { type: 'button', className: 'btn btn-lg btn-warning' },
+            { type: 'button', onClick: this._onSaving.bind(this), className: 'btn btn-lg btn-warning' },
             'Yes'
           ),
           _react2['default'].createElement(
             'button',
-            { type: 'button', className: 'btn btn-lg btn-default' },
+            { type: 'button', onClick: this._onCancel.bind(this), className: 'btn btn-lg btn-default' },
             'No'
           ),
           _react2['default'].createElement('hr', null)
@@ -983,7 +959,7 @@ var Item = (function (_Component) {
 
 module.exports = exports['default'];
 
-},{"../lib/make-form":16,"./admin":8,"newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],11:[function(require,module,exports){
+},{"./admin":8,"react":"react"}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

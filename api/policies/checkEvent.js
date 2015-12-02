@@ -15,7 +15,7 @@ module.exports = function(req, res, next) {
     case 'PUT': _.extend(query, { id: {'!' : req.param('id')} })
       break;
     case 'POST': break;
-    default: return next(); break;
+    default: next(); return; break;
   }
 
   Event
