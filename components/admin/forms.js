@@ -3,6 +3,42 @@
 import React from 'react'
 import {Container, Row, Field} from 'newforms-bootstrap'
 
+
+export const user = (
+  <Container autoColumns="md">
+    <h1>Rôle</h1>
+    <hr />
+    <p className="text-right">
+      <button className="btn btn-default">Save</button>
+    </p>
+    <Row>
+      <Field name="username" md="8"/>
+      <Field name="active"/>
+    </Row>
+    <Row>
+      <Field name="email" md="8"/>
+      <Field name="role"/>
+    </Row>
+  </Container>
+);
+
+export const role = (
+  <Container autoColumns="md">
+    <h1>Rôle</h1>
+    <hr />
+    <p className="text-right">
+      <button className="btn btn-default">Save</button>
+    </p>
+    <Row>
+      <Field name="name" md="8"/>
+      <Field name="active"/>
+    </Row>
+    <Row>
+      <Field name="description"/>
+    </Row>
+  </Container>
+);
+
 export const room = (
   <Container autoColumns="md">
     <h1>Room</h1>

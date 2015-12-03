@@ -1178,6 +1178,71 @@ var _react2 = _interopRequireDefault(_react);
 
 var _newformsBootstrap = require('newforms-bootstrap');
 
+var user = _react2['default'].createElement(
+  _newformsBootstrap.Container,
+  { autoColumns: 'md' },
+  _react2['default'].createElement(
+    'h1',
+    null,
+    'Rôle'
+  ),
+  _react2['default'].createElement('hr', null),
+  _react2['default'].createElement(
+    'p',
+    { className: 'text-right' },
+    _react2['default'].createElement(
+      'button',
+      { className: 'btn btn-default' },
+      'Save'
+    )
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'username', md: '8' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'active' })
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'email', md: '8' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'role' })
+  )
+);
+
+exports.user = user;
+var role = _react2['default'].createElement(
+  _newformsBootstrap.Container,
+  { autoColumns: 'md' },
+  _react2['default'].createElement(
+    'h1',
+    null,
+    'Rôle'
+  ),
+  _react2['default'].createElement('hr', null),
+  _react2['default'].createElement(
+    'p',
+    { className: 'text-right' },
+    _react2['default'].createElement(
+      'button',
+      { className: 'btn btn-default' },
+      'Save'
+    )
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'name', md: '8' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'active' })
+  ),
+  _react2['default'].createElement(
+    _newformsBootstrap.Row,
+    null,
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'description' })
+  )
+);
+
+exports.role = role;
 var room = _react2['default'].createElement(
   _newformsBootstrap.Container,
   { autoColumns: 'md' },
