@@ -1929,7 +1929,7 @@ var _default = (function (_Component) {
       height: 700,
       defaultRight: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
       right: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
-      filters: { where: {} }
+      filters: { where: {}, limit: 500 }
     };
     this.timeout = null;
     this.loadEvents();
@@ -1995,6 +1995,7 @@ var _default = (function (_Component) {
           dateStart = new Date(props.params.year, currentMonth - 1),
           dateEnd = new Date(props.params.year, currentMonth + 1),
           filters = {
+        limit: 500,
         where: {
           room: this.state.filters.room,
           or: [{ start: { '>=': dateStart, '<=': dateEnd } }, { end: { '>=': dateStart, '<=': dateEnd } }, { start: { '<=': dateStart }, end: { '>=': dateEnd } }]
@@ -2049,9 +2050,7 @@ var _default = (function (_Component) {
     value: function onSelectDatePanel(val) {
       var url = '/day/' + val.year + '/' + val.monthName + '/' + Math.abs(val.day);
       this.props.history.pushState(null, url, { force: true });
-      this.setState({
-        current: val
-      });
+      this.setState({ current: val });
     }
   }, {
     key: 'onSelect',

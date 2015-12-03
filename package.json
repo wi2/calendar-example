@@ -27,6 +27,7 @@
     "moment": "^2.10.6",
     "newforms": "^0.13.2",
     "newforms-bootstrap": "^2.0.0",
+    "passport-local": "^1.0.0",
     "rc": "~0.5.0",
     "rc-pagination": "latest",
     "react": "^0.14.2",
