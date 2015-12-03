@@ -64,8 +64,9 @@ export const event = (
       <button className="btn btn-default">Save</button>
     </p>
     <Row>
-      <Field name="title" md="8"/>
-      <Field name="room"/>
+      <Field name="title" md="4"/>
+      <Field name="room" md="4"/>
+      <Field name="member"/>
     </Row>
     <Row>
       <Field name="content"/>

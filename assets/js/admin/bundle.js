@@ -1296,8 +1296,9 @@ var event = _react2['default'].createElement(
   _react2['default'].createElement(
     _newformsBootstrap.Row,
     null,
-    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'title', md: '8' }),
-    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'title', md: '4' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '4' }),
+    _react2['default'].createElement(_newformsBootstrap.Field, { name: 'member' })
   ),
   _react2['default'].createElement(
     _newformsBootstrap.Row,
