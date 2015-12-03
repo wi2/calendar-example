@@ -29,7 +29,7 @@ module.exports.policies = {
   // '*': true,
   'admin': ['sessionAuth'],
   EventController: {
-    '*': 'checkEvent'
+    '*': ['sessionAuth', 'checkEvent']
   },
 
   /***************************************************************************

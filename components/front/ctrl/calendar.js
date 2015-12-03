@@ -85,7 +85,9 @@ export default class extends Component {
       }
 
     if (global.io)
-      io.socket.get('/event', filters, res => this.setState({ events: res }) );
+      io.socket.get('/event', filters, res => {
+        this.setState({ events: typeof res === 'string' ? [] : res })
+      });
   }
   hideModal() {
     this.setState({ show: false, selection: null })

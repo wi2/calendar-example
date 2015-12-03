@@ -2011,7 +2011,7 @@ var _default = (function (_Component) {
       };
 
       if (global.io) io.socket.get('/event', filters, function (res) {
-        return _this3.setState({ events: res });
+        _this3.setState({ events: typeof res === 'string' ? [] : res });
       });
     }
   }, {
