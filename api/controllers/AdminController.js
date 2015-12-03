@@ -22,8 +22,7 @@ module.exports = {
         identity: req.param('identity'),
         identities: Object.keys(sails.models),
         formItem: result,
-        item: null,
-        ok: true
+        item: null
       };
       resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/new', {title:'Administration - create record'}, state);
     })
@@ -40,8 +39,7 @@ module.exports = {
         identity: req.param('identity'),
         identities: Object.keys(sails.models),
         formItem: result,
-        item: item,
-        ok: true
+        item: item
       };
       resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/'+req.param('id'), {title:'Administration - update record'}, state);
     });
@@ -58,8 +56,7 @@ module.exports = {
         identity: req.param('identity'),
         identities: Object.keys(sails.models),
         formItem: result,
-        item: item,
-        ok: true
+        item: item
       };
       resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/'+req.param('id')+'/delete', {title:'Administration - update record'}, state);
     });
@@ -95,8 +92,7 @@ module.exports = {
           items: items,
           current: current,
           total: total,
-          limit: limit,
-          ok: true
+          limit: limit
         };
         resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity'), {title:'Administration - List'}, state);
       });
