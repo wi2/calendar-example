@@ -63,7 +63,10 @@ class FormItem extends AdminComponent {
         fItem = this.state.formItem;
       var binaries = fItem.filter( a => { return a.type === 'binary' } );
       this.multipart(data, binaries, result => {
-        io.socket.post("/" + this.identity + url, result, ( res => { if (cb) cb(res); }))
+        if (url === "")
+          io.socket.post("/" + this.identity, result, ( res => { if (cb) cb(res); }))
+        else
+          io.socket.put("/" + this.identity + url, result, ( res => { if (cb) cb(res); }))
       });
     }
   }
@@ -83,8 +86,6 @@ class FormItem extends AdminComponent {
                   modelForm={this.props.models[this.identity]} />
   }
 }
-// FormItem.contextTypes = { hi: React.PropTypes.object }
-
 
 export class Update extends FormItem {
   onSave(data) {

@@ -637,8 +637,6 @@ var FormItem = (function (_AdminComponent) {
     _get(Object.getPrototypeOf(FormItem.prototype), 'constructor', this).apply(this, arguments);
   }
 
-  // FormItem.contextTypes = { hi: React.PropTypes.object }
-
   _createClass(FormItem, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
@@ -708,7 +706,9 @@ var FormItem = (function (_AdminComponent) {
           return a.type === 'binary';
         });
         this.multipart(data, binaries, function (result) {
-          io.socket.post("/" + _this3.identity + url, result, function (res) {
+          if (url === "") io.socket.post("/" + _this3.identity, result, function (res) {
+            if (cb) cb(res);
+          });else io.socket.put("/" + _this3.identity + url, result, function (res) {
             if (cb) cb(res);
           });
         });
