@@ -14,7 +14,7 @@ module.exports = {
     },
     description: 'text',
     events: {
-      collection:'event',
+      collection:'Event',
       via: 'room'
     },
     color: {

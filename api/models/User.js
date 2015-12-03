@@ -21,10 +21,14 @@ module.exports = {
       via: 'user'
     },
     role: {
-      model: 'role'
+      model: 'Role',
+      required: true
+    },
+    events: {
+      collection:'Event',
+      via: 'member'
     },
     active: {
-      required: true,
       type: 'boolean',
       defaultsTo: true
     }

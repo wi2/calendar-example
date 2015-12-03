@@ -14,11 +14,10 @@ module.exports = {
     },
     description: 'text',
     users: {
-      collection:'user',
+      collection:'User',
       via: 'role'
     },
     active: {
-      required: true,
       type: 'boolean',
       defaultsTo: true
     }

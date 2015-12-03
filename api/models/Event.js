@@ -16,11 +16,11 @@ module.exports = {
     content: {
       type: 'text'
     },
-    user: {
-      model: 'user'
+    member: {
+      model: 'User'
     },
     room: {
-      model: 'room'
+      model: 'Room'
     },
     start: {
       type: 'datetime',
