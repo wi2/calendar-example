@@ -349,6 +349,8 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _reactMotion = require('react-motion');
+
 var _calendarUtils = require('./calendar-utils');
 
 var ViewDefault = (function (_Component) {
@@ -426,12 +428,12 @@ var Week = (function (_ViewDefault) {
     }
   }, {
     key: 'style',
-    value: function style(evt) {
+    value: function style(evt, opacity) {
       var room = evt.room;
       var cell = evt.cell;
       var width = this.props.height / 24;
       return {
-        opacity: 0.8,
+        opacity: opacity,
         left: (evt.cell.line + 1.5) * 18 + 'px',
         top: cell.start * width + 'px',
         width: (cell.end - cell.start + 1) * width + 'px',
@@ -458,12 +460,15 @@ var Week = (function (_ViewDefault) {
         { className: this.state.cellClassName },
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
-            'div',
-            { className: 'event',
-              style: _this.style(evt),
-              onClick: _this.onSelect.bind(_this, evt),
-              key: 'event-' + i },
-            evt.title
+            _reactMotion.Motion,
+            { defaultStyle: { alpha: 0 }, style: { alpha: (0, _reactMotion.spring)(0.9) } },
+            function (value) {
+              return _react2['default'].createElement(
+                'div',
+                { className: 'event', style: _this.style(evt, value.alpha), onClick: _this.onSelect.bind(_this, evt), key: 'event-' + i },
+                evt.title
+              );
+            }
           );
         }),
         week.map(function (item) {
@@ -513,13 +518,13 @@ var Day = (function (_Week) {
     }
   }, {
     key: 'style',
-    value: function style(evt) {
+    value: function style(evt, opacity) {
       var eventWidth = 180;
       var room = evt.room;
       var cell = evt.cell;
       var width = this.props.height / 24;
       return {
-        opacity: 0.8,
+        opacity: opacity,
         top: cell.start * width + 'px',
         left: (evt.cell.line - 0.5) * eventWidth + 'px',
         height: (cell.end - cell.start + 1) * width + 'px',
@@ -555,12 +560,12 @@ var Month = (function (_ViewDefault2) {
     }
   }, {
     key: 'style',
-    value: function style(evt) {
+    value: function style(evt, opacity) {
       var room = evt.room;
       var cell = evt.cell;
       var width = this.state.width;
       return {
-        opacity: 0.8,
+        opacity: opacity,
         top: (evt.cell.line + 0.5) * 12 + 'px',
         left: cell.start * width + 'px',
         width: (cell.end - cell.start + 1) * width + 'px',
@@ -585,12 +590,15 @@ var Month = (function (_ViewDefault2) {
         null,
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
-            'div',
-            { className: 'event',
-              style: _this2.style(evt),
-              onClick: _this2.onSelect.bind(_this2, evt),
-              key: 'event-' + i },
-            evt.title
+            _reactMotion.Motion,
+            { defaultStyle: { alpha: 0 }, style: { alpha: (0, _reactMotion.spring)(0.9) } },
+            function (value) {
+              return _react2['default'].createElement(
+                'div',
+                { className: 'event', style: _this2.style(evt, value.alpha), onClick: _this2.onSelect.bind(_this2, evt), key: 'event-' + i },
+                evt.title
+              );
+            }
           );
         }),
         week.map(function (item) {
@@ -619,7 +627,7 @@ var Month = (function (_ViewDefault2) {
 
 exports.Month = Month;
 
-},{"./calendar-utils":2,"react":"react"}],4:[function(require,module,exports){
+},{"./calendar-utils":2,"react":"react","react-motion":27}],4:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, '__esModule', {

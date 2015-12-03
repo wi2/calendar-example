@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import {Motion, spring} from 'react-motion';
 import {Vertical, Row, Cell} from './calendar-utils';
 
 class ViewDefault extends Component {
@@ -46,11 +47,11 @@ export class Week extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
   }
 
-  style(evt) {
+  style(evt, opacity) {
     let {room, cell} = evt
       , width = this.props.height/24;
     return {
-      opacity: 0.8,
+      opacity,
       left: (evt.cell.line + 1.5) * 18 + 'px',
       top: `${cell.start * width}px`,
       width: `${(cell.end - cell.start + 1) * width}px`,
@@ -65,10 +66,11 @@ export class Week extends ViewDefault {
       , {events, week, selection} = this.prepareRender(true)
     return (
       <Vertical className={this.state.cellClassName}>
-        {events && events.map((evt, i) => <div className="event"
-                                            style={this.style(evt)}
-                                            onClick={this.onSelect.bind(this, evt)}
-                                            key={`event-${i}`}>{evt.title}</div> )}
+        {events && events.map((evt, i) =>
+          <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(0.9)}}>
+            {value => <div className="event" style={this.style(evt, value.alpha)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>}
+          </Motion>
+        )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
                       || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day), this.props.current.hour), true ) )
@@ -100,12 +102,12 @@ export class Day extends Week {
     this.setDimension(this.props.width, this.props.height/24, "agenda-vertical agenda-vertical-row")
   }
 
-  style(evt) {
+  style(evt, opacity) {
     let eventWidth = 180
       , {room, cell} = evt
       , width = this.props.height/24;
     return {
-      opacity: 0.8,
+      opacity,
       top: `${cell.start * width}px`,
       left: (evt.cell.line - 0.5) * eventWidth + 'px',
       height: `${(cell.end - cell.start + 1) * width}px`,
@@ -123,11 +125,11 @@ export class Month extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/7)
   }
 
-  style(evt) {
+  style(evt, opacity) {
     let {room, cell} = evt
       , width = this.state.width
     return {
-      opacity: 0.8,
+      opacity,
       top: (evt.cell.line + 0.5) * 12 + 'px',
       left: `${cell.start * width}px`,
       width: `${(cell.end - cell.start + 1) * width}px`,
@@ -141,11 +143,12 @@ export class Month extends ViewDefault {
       , that = this
     return (
       <Row>
-        {events &&
-          events.map((evt, i) => <div className="event"
-                                      style={this.style(evt)}
-                                      onClick={this.onSelect.bind(this, evt)}
-                                      key={`event-${i}`}>{evt.title}</div> )}
+        {events && events.map((evt, i) =>
+          <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(0.9)}}>
+            {value => <div className="event" style={this.style(evt, value.alpha)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>}
+          </Motion>
+        )}
+
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
                       || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day)) ) )
