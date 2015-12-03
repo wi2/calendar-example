@@ -72,12 +72,17 @@ function prepare(def, data, attr) {
 
   //Promise
   return new Promise( (resolve, reject) => {
+    console.log(data)
     // if it's a model association
     if (data.alias && data.model)
-      sails.models[data.alias].find()
+      sails.models[data.model].find()
       .then( list => {
         res.input = 'choice';
-        res.in = list.map( item => { return [item.id, item[Object.keys(item)[1]]]; });
+        res.in = list.map( item => {
+          let key = 0;
+          while(typeof item[Object.keys(item)[key]] !== 'string') { key++; }
+          return [item.id, item[Object.keys(item)[key]]];
+        });
         resolve(res);
       } )
       .catch( err => { reject(err); } )
