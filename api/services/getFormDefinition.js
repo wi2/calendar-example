@@ -72,7 +72,6 @@ function prepare(def, data, attr) {
 
   //Promise
   return new Promise( (resolve, reject) => {
-    console.log(data)
     // if it's a model association
     if (data.alias && data.model)
       sails.models[data.model].find()
