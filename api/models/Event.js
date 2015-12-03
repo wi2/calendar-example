@@ -16,6 +16,9 @@ module.exports = {
     content: {
       type: 'text'
     },
+    user: {
+      model: 'user'
+    },
     room: {
       model: 'room'
     },
