@@ -1,5 +1,5 @@
 module.exports = function(req, res, next) {
-  // console.log(req.allParams())
+
   var dateStart = new Date(req.param('start'))
     , dateEnd = new Date(req.param('end'))
     , query = {
@@ -12,9 +12,14 @@ module.exports = function(req, res, next) {
       };
 
   switch(req.method) {
-    case 'PUT': _.extend(query, { id: {'!' : req.param('id')} })
+    case 'PUT':
+      query.id = {'!' : req.param('id')}
+      query.member = req.session.passport.user;//only user was created this event can update this
+      req.body.member = req.session.passport.user;
       break;
-    case 'POST': break;
+    case 'POST':
+      req.body.member = req.session.passport.user;
+      break;
     default: next(); return; break;
   }
 
