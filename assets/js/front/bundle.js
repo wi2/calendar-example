@@ -1602,6 +1602,12 @@ var _default = (function (_Component) {
                   ' to ',
                   _this.format(evt.end)
                 ),
+                evt.member && _react2['default'].createElement(
+                  'div',
+                  { className: 'panel-event-member' },
+                  'reserved by ',
+                  evt.member.username
+                ),
                 _react2['default'].createElement(
                   'div',
                   { className: 'panel-event-title' },

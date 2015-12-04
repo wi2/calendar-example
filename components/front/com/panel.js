@@ -36,6 +36,7 @@ export default class extends Component {
             return (
               <div className="panel-event" key={"evt"+evt.id} style={{background: evt.room.color} }>
                 <div className="panel-event-date">{this.format(evt.start)} to {this.format(evt.end)}</div>
+                {evt.member && <div className="panel-event-member">reserved by {evt.member.username}</div>}
                 <div className="panel-event-title">{evt.title}</div>
                 <p className="panel-event-content">{evt.content}</p>
               </div>
