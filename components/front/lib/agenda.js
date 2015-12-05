@@ -167,8 +167,13 @@ export default class {
                 ret = true;
               break;
             default:
-              if (date.toString() === this.except[i].toString())
+              if (view === 'month' && date.toString() === this.except[i].toString())
                 ret = true;
+              else if(view !== 'month') {
+                let tmp = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+                if( tmp.toString() === this.except[i].toString())
+                  ret = true;
+              }
               break;
           }
           if (date.getDay() === this.days.indexOf(this.except[i]))
