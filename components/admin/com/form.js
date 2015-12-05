@@ -1,22 +1,26 @@
 "use strict";
 
-import React, {cloneElement} from 'react'
+import React, {cloneElement, Component} from 'react'
 import {RenderForm} from 'newforms'
 import BootstrapForm, {Container, Row} from 'newforms-bootstrap'
 
 import generateForm from '../lib/make-form'
 
-export default class extends React.Component {
+export default class extends Component {
   componentWillMount() {
     this.makeForm(this.props.formItem)
   }
   componentWillReceiveProps(props) {
-    if (this.mForm)
-      delete this.mForm
+    if (this.mForm) delete this.mForm
   }
-  makeForm(formItem=this.props.formItem, data=this.props.item) {
+
+  generateForm(formItem=this.props.formItem, data=this.props.item) {
     return generateForm(formItem, data)
   }
+  makeForm(formItem=this.props.formItem, data=this.props.item) {
+    return this.generateForm(formItem, data)
+  }
+
   _onSubmit(e) {
     e.preventDefault();
     let form = this.mForm.getForm()
@@ -26,14 +30,19 @@ export default class extends React.Component {
   render() {
     var mForm = this.makeForm()
     if (this.props.modelForm)
-      return (
-        <form onSubmit={this._onSubmit.bind(this)} encType="multipart/form-data">
-          {mForm && this.props.formItem &&
-          <RenderForm form={mForm} ref={(ref) => this.mForm = ref}>
-            {cloneElement(this.props.modelForm)}
-          </RenderForm>}
-        </form>
-      );
+      if (typeof this.props.modelForm === 'object')
+        return (
+          <form onSubmit={this._onSubmit.bind(this)} encType="multipart/form-data">
+            {mForm && this.props.formItem &&
+            <RenderForm form={mForm} ref={(ref) => this.mForm = ref}>
+              {cloneElement(this.props.modelForm)}
+            </RenderForm>}
+          </form>
+        );
+      else {
+        let MF = this.props.modelForm
+        return <MF {...this.props} />
+      }
 
     return (
       <form onSubmit={this._onSubmit.bind(this)} encType="multipart/form-data">
