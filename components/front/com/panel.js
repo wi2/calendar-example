@@ -1,7 +1,6 @@
 "use strict";
 
 import React, {Component} from 'react';
-import {Motion, spring} from 'react-motion';
 import DatePicker from './date-picker';
 import Agenda from '../lib/agenda'
 
@@ -21,9 +20,7 @@ export default class extends Component {
   render() {
     let events = this.agenda.getEventsByDate(this.props.date, this.props.events, this.props.view !== "month")
     return (
-      <Motion defaultStyle={{x: this.props.defaultRight}} style={{x: spring(this.props.right)}}>
-        {value =>
-        <div className="agenda-panel" style={{right: value.x}} key="panel">
+      <div className="agenda-panel" style={{right: this.props.right}} key="panel">
           {this.props.date &&
             <DatePicker view="month"
                         year={this.props.date.getFullYear()}
@@ -43,8 +40,7 @@ export default class extends Component {
             )}
           )}
 
-        </div>}
-      </Motion>
+        </div>
     )
   }
 }
