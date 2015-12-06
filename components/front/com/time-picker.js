@@ -54,7 +54,7 @@ export default class extends Component {
     for(let num=range.start; num<range.end; num++) {
       disabled = false
       dateHour.setHours(num)
-      if (this.state.type === 'hour')
+      if (this.state.type === 'hour') {
         for(let i=0, len=except.length; i<len; i++)
           if(typeof except[i] === 'object')
             if (typeof except[i].start === 'number' && except[i].start <= num && except[i].end >= num)
@@ -63,6 +63,9 @@ export default class extends Component {
               disabled = true
             else if (except[i].toString() === dateHour.toString())
               disabled = true
+      } else if (this.state.type === 'minute' && num % 3 !== 0) {
+        disabled = true
+      }
       items.push({num, disabled});
     }
     return items
