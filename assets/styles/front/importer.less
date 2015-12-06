@@ -43,6 +43,7 @@ body { padding-top: 50px; font-family: Arial }
     .col-content {
       background: #F8F8F8;
       text-shadow: 0.5px 0.5px #AAA;
+      color: #666;
      }
   }
   .col-active, .col-day-active {
@@ -94,6 +95,7 @@ body { padding-top: 50px; font-family: Arial }
   .col, .col-day {
     .col-content {
       background: #F8F8F8;
+      color: #FFF;
      }
   }
   .col-active, .col-day-active {
@@ -118,12 +120,16 @@ body { padding-top: 50px; font-family: Arial }
   opacity: 0.95;
   .col-content {
     background: #DDD!important;
-    color: #fff;
     height: 100%;
     text-shadow: 0.5px 0.5px #333;
   }
 }
 
-
-
+.agenda-vertical {
+  .col-day:nth-child(4n+1), .col-day:nth-child(4n+1) {
+    .col-content {
+      color: #000!important;
+    }
+  }
+}
 
