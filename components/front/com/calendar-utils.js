@@ -25,12 +25,18 @@ export class Cell extends Component {
     e.preventDefault()
     if (this.props.moveSelection) this.props.moveSelection()
   }
+  style() {
+    let s = {}
+    if (this.props.color)
+      s.background = this.props.color
+    return s
+  }
   render() {
     return (
       <div className={this.props.className} style={{height: this.props.height}}
            onClick={this._handleClick.bind(this)}
            onMouseOver={this._handleOver.bind(this)}>
-        <div className="col-content">{this.props.value}</div>
+        <div className="col-content" style={this.style()}>{this.props.value}</div>
       </div>
     )
   }

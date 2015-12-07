@@ -23,7 +23,8 @@ export default class extends Component {
       info: this.agenda.getInfo(),
       start: -1,
       end: -1,
-      startInit: -1
+      startInit: -1,
+      color: null
     }
     if (this.props.onLoad)
       this.props.onLoad(this.props)
@@ -51,12 +52,12 @@ export default class extends Component {
     });
   }
 
-  toggleSelection(val) {
+  toggleSelection(val, isEvent=false) {
     if (this.state.editor) {
       if (this.state.start !== -1) {
-        let selection = this.getSmartSelection(val)
+        let selection = _.extend({...this.state.selection}, this.getSmartSelection(val))
         this.setState({
-          selection: selection,
+          selection,
           start: -1,
           end: -1,
           startInit: -1
@@ -65,6 +66,7 @@ export default class extends Component {
           selection = {
             start: _.clone(selection.start),
             end: _.clone(selection.end),
+            isEvent: _.clone(selection.isEvent),
           }
           selection.end.date = new Date(selection.end.date)
           selection.end.date.setHours(23)
@@ -72,12 +74,14 @@ export default class extends Component {
           selection.end.hour = 23
           selection.end.minute = 45
         }
-        this.props.onSelect(selection, this.state.editor)
+        this.props.onSelect(selection.isEvent ? _.extend({}, selection.isEvent, selection) : selection, this.state.editor)
       } else {
         this.setState({
           startInit: val,
           start: val,
-          end: val
+          end: val,
+          selection: {isEvent},
+          color: isEvent ? isEvent.room.color : null
         })
       }
     } else {
@@ -119,6 +123,7 @@ export default class extends Component {
         onSelect: this.onSelectEvent.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end,
+        selectionColor: this.state.color,
         editor: this.state.editor,
         current: this.props.current
       };

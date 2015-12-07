@@ -113,6 +113,13 @@ var Cell = (function (_Component3) {
       if (this.props.moveSelection) this.props.moveSelection();
     }
   }, {
+    key: 'style',
+    value: function style() {
+      var s = {};
+      if (this.props.color) s.background = this.props.color;
+      return s;
+    }
+  }, {
     key: 'render',
     value: function render() {
       return _react2['default'].createElement(
@@ -122,7 +129,7 @@ var Cell = (function (_Component3) {
           onMouseOver: this._handleOver.bind(this) },
         _react2['default'].createElement(
           'div',
-          { className: 'col-content' },
+          { className: 'col-content', style: this.style() },
           this.props.value
         )
       );
@@ -400,15 +407,17 @@ var ViewDefault = (function (_Component) {
     }
   }, {
     key: 'onSelect',
-    value: function onSelect(val) {
-      this.props.onSelect(val);
+    value: function onSelect(val, e) {
+      e.preventDefault();
+      var pPosition = this.getPosition(e.currentTarget),
+          position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
+      if (position.y < 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else if (position.y > e.target.clientWidth - 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else this.props.onSelect(val);
     }
   }, {
     key: 'getPosition',
     value: function getPosition(element) {
-      var xPosition = 0;
-      var yPosition = 0;
-
+      var xPosition = 0,
+          yPosition = 0;
       while (element) {
         xPosition += element.offsetLeft - element.scrollLeft + element.clientLeft;
         yPosition += element.offsetTop - element.scrollTop + element.clientTop;
@@ -483,6 +492,9 @@ var Week = (function (_ViewDefault) {
             disabled: item.disabled,
             key: 'hour-' + item.hour + '-{item.minute}-' + item.row + '-' + item.col
           };
+          if (cond) {
+            props.color = _this.props.selectionColor;
+          }
           if (item.disabled) {
             delete props.toggleSelection;
             delete props.moveSelection;
@@ -570,6 +582,14 @@ var Month = (function (_ViewDefault2) {
       this.setDimension(this.props.width / 7, this.props.height / 7);
     }
   }, {
+    key: 'onSelect',
+    value: function onSelect(val, e) {
+      e.preventDefault();
+      var pPosition = this.getPosition(e.currentTarget),
+          position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
+      if (position.x < 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else if (position.x > this.state.width * (val.cell.end - val.cell.start) - 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else this.props.onSelect(val);
+    }
+  }, {
     key: 'style',
     value: function style(evt) {
       var opacity = arguments.length <= 1 || arguments[1] === undefined ? 0.9 : arguments[1];
@@ -610,6 +630,9 @@ var Month = (function (_ViewDefault2) {
             disabled: item.disabled,
             key: 'day-' + item.day + '-' + item.col + '-' + item.row
           };
+          if (cond) {
+            props.color = _this2.props.selectionColor;
+          }
           if (item.disabled) {
             delete props.toggleSelection;
             delete props.moveSelection;
@@ -644,7 +667,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -693,7 +716,8 @@ var _default = (function (_Component) {
       info: this.agenda.getInfo(),
       start: -1,
       end: -1,
-      startInit: -1
+      startInit: -1,
+      color: null
     };
     if (this.props.onLoad) this.props.onLoad(this.props);
   }
@@ -725,9 +749,11 @@ var _default = (function (_Component) {
   }, {
     key: 'toggleSelection',
     value: function toggleSelection(val) {
+      var isEvent = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+
       if (this.state.editor) {
         if (this.state.start !== -1) {
-          var selection = this.getSmartSelection(val);
+          var selection = _lodash2['default'].extend(_extends({}, this.state.selection), this.getSmartSelection(val));
           this.setState({
             selection: selection,
             start: -1,
@@ -737,7 +763,8 @@ var _default = (function (_Component) {
           if (this.state.view === "month") {
             selection = {
               start: _lodash2['default'].clone(selection.start),
-              end: _lodash2['default'].clone(selection.end)
+              end: _lodash2['default'].clone(selection.end),
+              isEvent: _lodash2['default'].clone(selection.isEvent)
             };
             selection.end.date = new Date(selection.end.date);
             selection.end.date.setHours(23);
@@ -745,12 +772,14 @@ var _default = (function (_Component) {
             selection.end.hour = 23;
             selection.end.minute = 45;
           }
-          this.props.onSelect(selection, this.state.editor);
+          this.props.onSelect(selection.isEvent ? _lodash2['default'].extend({}, selection.isEvent, selection) : selection, this.state.editor);
         } else {
           this.setState({
             startInit: val,
             start: val,
-            end: val
+            end: val,
+            selection: { isEvent: isEvent },
+            color: isEvent ? isEvent.room.color : null
           });
         }
       } else {
@@ -798,6 +827,7 @@ var _default = (function (_Component) {
         onSelect: this.onSelectEvent.bind(this),
         selectionStart: this.state.start,
         selectionEnd: this.state.end,
+        selectionColor: this.state.color,
         editor: this.state.editor,
         current: this.props.current
       };

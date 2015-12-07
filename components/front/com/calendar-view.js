@@ -34,13 +34,20 @@ class ViewDefault extends Component {
   moveSelection(val) {
     this.props.moveSelection(val)
   }
-  onSelect(val) {
-    this.props.onSelect(val)
+  onSelect(val, e) {
+    e.preventDefault()
+    let pPosition = this.getPosition(e.currentTarget)
+      , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
+    if (position.y < 20)
+      this.props.toggleSelection({date: new Date(val.start)}, val)
+    else if (position.y > e.target.clientWidth - 20)
+      this.props.toggleSelection({date: new Date(val.end)}, val)
+    else
+      this.props.onSelect(val)
   }
   getPosition(element) {
-    var xPosition = 0;
-    var yPosition = 0;
-
+    let xPosition = 0
+      , yPosition = 0;
     while (element) {
         xPosition += (element.offsetLeft - element.scrollLeft + element.clientLeft);
         yPosition += (element.offsetTop - element.scrollTop + element.clientTop);
@@ -88,6 +95,9 @@ export class Week extends ViewDefault {
             moveSelection: this.moveSelection.bind(this, item),
             disabled: item.disabled,
             key: `hour-${item.hour}-{item.minute}-${item.row}-${item.col}`
+          }
+          if (cond) {
+            props.color = this.props.selectionColor
           }
           if (item.disabled) {
             delete props.toggleSelection;
@@ -137,6 +147,19 @@ export class Month extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/7)
   }
 
+  onSelect(val, e) {
+    e.preventDefault()
+    let pPosition = this.getPosition(e.currentTarget)
+      , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
+    if (position.x < 20)
+      this.props.toggleSelection({date: new Date(val.start)}, val)
+    else if (position.x > this.state.width*(val.cell.end - val.cell.start) - 20)
+      this.props.toggleSelection({date: new Date(val.end)}, val)
+    else
+      this.props.onSelect(val)
+  }
+
+
   style(evt, opacity=0.9) {
     let {room, cell} = evt
       , width = this.state.width
@@ -167,6 +190,9 @@ export class Month extends ViewDefault {
               disabled: item.disabled,
               key: `day-${item.day}-${item.col}-${item.row}`
             }
+          if (cond) {
+            props.color = this.props.selectionColor
+          }
           if (item.disabled) {
             delete props.toggleSelection;
             delete props.moveSelection;
