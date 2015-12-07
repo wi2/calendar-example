@@ -36,7 +36,7 @@ module.exports = function(req, res, next) {
           .findOneById(req.param('id'))
           .then( evt => {//check if you can update or delete this event
             if ( evt && (evt.member == req.session.passport.user || currentUserWithRole.role.name == 'admin') )
-              return Event.count( _.extend({'!' : req.param('id')}, query) )
+              return Event.count( _.extend({id: {'!' : req.param('id')}}, query) )
             else
               return { error: "You are not authorize." };
           })
