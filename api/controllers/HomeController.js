@@ -18,10 +18,15 @@ module.exports = {
                              : url + "month/" + tmpUrl
     }
     var state = {identities: Object.keys(sails.models)};
-    Room.find().then( rooms => {
-      state.rooms = rooms;
-      resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
-    })
+    Room.find()
+      .then( rooms => {
+        state.rooms = rooms;
+        return Exception.find()
+      })
+      .then( exception => {
+        state.exception = exception;
+        resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
+      })
   }
 
 };

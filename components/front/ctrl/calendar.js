@@ -10,23 +10,35 @@ import Panel from '../com/panel';
 export default class extends Component {
   constructor(props) {
     super(props)
-    this.except = [
-      'Sun',
-      'Sat',
-      {start: new Date(2015, 9, 7), end: new Date(2015, 9, 11)},
-      {start: new Date(2015, 9, 15), end: new Date(2015, 9, 17)},
-      {start: new Date(2015, 11, 7, 14), end: new Date(2015, 11, 7, 17)},
-      {start: 0, end: 6},
-      {start: 20, end: 23},
-      new Date(2015, 10, 7),
-      new Date(2015, 10, 10),
-      new Date(2015, 11, 8, 16)
+    this.except = this.props.exception.map(exc => {
+      let value;
+      if (exc.type === 'day') {
+        value = exc.day;
+      } else if (exc.type === 'date') {
+        let date = new Date(exc.date)
+        value = Date(date.getFullYear(), date.getMonth(), date.getDate());
+      } else if (exc.type === 'dateHour') {
+        let date = new Date(exc.date)
+        value = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
+      } else if (exc.type === 'dates') {
+        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
+          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate())
+          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate())
+        value = { start, end };
+      } else if (exc.type === 'datesHour') {
+        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
+          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate(), tmp.start.getHours(), tmp.start.getMinutes())
+          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate(), tmp.end.getHours(), tmp.end.getMinutes())
+        value = { start, end };
+      } else if (exc.type === 'hours') {
+        value = { start: exc.startHour, end: exc.endHour };
+      }
+      return value;
+    })
 
-    ];
     this.state = {
       show: false,
       rooms: this.props.rooms||[],
-      width: 1000,
       height: 700,
       defaultRight: typeof document !== "undefined" ? -document.body.offsetWidth*0.2 : -500,
       right: typeof document !== "undefined" ? -document.body.offsetWidth*0.2 : -500,
@@ -34,16 +46,14 @@ export default class extends Component {
     }
     this.timeout = null;
     this.loadEvents()
-    if (global.io)
-      io.socket.on('event', msg => this.loadEvents());
+    if (global.io) io.socket.on('event', msg => this.loadEvents());
   }
   componentDidMount() {
     this.setState({width:findDOMNode(this).offsetWidth})
     window.addEventListener('resize', this.handleResize.bind(this));
   }
   componentDidUpdate(props, state) {
-    if (this.state.filters !== state.filters)
-      this.loadEvents()
+    if (this.state.filters !== state.filters) this.loadEvents()
   }
   componentWillReceiveProps(props) {
     this.loadEvents(props)
@@ -52,8 +62,7 @@ export default class extends Component {
     return this.state && this.state !== state
   }
   componentWillUnmount() {
-    if (global.io)
-      io.socket.off()
+    if (global.io) io.socket.off()
     window.removeEventListener('resize', this.handleResize);
   }
 
