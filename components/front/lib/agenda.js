@@ -24,21 +24,25 @@ export default class {
     this.date = this.linkHelper(y,m,d,h,mm)
   }
 
-  getEvents(line, events, withHour=false) {
+  getEvents(line, events, withHour=false, withMinute=false) {
     let allevents = events.filter( evt  => {
-      let {start, end} = this.getLimit(line, evt, withHour)
+      let {start, end} = this.getLimit(line, evt, withHour, withMinute)
       if (start && end) {
         evt.cell = {start: start.col, end: end.col}
         return evt;
       }
     })
+    if (allevents.length === 0) return allevents
+
     return allevents
-      .sort( (a, b) => b.cell.start - a.cell.start )
+      .sort( (a, b) => b.room.id - a.room.id )
+      // .sort( (a, b) => b.cell.start - a.cell.start )
       .sort( (a, b) => b.cell.end - b.cell.start - (a.cell.end - a.cell.start) )
+      // .sort( (a, b) => b.room.id - a.room.id )
   }
 
-  getEventsByDate(date, events, withHour) {
-    return events.filter( evt  => this.compare(date, new Date(evt.start), withHour) || this.compare(date, new Date(evt.end), withHour) || (date >= new Date(evt.start) && date <= new Date(evt.end)) )
+  getEventsByDate(date, events, withHour=false, withMinute=false) {
+    return events.filter( evt  => this.compare(date, new Date(evt.start), withHour, withMinute) || this.compare(date, new Date(evt.end), withHour, withMinute) || (date >= new Date(evt.start) && date <= new Date(evt.end)) )
   }
 
   tetris(events) {
@@ -127,9 +131,13 @@ export default class {
     if (currentDay) {
       let dayHour = []
       _.range(0, 24).map((hour) => {
-        let date = new Date(currentDay.year, currentDay.month , Math.abs(currentDay.day), hour)
-          , check = this.checkExcept(date, view)
-        dayHour.push(_.assign({}, currentDay, {hour}, {col: hour}, {date}, {disabled: check}))
+
+        _.range(0, 4).map((quart) => {
+          let minute = quart * 15
+          let date = new Date(currentDay.year, currentDay.month , Math.abs(currentDay.day), hour, minute)
+            , check = this.checkExcept(date, view)
+          dayHour.push(_.assign({}, currentDay, {hour}, {minute}, {col: dayHour.length}, {date}, {disabled: check}))
+        })
       })
       return dayHour;
     } else if (currentWeek) {
@@ -137,9 +145,14 @@ export default class {
       _.each(currentWeek, (item) => {
         let dayHour = []
         _.range(0, 24).map((hour) => {
-          let date = new Date(item.year, item.month , Math.abs(item.day), hour)
-            , check = this.checkExcept(date, view)
-          dayHour.push(_.assign({}, item, {hour}, {col: hour}, {date}, {disabled: check}))
+
+          _.range(0, 4).map((quart) => {
+            let minute = quart * 15
+            let date = new Date(item.year, item.month , Math.abs(item.day), hour, minute)
+              , check = this.checkExcept(date, view)
+            dayHour.push(_.assign({}, item, {hour}, {minute}, {col: dayHour.length}, {date}, {disabled: check}))
+          })
+
         })
         weekHour.push(dayHour)
       })
@@ -260,13 +273,13 @@ export default class {
     }
   }
 
-  getLimit(line, evt, withHour) {
+  getLimit(line, evt, withHour, withMinute) {
     let eventDate = {
       start: new Date(evt.start),
       end: new Date(evt.end)
     }
-    let start = _.find(line, item => this.compare(item.date, eventDate.start, withHour));
-    let end = _.find(line, item => this.compare(item.date, eventDate.end, withHour));
+    let start = _.find(line, item => this.compare(item.date, eventDate.start, withHour, withMinute));
+    let end = _.find(line, item => this.compare(item.date, eventDate.end, withHour, withMinute));
     if ( !(start || end || (line[0].date > eventDate.start && line[line.length-1].date < eventDate.end)) )
       return {start, end}
     if (!start) start = line[0];
@@ -274,16 +287,19 @@ export default class {
     return {start, end}
   }
 
-  compare(date1, date2, withHour) {
-    if (withHour)
+  compare(date1, date2, withHour, withMinute) {
+    if (withMinute)
+      return this.compareWithMinute(date1, date2);
+    else if (withHour)
       return this.compareWithHour(date1, date2);
     return this.compareDate(date1, date2)
   }
-
+  compareWithMinute(date1, date2) {
+    return date1.getMinutes() === date2.getMinutes() && this.compareWithHour(date1, date2)
+  }
   compareWithHour(date1, date2) {
     return date1.getHours() === date2.getHours() && this.compareDate(date1, date2)
   }
-
   compareDate(date1, date2) {
     return date1.getDate() === date2.getDate()
         && date1.getMonth() === date2.getMonth()

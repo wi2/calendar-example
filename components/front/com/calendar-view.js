@@ -14,12 +14,12 @@ class ViewDefault extends Component {
     this.setState({width, height, cellClassName});
   }
 
-  prepareRender(withHour=false) {
+  prepareRender(withHour=false, withMinute=false) {
     let events
       , agenda = this.props.agenda
       , week = this.props.week
     if (this.props.agenda && this.props.events) {
-      events = agenda.tetris(agenda.getEvents(week, this.props.events, withHour))
+      events = agenda.tetris(agenda.getEvents(week, this.props.events, withHour, withMinute))
     }
     let selection = {
       s: this.props.selectionStart.date,
@@ -37,6 +37,18 @@ class ViewDefault extends Component {
   onSelect(val) {
     this.props.onSelect(val)
   }
+  getPosition(element) {
+    var xPosition = 0;
+    var yPosition = 0;
+
+    while (element) {
+        xPosition += (element.offsetLeft - element.scrollLeft + element.clientLeft);
+        yPosition += (element.offsetTop - element.scrollTop + element.clientTop);
+        element = element.offsetParent;
+    }
+    return { x: xPosition, y: yPosition };
+  }
+
 }
 
 export class Week extends ViewDefault {
@@ -47,7 +59,7 @@ export class Week extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
   }
 
-  style(evt, opacity) {
+  style(evt, opacity=0.9) {
     let {room, cell} = evt
       , width = this.props.height/24;
     return {
@@ -63,24 +75,19 @@ export class Week extends ViewDefault {
 
   render() {
     let agenda = this.props.agenda
-      , {events, week, selection} = this.prepareRender(true)
+      , {events, week, selection} = this.prepareRender(true, true)
     return (
       <Vertical className={this.state.cellClassName}>
-        {events && events.map((evt, i) =>
-          <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(0.9)}}>
-            {value => <div className="event" style={this.style(evt, value.alpha)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>}
-          </Motion>
-        )}
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
                       || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day), this.props.current.hour), true ) )
           let props = {
-            value: item.hour + "h",
+            value: item.minute ? "  " + item.minute : item.hour + "h ",
             className: cond ? "col-day col-day-active" : "col-day",
             toggleSelection: this.toggleSelection.bind(this, item),
             moveSelection: this.moveSelection.bind(this, item),
             disabled: item.disabled,
-            key: `hour-${item.hour}-${item.row}-${item.col}`
+            key: `hour-${item.hour}-{item.minute}-${item.row}-${item.col}`
           }
           if (item.disabled) {
             delete props.toggleSelection;
@@ -89,6 +96,11 @@ export class Week extends ViewDefault {
           }
           return <Cell {...props} {...this.state} />
         })}
+        {events && events.map((evt, i) =>
+          <div className="event" style={this.style(evt)}
+                onClick={this.onSelect.bind(this, evt)}
+                key={`event-${evt.id}-${i}`}>{evt.title}</div>
+        )}
       </Vertical>
     )
   }
@@ -96,16 +108,16 @@ export class Week extends ViewDefault {
 
 export class Day extends Week {
   componentDidMount() {
-    this.setDimension(this.props.width, this.props.height/24, "agenda-vertical agenda-vertical-row")
+    this.setDimension(this.props.width, this.props.height/(24*2), "agenda-vertical agenda-vertical-row")
   }
   componentWillReceiveProps(props) {
-    this.setDimension(this.props.width, this.props.height/24, "agenda-vertical agenda-vertical-row")
+    this.setDimension(this.props.width, this.props.height/(24*2), "agenda-vertical agenda-vertical-row")
   }
 
   style(evt, opacity) {
     let eventWidth = 180
       , {room, cell} = evt
-      , width = this.props.height/24;
+      , width = this.props.height/(24*2);
     return {
       opacity,
       top: `${cell.start * width}px`,
@@ -125,7 +137,7 @@ export class Month extends ViewDefault {
     this.setDimension(this.props.width/7, this.props.height/7)
   }
 
-  style(evt, opacity) {
+  style(evt, opacity=0.9) {
     let {room, cell} = evt
       , width = this.state.width
     return {
@@ -143,11 +155,6 @@ export class Month extends ViewDefault {
       , that = this
     return (
       <Row>
-        {events && events.map((evt, i) =>
-          <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(0.9)}}>
-            {value => <div className="event" style={this.style(evt, value.alpha)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>}
-          </Motion>
-        )}
 
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
@@ -167,6 +174,11 @@ export class Month extends ViewDefault {
           }
           return <Cell {...props} {...this.state} />
         } )}
+
+        {events && events.map((evt, i) =>
+          <div className="event" style={this.style(evt)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
+        )}
+
       </Row>
     )
   }

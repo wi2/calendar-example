@@ -68,7 +68,9 @@ export default class extends Component {
           }
           selection.end.date = new Date(selection.end.date)
           selection.end.date.setHours(23)
+          selection.end.date.setMinutes(45)
           selection.end.hour = 23
+          selection.end.minute = 45
         }
         this.props.onSelect(selection, this.state.editor)
       } else {
@@ -122,7 +124,7 @@ export default class extends Component {
       };
 
     return (
-      <Motion style={{width: spring(this.props.width)}}>
+      <Motion style={{width: spring(this.props.width||2000)}}>
         {value =>
 
         <div className="agenda" style={{width: value.width}}>

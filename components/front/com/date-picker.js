@@ -85,7 +85,7 @@ export default class extends Component {
               return (
                 <Vertical key={`vertical-${j}-${this.props.name}`}>
                   {line.map((item, i) => {
-                    let cond = this.agenda.compare(this.state.current, item.date, true)
+                    let cond = this.agenda.compare(this.state.current, item.date, true, true)
                     let props = {
                       height,
                       value: item.day +" "+item.hour,
