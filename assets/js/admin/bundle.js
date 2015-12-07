@@ -23,7 +23,7 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x5, _x6, _x7) { var _again = true; _function: while (_again) { var object = _x5, property = _x6, receiver = _x7; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x5 = parent; _x6 = property; _x7 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -45,8 +45,8 @@ var _libMakeForm = require('../lib/make-form');
 
 var _libMakeForm2 = _interopRequireDefault(_libMakeForm);
 
-var _default = (function (_React$Component) {
-  _inherits(_default, _React$Component);
+var _default = (function (_Component) {
+  _inherits(_default, _Component);
 
   function _default() {
     _classCallCheck(this, _default);
@@ -65,12 +65,20 @@ var _default = (function (_React$Component) {
       if (this.mForm) delete this.mForm;
     }
   }, {
+    key: 'generateForm',
+    value: function generateForm() {
+      var formItem = arguments.length <= 0 || arguments[0] === undefined ? this.props.formItem : arguments[0];
+      var data = arguments.length <= 1 || arguments[1] === undefined ? this.props.item : arguments[1];
+
+      return (0, _libMakeForm2['default'])(formItem, data);
+    }
+  }, {
     key: 'makeForm',
     value: function makeForm() {
       var formItem = arguments.length <= 0 || arguments[0] === undefined ? this.props.formItem : arguments[0];
       var data = arguments.length <= 1 || arguments[1] === undefined ? this.props.item : arguments[1];
 
-      return (0, _libMakeForm2['default'])(formItem, data);
+      return this.generateForm(formItem, data);
     }
   }, {
     key: '_onSubmit',
@@ -85,7 +93,7 @@ var _default = (function (_React$Component) {
       var _this = this;
 
       var mForm = this.makeForm();
-      if (this.props.modelForm) return _react2['default'].createElement(
+      if (this.props.modelForm) if (typeof this.props.modelForm === 'object') return _react2['default'].createElement(
         'form',
         { onSubmit: this._onSubmit.bind(this), encType: 'multipart/form-data' },
         mForm && this.props.formItem && _react2['default'].createElement(
@@ -95,7 +103,10 @@ var _default = (function (_React$Component) {
             } },
           (0, _react.cloneElement)(this.props.modelForm)
         )
-      );
+      );else {
+        var MF = this.props.modelForm;
+        return _react2['default'].createElement(MF, this.props);
+      }
 
       return _react2['default'].createElement(
         'form',
@@ -127,7 +138,7 @@ var _default = (function (_React$Component) {
   }]);
 
   return _default;
-})(_react2['default'].Component);
+})(_react.Component);
 
 exports['default'] = _default;
 module.exports = exports['default'];
@@ -1170,14 +1181,147 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
+var _comForm = require('./com/form');
+
+var _comForm2 = _interopRequireDefault(_comForm);
+
+var _newforms = require('newforms');
+
 var _newformsBootstrap = require('newforms-bootstrap');
 
+var exception = (function (_AdForm) {
+  _inherits(exception, _AdForm);
+
+  function exception(props) {
+    _classCallCheck(this, exception);
+
+    _get(Object.getPrototypeOf(exception.prototype), 'constructor', this).call(this, props);
+    this.state = {
+      type: 'day'
+    };
+  }
+
+  _createClass(exception, [{
+    key: '_onFocus',
+    value: function _onFocus(e) {
+      e.preventDefault();
+      setTimeout(function () {
+        return e.target.blur();
+      }, 50);
+    }
+  }, {
+    key: '_onBlur',
+    value: function _onBlur(e) {
+      if (e) e.preventDefault();
+      var form = this.mForm.getForm();
+      var cleanedData = _lodash2['default'].clone(form.cleanedData);
+      this.setState({ type: cleanedData.type });
+    }
+  }, {
+    key: 'makeForm',
+    value: function makeForm() {
+      var formItem = arguments.length <= 0 || arguments[0] === undefined ? this.props.formItem : arguments[0];
+      var data = arguments.length <= 1 || arguments[1] === undefined ? this.props.item : arguments[1];
+
+      console.log(formItem);
+      formItem[3].widget = _newforms.RadioSelect;
+      formItem[3].widgetAttrs = {
+        onFocus: this._onFocus.bind(this),
+        onBlur: this._onBlur.bind(this)
+      };
+      return this.generateForm(formItem, data);
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this = this;
+
+      var mForm = this.makeForm();
+      return _react2['default'].createElement(
+        'form',
+        { onSubmit: this._onSubmit.bind(this), encType: 'multipart/form-data' },
+        mForm && this.props.formItem && _react2['default'].createElement(
+          _newforms.RenderForm,
+          { form: mForm, ref: function (ref) {
+              return _this.mForm = ref;
+            } },
+          _react2['default'].createElement(
+            _newformsBootstrap.Container,
+            { autoColumns: 'md' },
+            _react2['default'].createElement(
+              'h1',
+              null,
+              'Rôle'
+            ),
+            _react2['default'].createElement('hr', null),
+            _react2['default'].createElement(
+              'p',
+              { className: 'text-right' },
+              _react2['default'].createElement(
+                'button',
+                { className: 'btn btn-default' },
+                'Save'
+              )
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'name', md: '8' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'active' })
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'description' })
+            ),
+            _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'type' })
+            ),
+            (this.state.type === 'dates' || this.state.type === 'datesHour') && _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'startDate' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'endDate' })
+            ) || this.state.type === 'hours' && _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'startHour' }),
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: 'endHour' })
+            ) || (this.state.type === 'day' || this.state.type === 'date') && _react2['default'].createElement(
+              _newformsBootstrap.Row,
+              null,
+              _react2['default'].createElement(_newformsBootstrap.Field, { name: this.state.type })
+            )
+          )
+        )
+      );
+    }
+  }]);
+
+  return exception;
+})(_comForm2['default']);
+
+exports.exception = exception;
 var user = _react2['default'].createElement(
   _newformsBootstrap.Container,
   { autoColumns: 'md' },
@@ -1347,7 +1491,7 @@ var image = _react2['default'].createElement(
 );
 exports.image = image;
 
-},{"newforms-bootstrap":"newforms-bootstrap","react":"react"}],14:[function(require,module,exports){
+},{"./com/form":2,"lodash":"lodash","newforms":"newforms","newforms-bootstrap":"newforms-bootstrap","react":"react"}],14:[function(require,module,exports){
 "use strict";
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
