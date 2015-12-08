@@ -27,10 +27,11 @@ module.exports.policies = {
   ***************************************************************************/
 
   // '*': true,
-  'admin': ['sessionAuth', 'isAdmin'],
+  '*': ['sessionAuth', 'isAdmin'],
   EventController: {
     '*': ['sessionAuth', 'checkEvent']
   },
+  'home': true
 
   /***************************************************************************
   *                                                                          *
