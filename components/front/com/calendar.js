@@ -97,8 +97,10 @@ export default class extends Component {
   }
 
   onSelectEvent(val) {
-    val.date = new Date(val.start);
-    this.props.onSelect(val, this.state.editor)
+    if (val.member.id === this.props.me.id || this.props.me.role === 'admin'){
+      val.date = new Date(val.start);
+      this.props.onSelect(val, this.state.editor)
+    }
   }
 
   onFilterChange(val) {

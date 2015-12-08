@@ -36,9 +36,9 @@ module.exports = {
           return User.findOneById(req.session.passport.user).populate('role')
         else
           return
-        // resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
       })
       .then( user => {
+        if (user) state.me = user
         state.isAdmin = (user && user.role.name == 'admin')
         resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
       })

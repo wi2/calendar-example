@@ -38,6 +38,7 @@ export default class extends Component {
 
     this.state = {
       show: false,
+      me: this.props.me||{},
       rooms: this.props.rooms||[],
       users: this.props.users||[],
       height: 700,
@@ -178,6 +179,7 @@ export default class extends Component {
                   {...this.props.params} />}
 
         <Calendar events={this.props.events||[]}
+                  me={this.state.me}
                   except={this.except}
                   onSelect={this.onSelect.bind(this)}
                   onChange={this.onChange.bind(this)}

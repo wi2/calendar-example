@@ -801,8 +801,10 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelectEvent',
     value: function onSelectEvent(val) {
-      val.date = new Date(val.start);
-      this.props.onSelect(val, this.state.editor);
+      if (val.member.id === this.props.me.id || this.props.me.role === 'admin') {
+        val.date = new Date(val.start);
+        this.props.onSelect(val, this.state.editor);
+      }
     }
   }, {
     key: 'onFilterChange',
@@ -1394,7 +1396,7 @@ var _default = (function (_Component) {
           choices: this.props.users.map(function (r) {
             return [r.id, r.username];
           }),
-          initial: this.props.members.map(function (r) {
+          initial: (this.props.members || []).map(function (r) {
             return r.id;
           })
         })
@@ -2053,6 +2055,7 @@ var _default = (function (_Component) {
 
     this.state = {
       show: false,
+      me: this.props.me || {},
       rooms: this.props.rooms || [],
       users: this.props.users || [],
       height: 700,
@@ -2234,6 +2237,7 @@ var _default = (function (_Component) {
           except: this.except
         }, this.props.params)),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
+          me: this.state.me,
           except: this.except,
           onSelect: this.onSelect.bind(this),
           onChange: this.onChange.bind(this),

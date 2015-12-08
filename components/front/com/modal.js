@@ -54,7 +54,7 @@ export default class extends Component {
       members: MultipleChoiceField({
         widget: CheckboxSelectMultiple,
         choices: this.props.users.map(r => [r.id, r.username]),
-        initial: this.props.members.map(r => r.id),
+        initial: (this.props.members||[]).map(r => r.id),
       })
     })
     this.form = new MyForm({
