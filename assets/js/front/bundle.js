@@ -1108,7 +1108,8 @@ var _default = (function (_Component) {
       minute: this.props.minute,
       name: this.props.name,
       except: this.props.except || [],
-      type: "date"
+      type: "date",
+      decal: this.props.decal || 0
     };
   }
 
@@ -1359,7 +1360,7 @@ var _default = (function (_Component) {
 
     this.state = {
       startPicker: { show: false, date: startDate, except: startExcept },
-      endPicker: { show: false, date: endDate, except: endExcept }
+      endPicker: { show: false, date: endDate, except: endExcept, decal: 14 }
     };
     this.createForm();
   }
@@ -1430,7 +1431,7 @@ var _default = (function (_Component) {
           end: date
         });
       } else {
-        _lodash2['default'].extend(endPicker, common);
+        _lodash2['default'].extend(endPicker, common, { decal: 14 });
         startPicker.except = [].concat(_toConsumableArray(this.props.except));
         startPicker.except.push({
           start: date,
@@ -1615,9 +1616,15 @@ var _default = (function (_Component) {
     }
   }, {
     key: 'format',
-    value: function format(dateStr) {
+    value: function format(dateStr, ifEnd) {
       var date = new Date(dateStr);
-      return date.toLocaleString();
+      if (ifEnd) return this.agenda.getEndDate(date).toLocaleString();else return date.toLocaleString();
+    }
+  }, {
+    key: 'formatGetEndDate',
+    value: function formatGetEndDate(dateStr) {
+      var date = new Date(dateStr);
+      return this.agenda.getEndDate(dateStr);
     }
   }, {
     key: 'render',
@@ -1643,7 +1650,7 @@ var _default = (function (_Component) {
               { className: 'panel-event-date' },
               _this.format(evt.start),
               ' to ',
-              _this.format(evt.end)
+              _this.format(evt.end, true)
             ),
             evt.member && _react2['default'].createElement(
               'div',
@@ -1799,6 +1806,7 @@ var _default = (function (_Component) {
             radius: _this.state.radius,
             value: item.num,
             ampm: _this.state.ampm,
+            decal: _this.props.decal,
             type: _this.state.type, key: "dash-" + item.num });
         })
       );
@@ -1853,6 +1861,9 @@ var Dash = (function (_Component3) {
     _get(Object.getPrototypeOf(Dash.prototype), 'constructor', this).call(this, props);
     var value = this.props.value,
         angle = 360 / 12 * value;
+    if (this.props.type === 'minute') {
+      if (this.props.decal > 0) angle += 90;
+    }
     value = this.props.type === 'hour' ? value : value * 5;
     this.state = {
       style: { transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + this.props.radius + 'px)' },
@@ -1866,8 +1877,15 @@ var Dash = (function (_Component3) {
     value: function componentWillReceiveProps(props) {
       var angle = 360 / 12 * props.value,
           value = props.value;
-      if (props.type === 'minute') value = value * 5;
-      this.setState({ value: value });
+      if (props.type === 'minute') {
+        value = value * 5;
+        if (props.decal > 0) angle += 90;
+      }
+      this.setState({
+        style: { transform: 'translate(-50%, -50%) rotate(' + angle + 'deg) translateY(-' + props.radius + 'px)' },
+        numStyle: { transform: 'translate(-50%, -50%) rotate(-' + angle + 'deg)' },
+        value: value
+      });
     }
   }, {
     key: '_handleClick',
@@ -1880,13 +1898,14 @@ var Dash = (function (_Component3) {
     value: function render() {
       var className = this.props.className || "time-dash";
       if (this.props.disabled) className += " time-dash-disabled";
+      var valueStr = this.props.type === 'hour' ? this.state.value : this.state.value + this.props.decal;
       return _react2['default'].createElement(
         'div',
         { className: className, style: this.state.style },
         _react2['default'].createElement(
           'div',
           { onClick: this._handleClick.bind(this), style: this.state.numStyle },
-          this.state.value
+          valueStr
         )
       );
     }
@@ -2687,6 +2706,13 @@ var _default = (function () {
     value: function getInfo() {
       var info = new Date(this.date.y, this.date.month, this.date.d);
       return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate());
+    }
+  }, {
+    key: "getEndDate",
+    value: function getEndDate(date) {
+      var min = date.getMinutes();
+      date.setMinutes(min + 14);
+      return date;
     }
   }, {
     key: "getLink",

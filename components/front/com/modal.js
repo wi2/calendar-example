@@ -26,7 +26,7 @@ export default class extends Component {
 
     this.state = {
       startPicker: { show: false, date: startDate, except: startExcept },
-      endPicker: { show: false, date: endDate, except: endExcept }
+      endPicker: { show: false, date: endDate, except: endExcept, decal: 14 }
     }
     this.createForm()
   }
@@ -88,7 +88,7 @@ export default class extends Component {
       })
 
     } else {
-      _.extend(endPicker, common)
+      _.extend(endPicker, common, {decal: 14})
       startPicker.except = [...this.props.except]
       startPicker.except.push({
         start: date,

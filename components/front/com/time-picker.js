@@ -100,6 +100,7 @@ export default class extends Component {
                 radius={this.state.radius}
                 value={item.num}
                 ampm={this.state.ampm}
+                decal={this.props.decal}
                 type={this.state.type} key={"dash-"+item.num} />)}
       </div>
     )
@@ -128,6 +129,9 @@ class Dash extends Component {
     super(props)
     let value = this.props.value
       , angle = 360/12 * value
+    if (this.props.type === 'minute') {
+      if (this.props.decal > 0) angle += 90
+    }
     value = this.props.type === 'hour' ? value : value * 5
     this.state = {
       style: { transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${this.props.radius}px)` },
@@ -138,8 +142,15 @@ class Dash extends Component {
   componentWillReceiveProps(props) {
     let angle = 360/12 * props.value
       , value = props.value
-    if (props.type === 'minute') value = value * 5
-    this.setState({ value })
+    if (props.type === 'minute') {
+      value = value * 5
+      if (props.decal > 0) angle += 90
+    }
+    this.setState({
+      style: { transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${props.radius}px)` },
+      numStyle: { transform: `translate(-50%, -50%) rotate(-${angle}deg)` },
+      value
+    })
   }
 
   _handleClick(e) {
@@ -151,9 +162,10 @@ class Dash extends Component {
   render() {
     let className = this.props.className||"time-dash"
     if (this.props.disabled) className += " time-dash-disabled"
+    let valueStr = this.props.type === 'hour' ? this.state.value : this.state.value + this.props.decal
     return (
       <div className={className} style={this.state.style}>
-        <div onClick={this._handleClick.bind(this)} style={this.state.numStyle}>{this.state.value}</div>
+        <div onClick={this._handleClick.bind(this)} style={this.state.numStyle}>{valueStr}</div>
       </div>
     )
   }

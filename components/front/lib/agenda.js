@@ -235,6 +235,12 @@ export default class {
     return this.linkHelper(info.getFullYear(), info.getMonth(), info.getDate())
   }
 
+  getEndDate(date) {
+    let min = date.getMinutes()
+    date.setMinutes(min+14)
+    return date
+  }
+
   getLink(view) {
     let {previous, next, today, current} = this.getLinkHelper(view)
       , prevLink = `/${view}/${previous.y}/${previous.m}`

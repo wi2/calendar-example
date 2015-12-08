@@ -17,7 +17,8 @@ export default class extends Component {
       minute: this.props.minute,
       name: this.props.name,
       except: this.props.except||[],
-      type: "date"
+      type: "date",
+      decal: this.props.decal||0
     }
   }
   _onSelectDate(val) {
@@ -30,6 +31,7 @@ export default class extends Component {
     this.props.onSelect(current)
   }
   render() {
+
     return (
       <Motion defaultStyle={{alpha: 0}} style={{alpha: spring(1)}}>
       {value =>
