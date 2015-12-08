@@ -2872,7 +2872,25 @@ var _default = (function (_Component) {
                 'Calendar'
               )
             ),
-            _react2['default'].createElement(
+            !this.props.isLogged && _react2['default'].createElement(
+              'li',
+              null,
+              _react2['default'].createElement(
+                'a',
+                { href: '/login' },
+                'login'
+              )
+            ),
+            this.props.isLogged && _react2['default'].createElement(
+              'li',
+              null,
+              _react2['default'].createElement(
+                'a',
+                { href: '/logout' },
+                'logout'
+              )
+            ),
+            this.props.isAdmin && _react2['default'].createElement(
               'li',
               null,
               _react2['default'].createElement(

@@ -17,7 +17,10 @@ module.exports = {
       url = req.param('day') ? url + "week/" + tmpUrl + "/" + req.param('day')
                              : url + "month/" + tmpUrl
     }
-    var state = {identities: Object.keys(sails.models)};
+    var state = {
+      identities: Object.keys(sails.models),
+      isLogged: req.session.authenticated
+    };
     Room.find()
       .then( rooms => {
         state.rooms = rooms;
@@ -25,6 +28,14 @@ module.exports = {
       })
       .then( exception => {
         state.exception = exception;
+        if (req.session.authenticated)
+          return User.findOneById(req.session.passport.user).populate('role')
+        else
+          return
+        // resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
+      })
+      .then( user => {
+        state.isAdmin = (user && user.role.name == 'admin')
         resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
       })
   }

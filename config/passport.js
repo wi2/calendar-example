@@ -16,7 +16,7 @@
 
 module.exports.passport = {
   redirect: {
-    login: "/admin",//Login successful
+    login: "/",//Login successful
     logout: "/"//Logout successful
   },
   layout: "passport",

@@ -49,7 +49,6 @@ sails lift
 
 ## TODO
 - Homepage
-- Personalize navigation
 - secure registering
 - adjust end time events
 - add list member

@@ -18,7 +18,9 @@ export default class extends Component {
           <ul className="nav navbar-nav">
             <li><Link to="/">Accueil</Link></li>
             <li><Link to={link}>Calendar</Link></li>
-            <li><a href="/admin">Mon Admin</a></li>
+            {!this.props.isLogged && <li><a href="/login">login</a></li>}
+            {this.props.isLogged && <li><a href="/logout">logout</a></li>}
+            {this.props.isAdmin && <li><a href="/admin">Mon Admin</a></li>}
           </ul>
         </div>
       </nav>
