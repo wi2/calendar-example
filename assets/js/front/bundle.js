@@ -411,7 +411,7 @@ var ViewDefault = (function (_Component) {
       e.preventDefault();
       var pPosition = this.getPosition(e.currentTarget),
           position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
-      if (position.y < 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else if (position.y > e.target.clientWidth - 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else this.props.onSelect(val);
+      if (position.y < 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else if (position.y > e.target.clientWidth - 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else this.props.onSelect(val);
     }
   }, {
     key: 'getPosition',
@@ -587,7 +587,7 @@ var Month = (function (_ViewDefault2) {
       e.preventDefault();
       var pPosition = this.getPosition(e.currentTarget),
           position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
-      if (position.x < 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else if (position.x > this.state.width * (val.cell.end - val.cell.start) - 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else this.props.onSelect(val);
+      if (position.x < 10) this.props.toggleSelection({ date: new Date(val.end) }, val);else if (position.x > this.state.width * (val.cell.end - val.cell.start) - 10) this.props.toggleSelection({ date: new Date(val.start) }, val);else this.props.onSelect(val);
     }
   }, {
     key: 'style',
@@ -743,7 +743,8 @@ var _default = (function (_Component) {
         editor: !this.state.editor,
         start: -1,
         end: -1,
-        startInit: -1
+        startInit: -1,
+        color: null
       });
     }
   }, {
@@ -795,6 +796,7 @@ var _default = (function (_Component) {
   }, {
     key: 'onSelectEvent',
     value: function onSelectEvent(val) {
+      val.date = new Date(val.start);
       this.props.onSelect(val, this.state.editor);
     }
   }, {
@@ -838,7 +840,7 @@ var _default = (function (_Component) {
         function (value) {
           return _react2['default'].createElement(
             'div',
-            { className: 'agenda', style: { width: value.width } },
+            { className: "agenda" + (_this.state.editor ? " edition" : ""), style: { width: value.width } },
             _react2['default'].createElement(_filter2['default'], _extends({}, _this.props.filters, {
               rooms: _this.props.rooms,
               onChange: _this.onFilterChange.bind(_this) })),

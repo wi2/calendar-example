@@ -39,9 +39,9 @@ class ViewDefault extends Component {
     let pPosition = this.getPosition(e.currentTarget)
       , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
     if (position.y < 20)
-      this.props.toggleSelection({date: new Date(val.start)}, val)
-    else if (position.y > e.target.clientWidth - 20)
       this.props.toggleSelection({date: new Date(val.end)}, val)
+    else if (position.y > e.target.clientWidth - 20)
+      this.props.toggleSelection({date: new Date(val.start)}, val)
     else
       this.props.onSelect(val)
   }
@@ -151,10 +151,10 @@ export class Month extends ViewDefault {
     e.preventDefault()
     let pPosition = this.getPosition(e.currentTarget)
       , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
-    if (position.x < 20)
-      this.props.toggleSelection({date: new Date(val.start)}, val)
-    else if (position.x > this.state.width*(val.cell.end - val.cell.start) - 20)
+    if (position.x < 10)
       this.props.toggleSelection({date: new Date(val.end)}, val)
+    else if (position.x > this.state.width*(val.cell.end - val.cell.start) - 10)
+      this.props.toggleSelection({date: new Date(val.start)}, val)
     else
       this.props.onSelect(val)
   }

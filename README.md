@@ -37,6 +37,7 @@ sails lift
 - [sails 0.12 RC3](http://sailsjs.org)
 - [react 0.14](https://github.com/facebook/react)
 - [react-router](https://github.com/rackt/react-router)
+- [react-motion](https://github.com/chenglou/react-motion)
 - [newforms](https://github.com/insin/newforms)
 - [newforms-bootstrap](https://github.com/insin/newforms-bootstrap)
 - [sails-hook-babel](https://github.com/artificialio/sails-hook-babel)
@@ -49,6 +50,7 @@ sails lift
 
 ## TODO
 - Homepage
+- flash message
 - secure registering
 - adjust end time events
 - add list member

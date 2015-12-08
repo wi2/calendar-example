@@ -48,7 +48,8 @@ export default class extends Component {
       editor: !this.state.editor,
       start: -1,
       end: -1,
-      startInit: -1
+      startInit: -1,
+      color: null
     });
   }
 
@@ -96,6 +97,7 @@ export default class extends Component {
   }
 
   onSelectEvent(val) {
+    val.date = new Date(val.start);
     this.props.onSelect(val, this.state.editor)
   }
 
@@ -132,7 +134,7 @@ export default class extends Component {
       <Motion style={{width: spring(this.props.width||2000)}}>
         {value =>
 
-        <div className="agenda" style={{width: value.width}}>
+        <div className={"agenda"+(this.state.editor ? " edition":"")} style={{width: value.width}}>
           <Filter {...this.props.filters}
                   rooms={this.props.rooms}
                   onChange={this.onFilterChange.bind(this)} />

@@ -14,6 +14,9 @@ body { padding-top: 50px; font-family: Arial }
 .float-right {
   float: right;
 }
+.agenda {
+  background: #F8F8F8;
+}
 
 .agenda-row {
   position: relative;
@@ -33,33 +36,32 @@ body { padding-top: 50px; font-family: Arial }
     width: @agendaCell;
     .col-content {
       padding: 1px 5px;
-      border-top: 1px solid #FFF;
-      border-right: 1px solid #FFF;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
       text-shadow: 0.5px 0.5px #333;
       height: 100%;
      }
   }
   .col, .col-day {
+    z-index: 1;
     .col-content {
-      background: #F8F8F8;
       text-shadow: 0.5px 0.5px #AAA;
       color: #666;
      }
   }
   .col-active, .col-day-active {
     .col-content {
-      background: #FFC156;
+      background: rgba(255, 193, 86, 0.5);
     }
   }
 
   .event {
     position: absolute;
-    background: #AAA;
+    background: #000;
     color: #FFF;
     text-shadow: 1px 1px #333;
     font: 0.8em arial;
     text-align: center;
-    z-index: 5;
   }
 }
 
@@ -86,40 +88,38 @@ body { padding-top: 50px; font-family: Arial }
     .col-content {
       height: 100%;
       padding: 1px 5px;
-      border-top: 1px solid #FFF;
-      border-right: 1px solid #FFF;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
       font-size: 0.7em;
       line-height: 0em;
     }
   }
   .col, .col-day {
+    z-index: 1;
     .col-content {
-      background: #F8F8F8;
       color: #FFF;
      }
   }
   .col-active, .col-day-active {
     .col-content {
-      background: #FFC156;
+      background: rgba(255, 193, 86, 0.5);
     }
   }
   .event {
     position: absolute;
     top: 0;
     width: @agendaCell;
-    background: #FF0000;
+    background: #000;
     color: #FFF;
     font: 1em arial;
     text-align: center;
-    z-index: 5;
   }
 }
 
 .col-day-disabled {
-  z-index: 10;
-  opacity: 0.95;
+  z-index: 1!important;
   .col-content {
-    background: #DDD!important;
+    background: rgba(221, 221, 221, 0.95)!important;
     height: 100%;
     text-shadow: 0.5px 0.5px #333;
   }
@@ -133,3 +133,8 @@ body { padding-top: 50px; font-family: Arial }
   }
 }
 
+.edition {
+  .col, .col-day {
+    z-index: 0;
+  }
+}
