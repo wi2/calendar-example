@@ -2442,12 +2442,9 @@ var _default = (function () {
 
       return allevents.sort(function (a, b) {
         return b.room.id - a.room.id;
-      })
-      // .sort( (a, b) => b.cell.start - a.cell.start )
-      .sort(function (a, b) {
+      }).sort(function (a, b) {
         return b.cell.end - b.cell.start - (a.cell.end - a.cell.start);
       });
-      // .sort( (a, b) => b.room.id - a.room.id )
     }
   }, {
     key: "getEventsByDate",

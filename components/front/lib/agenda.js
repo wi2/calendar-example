@@ -36,9 +36,7 @@ export default class {
 
     return allevents
       .sort( (a, b) => b.room.id - a.room.id )
-      // .sort( (a, b) => b.cell.start - a.cell.start )
       .sort( (a, b) => b.cell.end - b.cell.start - (a.cell.end - a.cell.start) )
-      // .sort( (a, b) => b.room.id - a.room.id )
   }
 
   getEventsByDate(date, events, withHour=false, withMinute=false) {
@@ -131,7 +129,6 @@ export default class {
     if (currentDay) {
       let dayHour = []
       _.range(0, 24).map((hour) => {
-
         _.range(0, 4).map((quart) => {
           let minute = quart * 15
           let date = new Date(currentDay.year, currentDay.month , Math.abs(currentDay.day), hour, minute)
@@ -145,14 +142,12 @@ export default class {
       _.each(currentWeek, (item) => {
         let dayHour = []
         _.range(0, 24).map((hour) => {
-
           _.range(0, 4).map((quart) => {
             let minute = quart * 15
             let date = new Date(item.year, item.month , Math.abs(item.day), hour, minute)
               , check = this.checkExcept(date, view)
             dayHour.push(_.assign({}, item, {hour}, {minute}, {col: dayHour.length}, {date}, {disabled: check}))
           })
-
         })
         weekHour.push(dayHour)
       })
