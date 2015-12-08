@@ -19,6 +19,10 @@ module.exports = {
     member: {
       model: 'User'
     },
+    members: {
+      collection:'Event',
+      via: 'members'
+    },
     room: {
       model: 'Room'
     },

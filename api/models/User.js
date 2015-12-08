@@ -28,6 +28,10 @@ module.exports = {
       collection:'Event',
       via: 'member'
     },
+    members: {
+      collection:'Event',
+      via: 'members'
+    },
     active: {
       type: 'boolean',
       defaultsTo: true

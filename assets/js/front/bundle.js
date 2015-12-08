@@ -1388,6 +1388,15 @@ var _default = (function (_Component) {
         end: (0, _newforms.DateTimeField)({
           initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
           widgetAttrs: { onClick: this._showDatePicker.bind(this) }
+        }),
+        members: (0, _newforms.MultipleChoiceField)({
+          widget: _newforms.CheckboxSelectMultiple,
+          choices: this.props.users.map(function (r) {
+            return [r.id, r.username];
+          }),
+          initial: this.props.members.map(function (r) {
+            return r.id;
+          })
         })
       });
       this.form = new MyForm({
@@ -1555,6 +1564,11 @@ var _default = (function (_Component) {
                   null,
                   _react2['default'].createElement(_newformsBootstrap.Field, { name: 'start', md: '6' }),
                   _react2['default'].createElement(_newformsBootstrap.Field, { name: 'end' })
+                ),
+                _react2['default'].createElement(
+                  _newformsBootstrap.Row,
+                  null,
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'members' })
                 )
               )
             )
@@ -1667,6 +1681,17 @@ var _default = (function (_Component) {
               'p',
               { className: 'panel-event-content' },
               evt.content
+            ),
+            evt.members && _react2['default'].createElement(
+              'ul',
+              null,
+              evt.members.map(function (member) {
+                return _react2['default'].createElement(
+                  'li',
+                  null,
+                  member.username
+                );
+              })
             )
           );
         })
@@ -2029,6 +2054,7 @@ var _default = (function (_Component) {
     this.state = {
       show: false,
       rooms: this.props.rooms || [],
+      users: this.props.users || [],
       height: 700,
       defaultRight: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
       right: typeof document !== "undefined" ? -document.body.offsetWidth * 0.2 : -500,
@@ -2201,6 +2227,7 @@ var _default = (function (_Component) {
           events: this.state.events || this.props.events || [] })),
         this.state.show && _react2['default'].createElement(_comModal2['default'], _extends({}, this.state.selection, {
           rooms: this.state.rooms,
+          users: this.state.users,
           onSubmit: this.onSubmit.bind(this),
           onCancel: this.onCancel.bind(this),
           onDelete: this.onDelete.bind(this),

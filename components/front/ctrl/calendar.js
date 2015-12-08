@@ -39,6 +39,7 @@ export default class extends Component {
     this.state = {
       show: false,
       rooms: this.props.rooms||[],
+      users: this.props.users||[],
       height: 700,
       defaultRight: typeof document !== "undefined" ? -document.body.offsetWidth*0.2 : -500,
       right: typeof document !== "undefined" ? -document.body.offsetWidth*0.2 : -500,
@@ -169,6 +170,7 @@ export default class extends Component {
         {this.state.show &&
           <Modal {...this.state.selection}
                   rooms={this.state.rooms}
+                  users={this.state.users}
                   onSubmit={this.onSubmit.bind(this)}
                   onCancel={this.onCancel.bind(this)}
                   onDelete={this.onDelete.bind(this)}

@@ -52,15 +52,12 @@ sails lift
 - Homepage
 - flash message
 - secure registering
-- adjust end time events
-- add list member
 - fix bug admin exception on update
 - add a contact member
+- add filter my events
+- add picto for to know whose event i can update
 - externalise components (timepicker, datepicker, datetimepicker, et calendar) and admin
 - test
-
-
-
 
 
 

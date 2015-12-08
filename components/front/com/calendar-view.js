@@ -162,7 +162,6 @@ export class Month extends ViewDefault {
       this.props.onSelect(val)
   }
 
-
   style(evt, opacity=0.9) {
     let {room, cell} = evt
       , width = this.state.width

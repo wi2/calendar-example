@@ -3,7 +3,7 @@
 import React, {Component} from 'react';
 import {Motion, spring} from 'react-motion';
 import _ from 'lodash'
-import {RenderForm, Form, Textarea, CharField, RegexField, SlugField, EmailField, URLField, FilePathField, GenericIPAddressField, ChoiceField, DateField, DateTimeField, BooleanField, IntegerField, FloatField, FileField, MultipleFileField, ImageField} from 'newforms'
+import {RenderForm, Form, Textarea, CharField, ChoiceField, MultipleChoiceField, CheckboxSelectMultiple, DateTimeField} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
 import DateTimePicker from './date-time-picker'
 
@@ -50,6 +50,11 @@ export default class extends Component {
       end: DateTimeField({
         initial: this.props.end.date ? this.props.end.date : new Date(this.props.end),
         widgetAttrs: { onClick: this._showDatePicker.bind(this) }
+      }),
+      members: MultipleChoiceField({
+        widget: CheckboxSelectMultiple,
+        choices: this.props.users.map(r => [r.id, r.username]),
+        initial: this.props.members.map(r => r.id),
       })
     })
     this.form = new MyForm({
@@ -168,6 +173,9 @@ export default class extends Component {
               <Row>
                 <Field name="start" md="6" />
                 <Field name="end" />
+              </Row>
+              <Row>
+                <Field name="members"/>
               </Row>
             </Container>
           </RenderForm>

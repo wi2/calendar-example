@@ -24,6 +24,10 @@ module.exports = {
     Room.find()
       .then( rooms => {
         state.rooms = rooms;
+        return User.find()
+      })
+      .then( users => {
+        state.users = users;
         return Exception.find()
       })
       .then( exception => {
