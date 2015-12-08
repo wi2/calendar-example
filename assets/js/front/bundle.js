@@ -1218,7 +1218,8 @@ var _default = (function (_Component) {
             onFocus: this._onFocus.bind(this),
             onBlur: this._onSubmit.bind(this)
           }
-        })
+        }),
+        mine: (0, _newforms.BooleanField)()
       });
       this.form = new MyForm({
         controlled: true,
@@ -1282,7 +1283,8 @@ var _default = (function (_Component) {
                 _react2['default'].createElement(
                   _newformsBootstrap.Row,
                   null,
-                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room' })
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'mine' })
                 )
               )
             );
@@ -2133,6 +2135,9 @@ var _default = (function (_Component) {
           or: [{ start: { '>=': dateStart, '<=': dateEnd } }, { end: { '>=': dateStart, '<=': dateEnd } }, { start: { '<=': dateStart }, end: { '>=': dateEnd } }]
         }
       };
+      if (this.state.filters.mine) {
+        filters.where.member = this.state.me.id;
+      }
 
       if (global.io) io.socket.get('/event', filters, function (res) {
         _this3.setState({ events: typeof res === 'string' ? [] : res });

@@ -94,6 +94,9 @@ export default class extends Component {
           ]
         }
       }
+    if (this.state.filters.mine) {
+      filters.where.member = this.state.me.id
+    }
 
     if (global.io)
       io.socket.get('/event', filters, res => {

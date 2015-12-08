@@ -3,7 +3,7 @@
 import React, {Component} from 'react';
 import {Motion, spring} from 'react-motion';
 import _ from 'lodash';
-import {RenderForm, Form, ChoiceField, MultipleChoiceField, CheckboxSelectMultiple, RadioSelect} from 'newforms'
+import {RenderForm, Form, BooleanField, MultipleChoiceField, CheckboxSelectMultiple} from 'newforms'
 import BootstrapForm, {Container, Row, Col, Field} from 'newforms-bootstrap'
 import DatePicker from './date-picker'
 
@@ -24,7 +24,8 @@ export default class extends Component {
           onFocus: this._onFocus.bind(this),
           onBlur: this._onSubmit.bind(this)
         }
-      })
+      }),
+      mine: BooleanField()
     })
     this.form = new MyForm({
       controlled: true,
@@ -60,7 +61,10 @@ export default class extends Component {
           {value =>
           <div style={value}>
             <RenderForm form={this.form} ref={ref => this.mForm = ref}>
-              <Row><Field name="room" /></Row>
+              <Row>
+                <Field name="room" md="8" />
+                <Field name="mine" />
+              </Row>
             </RenderForm>
           </div>}
         </Motion>}
