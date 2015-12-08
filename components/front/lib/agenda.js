@@ -196,6 +196,16 @@ export default class {
     return ret;
   }
 
+  getMoveUp(height) {
+    let decal = 0;
+    for(let i=0, len=this.except.length; i<len; i++) {
+      if (typeof this.except[i].start === 'number' && this.except[i].start === 0) {
+        decal -= (this.except[i].end * height)
+      }
+    }
+    return decal;
+  }
+
   getRange(rows, cols) {
     return {
       rows: _.range(0, rows),

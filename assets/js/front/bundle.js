@@ -55,7 +55,7 @@ var Vertical = (function (_Component) {
     value: function render() {
       return _react2['default'].createElement(
         'div',
-        { className: this.props.className || "agenda-vertical" },
+        { className: this.props.className || "agenda-vertical", style: this.props.style },
         this.props.children
       );
     }
@@ -425,6 +425,11 @@ var ViewDefault = (function (_Component) {
       }
       return { x: xPosition, y: yPosition };
     }
+  }, {
+    key: 'getMoveUp',
+    value: function getMoveUp() {
+      return this.props.agenda.getMoveUp(4 * this.props.height / (24 * 2));
+    }
   }]);
 
   return ViewDefault;
@@ -442,12 +447,12 @@ var Week = (function (_ViewDefault) {
   _createClass(Week, [{
     key: 'componentDidMount',
     value: function componentDidMount() {
-      this.setDimension(this.props.width / 7, this.props.height / 24, "agenda-vertical");
+      this.setDimension(this.props.width / 7, this.props.height / (24 * 2), "agenda-vertical");
     }
   }, {
     key: 'componentWillReceiveProps',
     value: function componentWillReceiveProps(props) {
-      this.setDimension(this.props.width / 7, this.props.height / 24, "agenda-vertical");
+      this.setDimension(this.props.width / 7, this.props.height / (24 * 2), "agenda-vertical");
     }
   }, {
     key: 'style',
@@ -455,7 +460,7 @@ var Week = (function (_ViewDefault) {
       var opacity = arguments.length <= 1 || arguments[1] === undefined ? 0.9 : arguments[1];
       var room = evt.room;
       var cell = evt.cell;
-      var width = this.props.height / 24;
+      var width = this.props.height / (24 * 2);
       return {
         opacity: opacity,
         left: (evt.cell.line + 1.5) * 18 + 'px',
@@ -481,7 +486,7 @@ var Week = (function (_ViewDefault) {
 
       return _react2['default'].createElement(
         _calendarUtils.Vertical,
-        { className: this.state.cellClassName },
+        { className: this.state.cellClassName, style: { marginTop: this.getMoveUp() + "px" } },
         week.map(function (item) {
           var cond = item.date >= selection.s && item.date <= selection.e || !_this.props.editor && _this.props.current && agenda.compare(new Date(item.date), new Date(_this.props.current.year, _this.props.current.month, Math.abs(_this.props.current.day), _this.props.current.hour), true);
           var props = {
@@ -862,11 +867,15 @@ var _default = (function (_Component) {
                   agenda: _this.agenda, key: 'row-' + j }));
               })
             ),
-            view === 'day' && _react2['default'].createElement(_calendarView.Day, _extends({}, props, {
-              week: store,
-              height: _this.props.height,
-              width: _this.props.width,
-              agenda: _this.agenda })),
+            view === 'day' && _react2['default'].createElement(
+              _calendarUtils.Row,
+              null,
+              _react2['default'].createElement(_calendarView.Day, _extends({}, props, {
+                week: store,
+                height: _this.props.height,
+                width: _this.props.width,
+                agenda: _this.agenda }))
+            ),
             view === 'month' && store.map(function (week, j) {
               return _react2['default'].createElement(_calendarView.Month, _extends({}, props, {
                 week: week,
@@ -2564,7 +2573,6 @@ var _default = (function () {
         var _ret2 = (function () {
           var dayHour = [];
           _lodash2["default"].range(0, 24).map(function (hour) {
-
             _lodash2["default"].range(0, 4).map(function (quart) {
               var minute = quart * 15;
               var date = new Date(currentDay.year, currentDay.month, Math.abs(currentDay.day), hour, minute),
@@ -2584,7 +2592,6 @@ var _default = (function () {
           _lodash2["default"].each(currentWeek, function (item) {
             var dayHour = [];
             _lodash2["default"].range(0, 24).map(function (hour) {
-
               _lodash2["default"].range(0, 4).map(function (quart) {
                 var minute = quart * 15;
                 var date = new Date(item.year, item.month, Math.abs(item.day), hour, minute),
@@ -2635,6 +2642,17 @@ var _default = (function () {
         }
       }
       return ret;
+    }
+  }, {
+    key: "getMoveUp",
+    value: function getMoveUp(height) {
+      var decal = 0;
+      for (var i = 0, len = this.except.length; i < len; i++) {
+        if (typeof this.except[i].start === 'number' && this.except[i].start === 0) {
+          decal -= this.except[i].end * height;
+        }
+      }
+      return decal;
     }
   }, {
     key: "getRange",

@@ -6,7 +6,7 @@ import Agenda from '../lib/agenda'
 
 export class Vertical extends Component {
   render() {
-    return <div className={this.props.className||"agenda-vertical"}>{this.props.children}</div>
+    return <div className={this.props.className||"agenda-vertical"} style={this.props.style}>{this.props.children}</div>
   }
 }
 

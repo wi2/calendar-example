@@ -55,20 +55,23 @@ class ViewDefault extends Component {
     }
     return { x: xPosition, y: yPosition };
   }
+  getMoveUp() {
+    return this.props.agenda.getMoveUp(4*this.props.height/(24*2))
+  }
 
 }
 
 export class Week extends ViewDefault {
   componentDidMount() {
-    this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
+    this.setDimension(this.props.width/7, this.props.height/(24*2), "agenda-vertical")
   }
   componentWillReceiveProps(props) {
-    this.setDimension(this.props.width/7, this.props.height/24, "agenda-vertical")
+    this.setDimension(this.props.width/7, this.props.height/(24*2), "agenda-vertical")
   }
 
   style(evt, opacity=0.9) {
     let {room, cell} = evt
-      , width = this.props.height/24;
+      , width = this.props.height/(24*2);
     return {
       opacity,
       left: (evt.cell.line + 1.5) * 18 + 'px',
@@ -84,7 +87,7 @@ export class Week extends ViewDefault {
     let agenda = this.props.agenda
       , {events, week, selection} = this.prepareRender(true, true)
     return (
-      <Vertical className={this.state.cellClassName}>
+      <Vertical className={this.state.cellClassName} style={{marginTop: this.getMoveUp()+"px"}}>
         {week.map((item) => {
           let cond = (item.date >= selection.s && item.date <= selection.e)
                       || (!this.props.editor && this.props.current && agenda.compare(new Date(item.date), new Date(this.props.current.year, this.props.current.month, Math.abs(this.props.current.day), this.props.current.hour), true ) )

@@ -153,11 +153,11 @@ export default class extends Component {
                         width={this.props.width}
                         agenda={this.agenda} key={`row-${j}`} />)}
                </Row>}
-          {view === 'day' && <Day {...props}
+          {view === 'day' && <Row><Day {...props}
                       week={store}
                       height={this.props.height}
                       width={this.props.width}
-                      agenda={this.agenda} />}
+                      agenda={this.agenda} /></Row>}
           {view === 'month' && store.map((week, j) =>
               <Month  {...props}
                       week={week}
