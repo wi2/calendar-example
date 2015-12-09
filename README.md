@@ -31,6 +31,22 @@ npm install
 sails lift
 ```
 
+After first run, go to config/policies.js and replace this,
+```
+
+  'home': ['doInFirstInstall']// comment this after first run.
+  // 'home': true
+
+```
+by this
+```
+
+  // 'home': ['doInFirstInstall']// comment this after first run.
+  'home': true
+
+```
+
+
 
 
 ### Dependencies
