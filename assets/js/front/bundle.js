@@ -1289,8 +1289,8 @@ var _default = (function (_Component) {
                 _react2['default'].createElement(
                   _newformsBootstrap.Row,
                   null,
-                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
-                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'mine', md: '4' })
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '10' }),
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'mine', md: '2' })
                 )
               )
             );

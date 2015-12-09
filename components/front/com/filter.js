@@ -68,8 +68,8 @@ export default class extends Component {
           <div style={value}>
             <RenderForm form={this.form} ref={ref => this.mForm = ref}>
               <Row>
-                <Field name="room" md="8" />
-                <Field name="mine" md="4" />
+                <Field name="room" md="10" />
+                <Field name="mine" md="2" />
               </Row>
             </RenderForm>
           </div>}
