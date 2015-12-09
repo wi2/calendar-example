@@ -31,7 +31,8 @@ module.exports.policies = {
   EventController: {
     '*': ['sessionAuth', 'checkEvent']
   },
-  'home': true
+  'home': ['doInFirstInstall.js']// comment this after first run.
+  // 'home': true
 
   /***************************************************************************
   *                                                                          *
