@@ -36,25 +36,9 @@ class ViewDefault extends Component {
   }
   onSelect(val, e) {
     e.preventDefault()
-    let pPosition = this.getPosition(e.currentTarget)
-      , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
-    if (position.y < 20)
-      this.props.toggleSelection({date: new Date(val.end)}, val)
-    else if (position.y > e.target.clientWidth - 20)
-      this.props.toggleSelection({date: new Date(val.start)}, val)
-    else
-      this.props.onSelect(val)
+    this.props.onSelect(val)
   }
-  getPosition(element) {
-    let xPosition = 0
-      , yPosition = 0;
-    while (element) {
-        xPosition += (element.offsetLeft - element.scrollLeft + element.clientLeft);
-        yPosition += (element.offsetTop - element.scrollTop + element.clientTop);
-        element = element.offsetParent;
-    }
-    return { x: xPosition, y: yPosition };
-  }
+
   getMoveUp() {
     return this.props.agenda.getMoveUp(4*this.props.height/(24*2))
   }
@@ -152,14 +136,7 @@ export class Month extends ViewDefault {
 
   onSelect(val, e) {
     e.preventDefault()
-    let pPosition = this.getPosition(e.currentTarget)
-      , position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y }
-    if (position.x < 10)
-      this.props.toggleSelection({date: new Date(val.end)}, val)
-    else if (position.x > this.state.width*(val.cell.end - val.cell.start) - 10)
-      this.props.toggleSelection({date: new Date(val.start)}, val)
-    else
-      this.props.onSelect(val)
+    this.props.onSelect(val)
   }
 
   style(evt, opacity=0.9) {

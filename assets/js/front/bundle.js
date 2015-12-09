@@ -409,21 +409,7 @@ var ViewDefault = (function (_Component) {
     key: 'onSelect',
     value: function onSelect(val, e) {
       e.preventDefault();
-      var pPosition = this.getPosition(e.currentTarget),
-          position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
-      if (position.y < 20) this.props.toggleSelection({ date: new Date(val.end) }, val);else if (position.y > e.target.clientWidth - 20) this.props.toggleSelection({ date: new Date(val.start) }, val);else this.props.onSelect(val);
-    }
-  }, {
-    key: 'getPosition',
-    value: function getPosition(element) {
-      var xPosition = 0,
-          yPosition = 0;
-      while (element) {
-        xPosition += element.offsetLeft - element.scrollLeft + element.clientLeft;
-        yPosition += element.offsetTop - element.scrollTop + element.clientTop;
-        element = element.offsetParent;
-      }
-      return { x: xPosition, y: yPosition };
+      this.props.onSelect(val);
     }
   }, {
     key: 'getMoveUp',
@@ -590,9 +576,7 @@ var Month = (function (_ViewDefault2) {
     key: 'onSelect',
     value: function onSelect(val, e) {
       e.preventDefault();
-      var pPosition = this.getPosition(e.currentTarget),
-          position = { x: e.clientX - pPosition.x, y: e.clientY - pPosition.y };
-      if (position.x < 10) this.props.toggleSelection({ date: new Date(val.end) }, val);else if (position.x > this.state.width * (val.cell.end - val.cell.start) - 10) this.props.toggleSelection({ date: new Date(val.start) }, val);else this.props.onSelect(val);
+      this.props.onSelect(val);
     }
   }, {
     key: 'style',
