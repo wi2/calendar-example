@@ -25,7 +25,13 @@ export default class extends Component {
           onBlur: this._onSubmit.bind(this)
         }
       }),
-      mine: BooleanField()
+      mine: BooleanField({
+        required: false,
+        widgetAttrs: {
+          onFocus: this._onFocus.bind(this),
+          onBlur: this._onSubmit.bind(this)
+        }
+      })
     })
     this.form = new MyForm({
       controlled: true,
@@ -56,14 +62,14 @@ export default class extends Component {
   render() {
     return (
       <form className="agenda-filter">
-        {!this.state.show && <a onClick={this.toggle.bind(this)} className="btn">Filter</a>}
+        {!this.state.show && <a onClick={this.toggle.bind(this)}>Filter</a>}
         {this.state.show && <Motion defaultStyle={{opacity: 0, height:0}} style={{opacity: spring(1), height: 50}}>
           {value =>
           <div style={value}>
             <RenderForm form={this.form} ref={ref => this.mForm = ref}>
               <Row>
                 <Field name="room" md="8" />
-                <Field name="mine" />
+                <Field name="mine" md="4" />
               </Row>
             </RenderForm>
           </div>}

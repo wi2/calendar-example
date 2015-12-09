@@ -1,21 +1,25 @@
 
 .agenda-filter {
-  text-align: right;
-  min-height: 30px;
-  line-height: 30px;
+  height: 50px;
   a {
+    line-height: 50px;
     color: #333;
+    float:right;
+    display: block;
+    width:100px;
   }
   .form-group {
+    margin: 0;
     label {
       margin-left: 12px;
     }
   }
+  .checkbox input[type=checkbox] {
+    position: relative;
+  }
   ul {
     display: inline-block;
-    padding-left: 0;
-    margin-bottom: 0;
-    margin-right: 50px;
+    margin: 5px 0 0 0;
   }
   li {
     position: relative;

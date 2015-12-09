@@ -1219,7 +1219,13 @@ var _default = (function (_Component) {
             onBlur: this._onSubmit.bind(this)
           }
         }),
-        mine: (0, _newforms.BooleanField)()
+        mine: (0, _newforms.BooleanField)({
+          required: false,
+          widgetAttrs: {
+            onFocus: this._onFocus.bind(this),
+            onBlur: this._onSubmit.bind(this)
+          }
+        })
       });
       this.form = new MyForm({
         controlled: true,
@@ -1265,7 +1271,7 @@ var _default = (function (_Component) {
         { className: 'agenda-filter' },
         !this.state.show && _react2['default'].createElement(
           'a',
-          { onClick: this.toggle.bind(this), className: 'btn' },
+          { onClick: this.toggle.bind(this) },
           'Filter'
         ),
         this.state.show && _react2['default'].createElement(
@@ -1284,7 +1290,7 @@ var _default = (function (_Component) {
                   _newformsBootstrap.Row,
                   null,
                   _react2['default'].createElement(_newformsBootstrap.Field, { name: 'room', md: '8' }),
-                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'mine' })
+                  _react2['default'].createElement(_newformsBootstrap.Field, { name: 'mine', md: '4' })
                 )
               )
             );
