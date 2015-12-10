@@ -103,11 +103,11 @@ export class Week extends ViewDefault {
           }
           return <Cell {...props} {...this.state} />
         })}
-        {events && events.map((evt, i) =>
-          <div className="event" style={this.style(evt)}
-                onMouseDown={this.onMouseDown.bind(this, evt)}
-                onClick={this.onSelect.bind(this, evt)} key={`event-${evt.id}-${i}`}>{evt.title}</div>
-        )}
+
+        <Events events={events} style={this.style.bind(this)}
+                onMouseDown={this.onMouseDown.bind(this)}
+                onClick={this.onSelect.bind(this)} />
+
       </Vertical>
     )
   }
@@ -185,14 +185,29 @@ export class Month extends ViewDefault {
           return <Cell {...props} {...this.state} />
         } )}
 
-        {events && events.map((evt, i) =>
-          <div className="event" style={this.style(evt)}
-                onMouseDown={this.onMouseDown.bind(this, evt)}
-                onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
-        )}
+        <Events events={events} style={this.style.bind(this)}
+                onMouseDown={this.onMouseDown.bind(this)}
+                onClick={this.onSelect.bind(this)} />
 
       </Row>
     )
   }
 }
+
+
+class Events extends Component {
+
+  render() {
+    let events = this.props.events||[]
+    return (<div class="events">
+      {events && events.map((evt, i) =>
+        <div className="event"
+              style={this.props.style(evt)}
+              onMouseDown={this.props.onMouseDown.bind(this, evt)}
+              onClick={this.props.onClick.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
+      )}
+    </div>)
+  }
+}
+
 

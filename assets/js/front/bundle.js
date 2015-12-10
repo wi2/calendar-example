@@ -505,15 +505,9 @@ var Week = (function (_ViewDefault) {
           }
           return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this.state));
         }),
-        events && events.map(function (evt, i) {
-          return _react2['default'].createElement(
-            'div',
-            { className: 'event', style: _this.style(evt),
-              onMouseDown: _this.onMouseDown.bind(_this, evt),
-              onClick: _this.onSelect.bind(_this, evt), key: 'event-' + evt.id + '-' + i },
-            evt.title
-          );
-        })
+        _react2['default'].createElement(Events, { events: events, style: this.style.bind(this),
+          onMouseDown: this.onMouseDown.bind(this),
+          onClick: this.onSelect.bind(this) })
       );
     }
   }]);
@@ -635,15 +629,9 @@ var Month = (function (_ViewDefault2) {
           }
           return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, _this2.state));
         }),
-        events && events.map(function (evt, i) {
-          return _react2['default'].createElement(
-            'div',
-            { className: 'event', style: _this2.style(evt),
-              onMouseDown: _this2.onMouseDown.bind(_this2, evt),
-              onClick: _this2.onSelect.bind(_this2, evt), key: 'event-' + i },
-            evt.title
-          );
-        })
+        _react2['default'].createElement(Events, { events: events, style: this.style.bind(this),
+          onMouseDown: this.onMouseDown.bind(this),
+          onClick: this.onSelect.bind(this) })
       );
     }
   }]);
@@ -652,6 +640,41 @@ var Month = (function (_ViewDefault2) {
 })(ViewDefault);
 
 exports.Month = Month;
+
+var Events = (function (_Component2) {
+  _inherits(Events, _Component2);
+
+  function Events() {
+    _classCallCheck(this, Events);
+
+    _get(Object.getPrototypeOf(Events.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(Events, [{
+    key: 'render',
+    value: function render() {
+      var _this3 = this;
+
+      var events = this.props.events || [];
+      return _react2['default'].createElement(
+        'div',
+        { 'class': 'events' },
+        events && events.map(function (evt, i) {
+          return _react2['default'].createElement(
+            'div',
+            { className: 'event',
+              style: _this3.props.style(evt),
+              onMouseDown: _this3.props.onMouseDown.bind(_this3, evt),
+              onClick: _this3.props.onClick.bind(_this3, evt), key: 'event-' + i },
+            evt.title
+          );
+        })
+      );
+    }
+  }]);
+
+  return Events;
+})(_react.Component);
 
 },{"./calendar-utils":2,"react":"react","react-motion":"react-motion"}],4:[function(require,module,exports){
 "use strict";
