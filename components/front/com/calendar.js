@@ -96,6 +96,13 @@ export default class extends Component {
           selection: {isEvent},
           color: color,
         })
+        console.log({
+          startInit: val,
+          start: val,
+          end: val,
+          selection: {isEvent},
+          color: color,
+        })
       }
     } else {
       val.view = this.state.view
@@ -107,9 +114,11 @@ export default class extends Component {
     let updateState = true
     if (this.state.start !== -1) {
       let selection = this.getSmartSelection(val)
+      console.log(selection)
       if (this.props.limitDay && selection.start.date.getDate() !== selection.end.date.getDate())
           updateState = false
-      if (updateState) this.setState(selection)
+      if (updateState)
+        this.setState(selection)
     }
   }
 

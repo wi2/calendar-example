@@ -833,6 +833,13 @@ var _default = (function (_Component) {
             selection: { isEvent: isEvent },
             color: color
           });
+          console.log({
+            startInit: val,
+            start: val,
+            end: val,
+            selection: { isEvent: isEvent },
+            color: color
+          });
         }
       } else {
         val.view = this.state.view;
@@ -845,6 +852,7 @@ var _default = (function (_Component) {
       var updateState = true;
       if (this.state.start !== -1) {
         var selection = this.getSmartSelection(val);
+        console.log(selection);
         if (this.props.limitDay && selection.start.date.getDate() !== selection.end.date.getDate()) updateState = false;
         if (updateState) this.setState(selection);
       }
