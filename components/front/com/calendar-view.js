@@ -34,12 +34,10 @@ class ViewDefault extends Component {
   moveSelection(val) {
     this.props.moveSelection(val)
   }
-  onSelect(val, e) {
-    e.preventDefault()
+  onSelect(val) {
     this.props.onSelect(val)
   }
-  onMouseDown(val, e) {
-    e.preventDefault()
+  onMouseDown(val) {
     this.props.toggleSelection({date: new Date(val.start)}, val)
     let that = this
     var eventListener = function() {
@@ -196,15 +194,35 @@ export class Month extends ViewDefault {
 
 
 class Events extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { phase: null }
+    this.interval = null;
+  }
+  onClick(evt, e) {
+    e.preventDefault()
+    clearTimeout(this.interval)
+    if (this.state.phase === null)
+      this.props.onClick(evt)
+    else
+      this.setState({phase: null})
+  }
+  onMouseDown(evt, e) {
+    e.preventDefault()
+    this.interval = setTimeout(() => {
+      this.props.onMouseDown(evt)
+      this.setState({phase: 'down'})
+    }, 500)
+  }
 
   render() {
     let events = this.props.events||[]
-    return (<div class="events">
+    return (<div className="events">
       {events && events.map((evt, i) =>
         <div className="event"
               style={this.props.style(evt)}
-              onMouseDown={this.props.onMouseDown.bind(this, evt)}
-              onClick={this.props.onClick.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
+              onMouseDown={this.onMouseDown.bind(this, evt)}
+              onClick={this.onClick.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
       )}
     </div>)
   }

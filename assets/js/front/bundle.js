@@ -407,14 +407,12 @@ var ViewDefault = (function (_Component) {
     }
   }, {
     key: 'onSelect',
-    value: function onSelect(val, e) {
-      e.preventDefault();
+    value: function onSelect(val) {
       this.props.onSelect(val);
     }
   }, {
     key: 'onMouseDown',
-    value: function onMouseDown(val, e) {
-      e.preventDefault();
+    value: function onMouseDown(val) {
       this.props.toggleSelection({ date: new Date(val.start) }, val);
       var that = this;
       var eventListener = function eventListener() {
@@ -644,28 +642,48 @@ exports.Month = Month;
 var Events = (function (_Component2) {
   _inherits(Events, _Component2);
 
-  function Events() {
+  function Events(props) {
     _classCallCheck(this, Events);
 
-    _get(Object.getPrototypeOf(Events.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(Events.prototype), 'constructor', this).call(this, props);
+    this.state = { phase: null };
+    this.interval = null;
   }
 
   _createClass(Events, [{
+    key: 'onClick',
+    value: function onClick(evt, e) {
+      e.preventDefault();
+      clearTimeout(this.interval);
+      if (this.state.phase === null) this.props.onClick(evt);else this.setState({ phase: null });
+    }
+  }, {
+    key: 'onMouseDown',
+    value: function onMouseDown(evt, e) {
+      var _this3 = this;
+
+      e.preventDefault();
+      this.interval = setTimeout(function () {
+        _this3.props.onMouseDown(evt);
+        _this3.setState({ phase: 'down' });
+      }, 500);
+    }
+  }, {
     key: 'render',
     value: function render() {
-      var _this3 = this;
+      var _this4 = this;
 
       var events = this.props.events || [];
       return _react2['default'].createElement(
         'div',
-        { 'class': 'events' },
+        { className: 'events' },
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
             'div',
             { className: 'event',
-              style: _this3.props.style(evt),
-              onMouseDown: _this3.props.onMouseDown.bind(_this3, evt),
-              onClick: _this3.props.onClick.bind(_this3, evt), key: 'event-' + i },
+              style: _this4.props.style(evt),
+              onMouseDown: _this4.onMouseDown.bind(_this4, evt),
+              onClick: _this4.onClick.bind(_this4, evt), key: 'event-' + i },
             evt.title
           );
         })
