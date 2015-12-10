@@ -24,6 +24,7 @@ export default class extends Component {
       start: -1,
       end: -1,
       startInit: -1,
+      selection: {},
       color: null
     }
     if (this.props.onLoad)
@@ -43,6 +44,11 @@ export default class extends Component {
     this.props.onChange(props)
   }
 
+  hexToRGB(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+  }
+
   toggleEditor() {
     this.setState({
       editor: !this.state.editor,
@@ -56,12 +62,13 @@ export default class extends Component {
   toggleSelection(val, isEvent=false) {
     if (this.state.editor) {
       if (this.state.start !== -1) {
-        let selection = _.extend({...this.state.selection}, this.getSmartSelection(val))
+        let selection = _.extend(this.state.selection, {start: this.state.start, end: this.state.end})
         this.setState({
-          selection,
+          selection: {},
           start: -1,
           end: -1,
-          startInit: -1
+          startInit: -1,
+          isEvent: false
         })
         if (this.state.view === "month") {
           selection = {
@@ -77,12 +84,17 @@ export default class extends Component {
         }
         this.props.onSelect(selection.isEvent ? _.extend({}, selection.isEvent, selection) : selection, this.state.editor)
       } else {
+        let color = null;
+        if (isEvent) {
+          let colorRGB = this.hexToRGB(isEvent.room.color)
+          color = `rgba(${colorRGB.r}, ${colorRGB.g}, ${colorRGB.b}, 0.5)`
+        }
         this.setState({
           startInit: val,
           start: val,
           end: val,
           selection: {isEvent},
-          color: isEvent ? isEvent.room.color : null
+          color: color,
         })
       }
     } else {
@@ -136,7 +148,7 @@ export default class extends Component {
       <Motion style={{width: spring(this.props.width||2000)}}>
         {value =>
 
-        <div className={"agenda"+(this.state.editor ? " edition":"")} style={{width: value.width}}>
+        <div className={"agenda"+(this.state.editor && !this.state.selection.isEvent ? " edition":"")} style={{width: value.width}}>
           <Filter {...this.props.filters}
                   rooms={this.props.rooms}
                   onChange={this.onFilterChange.bind(this)} />

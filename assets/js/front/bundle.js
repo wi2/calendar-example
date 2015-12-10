@@ -412,6 +412,18 @@ var ViewDefault = (function (_Component) {
       this.props.onSelect(val);
     }
   }, {
+    key: 'onMouseDown',
+    value: function onMouseDown(val, e) {
+      e.preventDefault();
+      this.props.toggleSelection({ date: new Date(val.start) }, val);
+      var that = this;
+      var eventListener = function eventListener() {
+        that.props.toggleSelection();
+        document.body.removeEventListener('mouseup', eventListener);
+      };
+      document.body.addEventListener('mouseup', eventListener);
+    }
+  }, {
     key: 'getMoveUp',
     value: function getMoveUp() {
       return this.props.agenda.getMoveUp(4 * this.props.height / (24 * 2));
@@ -497,8 +509,8 @@ var Week = (function (_ViewDefault) {
           return _react2['default'].createElement(
             'div',
             { className: 'event', style: _this.style(evt),
-              onClick: _this.onSelect.bind(_this, evt),
-              key: 'event-' + evt.id + '-' + i },
+              onMouseDown: _this.onMouseDown.bind(_this, evt),
+              onClick: _this.onSelect.bind(_this, evt), key: 'event-' + evt.id + '-' + i },
             evt.title
           );
         })
@@ -573,12 +585,6 @@ var Month = (function (_ViewDefault2) {
       this.setDimension(this.props.width / 7, this.props.height / 7);
     }
   }, {
-    key: 'onSelect',
-    value: function onSelect(val, e) {
-      e.preventDefault();
-      this.props.onSelect(val);
-    }
-  }, {
     key: 'style',
     value: function style(evt) {
       var opacity = arguments.length <= 1 || arguments[1] === undefined ? 0.9 : arguments[1];
@@ -632,7 +638,9 @@ var Month = (function (_ViewDefault2) {
         events && events.map(function (evt, i) {
           return _react2['default'].createElement(
             'div',
-            { className: 'event', style: _this2.style(evt), onClick: _this2.onSelect.bind(_this2, evt), key: 'event-' + i },
+            { className: 'event', style: _this2.style(evt),
+              onMouseDown: _this2.onMouseDown.bind(_this2, evt),
+              onClick: _this2.onSelect.bind(_this2, evt), key: 'event-' + i },
             evt.title
           );
         })
@@ -706,6 +714,7 @@ var _default = (function (_Component) {
       start: -1,
       end: -1,
       startInit: -1,
+      selection: {},
       color: null
     };
     if (this.props.onLoad) this.props.onLoad(this.props);
@@ -726,6 +735,12 @@ var _default = (function (_Component) {
       this.props.onChange(props);
     }
   }, {
+    key: 'hexToRGB',
+    value: function hexToRGB(hex) {
+      var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+    }
+  }, {
     key: 'toggleEditor',
     value: function toggleEditor() {
       this.setState({
@@ -743,12 +758,13 @@ var _default = (function (_Component) {
 
       if (this.state.editor) {
         if (this.state.start !== -1) {
-          var selection = _lodash2['default'].extend(_extends({}, this.state.selection), this.getSmartSelection(val));
+          var selection = _lodash2['default'].extend(this.state.selection, { start: this.state.start, end: this.state.end });
           this.setState({
-            selection: selection,
+            selection: {},
             start: -1,
             end: -1,
-            startInit: -1
+            startInit: -1,
+            isEvent: false
           });
           if (this.state.view === "month") {
             selection = {
@@ -764,12 +780,17 @@ var _default = (function (_Component) {
           }
           this.props.onSelect(selection.isEvent ? _lodash2['default'].extend({}, selection.isEvent, selection) : selection, this.state.editor);
         } else {
+          var color = null;
+          if (isEvent) {
+            var colorRGB = this.hexToRGB(isEvent.room.color);
+            color = 'rgba(' + colorRGB.r + ', ' + colorRGB.g + ', ' + colorRGB.b + ', 0.5)';
+          }
           this.setState({
             startInit: val,
             start: val,
             end: val,
             selection: { isEvent: isEvent },
-            color: isEvent ? isEvent.room.color : null
+            color: color
           });
         }
       } else {
@@ -831,7 +852,7 @@ var _default = (function (_Component) {
         function (value) {
           return _react2['default'].createElement(
             'div',
-            { className: "agenda" + (_this.state.editor ? " edition" : ""), style: { width: value.width } },
+            { className: "agenda" + (_this.state.editor && !_this.state.selection.isEvent ? " edition" : ""), style: { width: value.width } },
             _react2['default'].createElement(_filter2['default'], _extends({}, _this.props.filters, {
               rooms: _this.props.rooms,
               onChange: _this.onFilterChange.bind(_this) })),

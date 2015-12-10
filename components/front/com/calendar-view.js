@@ -38,6 +38,16 @@ class ViewDefault extends Component {
     e.preventDefault()
     this.props.onSelect(val)
   }
+  onMouseDown(val, e) {
+    e.preventDefault()
+    this.props.toggleSelection({date: new Date(val.start)}, val)
+    let that = this
+    var eventListener = function() {
+      that.props.toggleSelection()
+      document.body.removeEventListener('mouseup',  eventListener);
+    };
+    document.body.addEventListener('mouseup',  eventListener);
+  }
 
   getMoveUp() {
     return this.props.agenda.getMoveUp(4*this.props.height/(24*2))
@@ -95,8 +105,8 @@ export class Week extends ViewDefault {
         })}
         {events && events.map((evt, i) =>
           <div className="event" style={this.style(evt)}
-                onClick={this.onSelect.bind(this, evt)}
-                key={`event-${evt.id}-${i}`}>{evt.title}</div>
+                onMouseDown={this.onMouseDown.bind(this, evt)}
+                onClick={this.onSelect.bind(this, evt)} key={`event-${evt.id}-${i}`}>{evt.title}</div>
         )}
       </Vertical>
     )
@@ -132,11 +142,6 @@ export class Month extends ViewDefault {
   }
   componentWillReceiveProps(props) {
     this.setDimension(this.props.width/7, this.props.height/7)
-  }
-
-  onSelect(val, e) {
-    e.preventDefault()
-    this.props.onSelect(val)
   }
 
   style(evt, opacity=0.9) {
@@ -181,7 +186,9 @@ export class Month extends ViewDefault {
         } )}
 
         {events && events.map((evt, i) =>
-          <div className="event" style={this.style(evt)} onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
+          <div className="event" style={this.style(evt)}
+                onMouseDown={this.onMouseDown.bind(this, evt)}
+                onClick={this.onSelect.bind(this, evt)} key={`event-${i}`}>{evt.title}</div>
         )}
 
       </Row>
