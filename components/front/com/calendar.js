@@ -104,8 +104,13 @@ export default class extends Component {
   }
 
   moveSelection(val) {
-    if (this.state.start !== -1)
-      this.setState(this.getSmartSelection(val))
+    let updateState = true
+    if (this.state.start !== -1) {
+      let selection = this.getSmartSelection(val)
+      if (this.props.limitDay && selection.start.date.getDate() !== selection.end.date.getDate())
+          updateState = false
+      if (updateState) this.setState(selection)
+    }
   }
 
   onSelectEvent(val) {

@@ -842,7 +842,12 @@ var _default = (function (_Component) {
   }, {
     key: 'moveSelection',
     value: function moveSelection(val) {
-      if (this.state.start !== -1) this.setState(this.getSmartSelection(val));
+      var updateState = true;
+      if (this.state.start !== -1) {
+        var selection = this.getSmartSelection(val);
+        if (this.props.limitDay && selection.start.date.getDate() !== selection.end.date.getDate()) updateState = false;
+        if (updateState) this.setState(selection);
+      }
     }
   }, {
     key: 'onSelectEvent',
@@ -2295,6 +2300,7 @@ var _default = (function (_Component) {
         }, this.props.params)),
         _react2['default'].createElement(_comCalendar2['default'], _extends({ events: this.props.events || [],
           me: this.state.me,
+          limitDay: true,
           except: this.except,
           onSelect: this.onSelect.bind(this),
           onChange: this.onChange.bind(this),

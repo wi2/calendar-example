@@ -183,6 +183,7 @@ export default class extends Component {
 
         <Calendar events={this.props.events||[]}
                   me={this.state.me}
+                  limitDay={true}
                   except={this.except}
                   onSelect={this.onSelect.bind(this)}
                   onChange={this.onChange.bind(this)}
