@@ -61,54 +61,82 @@ export default class extends Component {
           && <Header view={this.state.view} store={this.state.store} agenda={this.agenda} />}
         {this.props.toggle
           && <Row><a onClick={this._toggleView.bind(this)} className="btn">toggle view</a></Row>}
-        <Row>
-          {this.state
-            && this.state.store.map((line, j) => {
-            if (this.state.view === 'month')
-              return line.map((item, i) => {
-                let cond = this.agenda.compare(this.state.current, item.date)
-                let props = {
-                  height,
-                  value: item.day,
-                  className: cond ? 'col-day col-day-active':'col-day',
-                  disabled: item.disabled,
-                  toggleSelection: this._onSelect.bind(this, item),
-                  key: 'cell-'+j+'-'+i+this.props.name
-                }
-                if (item.disabled) {
-                  delete props.toggleSelection;
-                  props.className = "col-day col-day-disabled";
-                }
-                return <Cell {...props} />
-              })
-            else
-              return (
-                <Vertical key={`vertical-${j}-${this.props.name}`}>
-                  {line.map((item, i) => {
-                    let cond = this.agenda.compare(this.state.current, item.date, true, true)
-                    let props = {
-                      height,
-                      value: item.day +" "+item.hour,
-                      className: cond ? 'col-day col-day-active':'col-day',
-                      disabled: item.disabled,
-                      toggleSelection: this._onSelect.bind(this, item),
-                      key: 'cell-'+j+'-'+i+this.props.name
-                    }
-                    if (item.disabled) {
-                      delete props.toggleSelection;
-                      props.className = "col-day col-day-disabled";
-                    }
-                    return <Cell {...props} />
-                  })}
-                </Vertical>
-              )
-          })}
-        </Row>
+
+        {this.state
+          && <Cases view={this.state.view}
+                    store={this.state.store}
+                    agenda={this.agenda}
+                    current={this.state.current}
+                    height={height}
+                    toggleSelection={this._onSelect.bind(this)} />}
+
       </div>
     )
   }
 }
 
 
+class Cases extends Component {
+  prepareProps(item) {
+    let cond = this.props.agenda.compare(this.props.current, item.date)
+    let props = {
+      height: this.props.height,
+      value: item.day,
+      className: cond ? 'col-day col-day-active':'col-day',
+      disabled: item.disabled,
+      toggleSelection: this.props.toggleSelection.bind(this, item)
+    }
+    if (item.disabled) {
+      delete props.toggleSelection;
+      props.className = "col-day col-day-disabled";
+    }
+    return props;
+  }
 
+  render() {
+    return (
+      <Row>
+          {this.props.store.map((line, j) => {
+            if (this.props.view === 'month')
+              return line.map((item, i) => {
+                let props = this.prepareProps(item)
+                return <Cell {...props} key={'cell-'+item.col+'-'+i+'-'+item.day} />
+              })
+            else
+              return <ColCases {...this.props}
+                              line={line}
+                              key={'cell-column-'+j} />
+          })}
+      </Row>
+    )
+  }
+}
 
+class ColCases extends Component {
+  prepareProps(item) {
+    let cond = this.props.agenda.compare(this.props.current, item.date, true, true)
+    let props = {
+      height: this.props.height,
+      value: item.minute ? "  " + item.minute : item.hour + "h ",
+      className: cond ? 'col-day col-day-active':'col-day',
+      disabled: item.disabled,
+      toggleSelection: this.props.toggleSelection.bind(this, item)
+    }
+    if (item.disabled) {
+      delete props.toggleSelection;
+      props.className = "col-day col-day-disabled";
+    }
+    return props
+  }
+
+  render() {
+    return (
+      <Vertical>
+        {this.props.line.map((item, i) => {
+          let props = this.prepareProps(item)
+          return <Cell {...props} key={'cell-col-'+i+'-'+item.day+'-'+item.hour} />
+        })}
+      </Vertical>
+    )
+  }
+}

@@ -963,6 +963,8 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
@@ -1047,8 +1049,6 @@ var _default = (function (_Component) {
   }, {
     key: 'render',
     value: function render() {
-      var _this = this;
-
       var height = 30;
       return _react2['default'].createElement(
         'div',
@@ -1066,47 +1066,12 @@ var _default = (function (_Component) {
             'toggle view'
           )
         ),
-        _react2['default'].createElement(
-          _calendarUtils.Row,
-          null,
-          this.state && this.state.store.map(function (line, j) {
-            if (_this.state.view === 'month') return line.map(function (item, i) {
-              var cond = _this.agenda.compare(_this.state.current, item.date);
-              var props = {
-                height: height,
-                value: item.day,
-                className: cond ? 'col-day col-day-active' : 'col-day',
-                disabled: item.disabled,
-                toggleSelection: _this._onSelect.bind(_this, item),
-                key: 'cell-' + j + '-' + i + _this.props.name
-              };
-              if (item.disabled) {
-                delete props.toggleSelection;
-                props.className = "col-day col-day-disabled";
-              }
-              return _react2['default'].createElement(_calendarUtils.Cell, props);
-            });else return _react2['default'].createElement(
-              _calendarUtils.Vertical,
-              { key: 'vertical-' + j + '-' + _this.props.name },
-              line.map(function (item, i) {
-                var cond = _this.agenda.compare(_this.state.current, item.date, true, true);
-                var props = {
-                  height: height,
-                  value: item.day + " " + item.hour,
-                  className: cond ? 'col-day col-day-active' : 'col-day',
-                  disabled: item.disabled,
-                  toggleSelection: _this._onSelect.bind(_this, item),
-                  key: 'cell-' + j + '-' + i + _this.props.name
-                };
-                if (item.disabled) {
-                  delete props.toggleSelection;
-                  props.className = "col-day col-day-disabled";
-                }
-                return _react2['default'].createElement(_calendarUtils.Cell, props);
-              })
-            );
-          })
-        )
+        this.state && _react2['default'].createElement(Cases, { view: this.state.view,
+          store: this.state.store,
+          agenda: this.agenda,
+          current: this.state.current,
+          height: height,
+          toggleSelection: this._onSelect.bind(this) })
       );
     }
   }]);
@@ -1115,6 +1080,101 @@ var _default = (function (_Component) {
 })(_react.Component);
 
 exports['default'] = _default;
+
+var Cases = (function (_Component2) {
+  _inherits(Cases, _Component2);
+
+  function Cases() {
+    _classCallCheck(this, Cases);
+
+    _get(Object.getPrototypeOf(Cases.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(Cases, [{
+    key: 'prepareProps',
+    value: function prepareProps(item) {
+      var cond = this.props.agenda.compare(this.props.current, item.date);
+      var props = {
+        height: this.props.height,
+        value: item.day,
+        className: cond ? 'col-day col-day-active' : 'col-day',
+        disabled: item.disabled,
+        toggleSelection: this.props.toggleSelection.bind(this, item)
+      };
+      if (item.disabled) {
+        delete props.toggleSelection;
+        props.className = "col-day col-day-disabled";
+      }
+      return props;
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this = this;
+
+      return _react2['default'].createElement(
+        _calendarUtils.Row,
+        null,
+        this.props.store.map(function (line, j) {
+          if (_this.props.view === 'month') return line.map(function (item, i) {
+            var props = _this.prepareProps(item);
+            return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, { key: 'cell-' + item.col + '-' + i + '-' + item.day }));
+          });else return _react2['default'].createElement(ColCases, _extends({}, _this.props, {
+            line: line,
+            key: 'cell-column-' + j }));
+        })
+      );
+    }
+  }]);
+
+  return Cases;
+})(_react.Component);
+
+var ColCases = (function (_Component3) {
+  _inherits(ColCases, _Component3);
+
+  function ColCases() {
+    _classCallCheck(this, ColCases);
+
+    _get(Object.getPrototypeOf(ColCases.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(ColCases, [{
+    key: 'prepareProps',
+    value: function prepareProps(item) {
+      var cond = this.props.agenda.compare(this.props.current, item.date, true, true);
+      var props = {
+        height: this.props.height,
+        value: item.minute ? "  " + item.minute : item.hour + "h ",
+        className: cond ? 'col-day col-day-active' : 'col-day',
+        disabled: item.disabled,
+        toggleSelection: this.props.toggleSelection.bind(this, item)
+      };
+      if (item.disabled) {
+        delete props.toggleSelection;
+        props.className = "col-day col-day-disabled";
+      }
+      return props;
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var _this2 = this;
+
+      return _react2['default'].createElement(
+        _calendarUtils.Vertical,
+        null,
+        this.props.line.map(function (item, i) {
+          var props = _this2.prepareProps(item);
+          return _react2['default'].createElement(_calendarUtils.Cell, _extends({}, props, { key: 'cell-col-' + i + '-' + item.day + '-' + item.hour }));
+        })
+      );
+    }
+  }]);
+
+  return ColCases;
+})(_react.Component);
+
 module.exports = exports['default'];
 
 },{"../lib/agenda":15,"./calendar-utils":2,"react":"react"}],6:[function(require,module,exports){
@@ -1757,7 +1817,7 @@ var _default = (function (_Component) {
               evt.members.map(function (member) {
                 return _react2['default'].createElement(
                   'li',
-                  null,
+                  { key: 'member-' + member.id },
                   member.username
                 );
               })
