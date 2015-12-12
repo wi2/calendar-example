@@ -44,7 +44,7 @@ export default class extends Component {
                 <div className="panel-event-title">{evt.title}</div>
                 <p className="panel-event-content">{evt.content}</p>
                 {evt.members && <ul>
-                  {evt.members.map (member => <li>{member.username}</li>)}
+                  {evt.members.map (member => <li key={'member-'+member.id}>{member.username}</li>)}
                 </ul>}
               </div>
             )}
