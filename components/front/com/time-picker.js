@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react';
+import Agenda from '../lib/agenda'
 import _ from 'lodash';
 
 export default class extends Component {
@@ -45,7 +46,9 @@ export default class extends Component {
   }
 
   getDashItems() {
-    let except = this.props.except
+    this.agenda = new Agenda()
+
+    let except = this.agenda.prepareException(this.props.except||[])
       , items = []
       , disabled
       , range = this.state.type === 'minute' || this.state.ampm === 'AM' ? {start: 0, end: 12} : {start: 12, end: 24}

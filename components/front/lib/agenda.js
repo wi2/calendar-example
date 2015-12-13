@@ -15,8 +15,37 @@ export default class {
     this.changeDate(y,m,d,h,mm)
   }
 
+  prepareException(exceptions) {
+    return exceptions.map(exc => {
+      let value;
+      if (exc.type === 'day') {
+        value = exc.day;
+      } else if (exc.type === 'date') {
+        let date = new Date(exc.date)
+        value = Date(date.getFullYear(), date.getMonth(), date.getDate());
+      } else if (exc.type === 'dateHour') {
+        let date = new Date(exc.date)
+        value = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
+      } else if (exc.type === 'dates') {
+        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
+          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate())
+          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate())
+        value = { start, end };
+      } else if (exc.type === 'datesHour') {
+        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
+          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate(), tmp.start.getHours(), tmp.start.getMinutes())
+          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate(), tmp.end.getHours(), tmp.end.getMinutes())
+        value = { start, end };
+      } else if (exc.type === 'hours') {
+        value = { start: exc.startHour, end: exc.endHour };
+      }
+      return value;
+    })
+  }
+
+
   setException(except) {
-    this.except = except;
+    this.except = this.prepareException(except);
   }
 
   changeDate(y,m,d,h,mm) {
@@ -187,10 +216,10 @@ export default class {
           if (date.getDay() === this.days.indexOf(this.except[i]))
             ret = true;
           break;
-        default:
-          if (date.toString() === this.except[i].toString())
-            ret = true;
-          break;
+        // default:
+        //   if (date.toString() === this.except[i].toString())
+        //     ret = true;
+        //   break;
       }
     }
     return ret;

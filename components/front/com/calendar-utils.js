@@ -59,7 +59,6 @@ export class Navigation extends Component {
             <Link to={monthLink}>Month</Link>
             <Link to={weekLink}>Week</Link>
             <Link to={dayLink}>Day</Link>
-
           </div>
         </Row>
         <Row className="agenda-navigation">

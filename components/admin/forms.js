@@ -26,7 +26,6 @@ export class exception extends AdForm {
   }
 
   makeForm(formItem=this.props.formItem, data=this.props.item) {
-    console.log(formItem)
     formItem[3].widget = RadioSelect
     formItem[3].widgetAttrs = {
       onFocus: this._onFocus.bind(this),

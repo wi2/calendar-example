@@ -10,31 +10,6 @@ import Panel from '../com/panel';
 export default class extends Component {
   constructor(props) {
     super(props)
-    this.except = this.props.exception.map(exc => {
-      let value;
-      if (exc.type === 'day') {
-        value = exc.day;
-      } else if (exc.type === 'date') {
-        let date = new Date(exc.date)
-        value = Date(date.getFullYear(), date.getMonth(), date.getDate());
-      } else if (exc.type === 'dateHour') {
-        let date = new Date(exc.date)
-        value = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
-      } else if (exc.type === 'dates') {
-        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
-          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate())
-          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate())
-        value = { start, end };
-      } else if (exc.type === 'datesHour') {
-        let tmp = { start: new Date(exc.startDate), end: new Date(exc.endDate) }
-          , start = new Date(tmp.start.getFullYear(), tmp.start.getMonth(), tmp.start.getDate(), tmp.start.getHours(), tmp.start.getMinutes())
-          , end = new Date(tmp.end.getFullYear(), tmp.end.getMonth(), tmp.end.getDate(), tmp.end.getHours(), tmp.end.getMinutes())
-        value = { start, end };
-      } else if (exc.type === 'hours') {
-        value = { start: exc.startHour, end: exc.endHour };
-      }
-      return value;
-    })
 
     this.state = {
       show: false,
@@ -168,7 +143,7 @@ export default class extends Component {
                   onSelectDate={this.onSelectDatePanel.bind(this)}
                   right={this.state.right||0}
                   defaultRight={this.state.defaultRight}
-                  except={this.except}
+                  except={this.props.exception}
                   events={this.state.events||this.props.events||[]}  />}
 
         {this.state.show &&
@@ -178,13 +153,13 @@ export default class extends Component {
                   onSubmit={this.onSubmit.bind(this)}
                   onCancel={this.onCancel.bind(this)}
                   onDelete={this.onDelete.bind(this)}
-                  except={this.except}
+                  except={this.props.exception}
                   {...this.props.params} />}
 
         <Calendar events={this.props.events||[]}
                   me={this.state.me}
                   limitDay={true}
-                  except={this.except}
+                  except={this.props.exception}
                   onSelect={this.onSelect.bind(this)}
                   onChange={this.onChange.bind(this)}
                   onLoad={this.onLoad.bind(this)}

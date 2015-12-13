@@ -1,4 +1,4 @@
-"use strict";
+  "use strict";
 
 import React, {Component} from 'react';
 import {Motion, spring} from 'react-motion';
@@ -88,16 +88,18 @@ export default class extends Component {
       _.extend(startPicker, common)
       endPicker.except = [...this.props.except]
       endPicker.except.push({
-        start: new Date(new Date(date).setYear(2000)),
-        end: date
+        type: "datesHour",
+        startDate: new Date(new Date(date).setYear(2000)),
+        endDate: date
       })
 
     } else {
       _.extend(endPicker, common, {decal: 14})
       startPicker.except = [...this.props.except]
       startPicker.except.push({
-        start: date,
-        end: new Date(new Date(date).setYear(2020))
+        type: "datesHour",
+        startDate: date,
+        endDate: new Date(new Date(date).setYear(2020))
       })
     }
 
