@@ -96,13 +96,6 @@ export default class extends Component {
           selection: {isEvent},
           color: color,
         })
-        console.log({
-          startInit: val,
-          start: val,
-          end: val,
-          selection: {isEvent},
-          color: color,
-        })
       }
     } else {
       val.view = this.state.view
@@ -114,7 +107,6 @@ export default class extends Component {
     let updateState = true
     if (this.state.start !== -1) {
       let selection = this.getSmartSelection(val)
-      console.log(selection)
       if (this.props.limitDay && selection.start.date.getDate() !== selection.end.date.getDate())
           updateState = false
       if (updateState)
@@ -123,7 +115,7 @@ export default class extends Component {
   }
 
   onSelectEvent(val) {
-    if (val.member.id === this.props.me.id || this.props.me.role === 'admin'){
+    if ((val.member && val.member.id === this.props.me.id) || this.props.me.role.name === 'admin'){
       val.date = new Date(val.start);
       this.props.onSelect(val, this.state.editor)
     }
@@ -159,10 +151,10 @@ export default class extends Component {
       };
 
     return (
-      <Motion style={{width: spring(this.props.width||2000)}}>
+      <Motion defaultStyle={{left:1500, width: 1500}} style={{left: spring(0, [120, 20]), width: spring(this.props.width||1500, [120, 20])}}>
         {value =>
 
-        <div className={"agenda"+(this.state.editor && !this.state.selection.isEvent ? " edition":"")} style={{width: value.width}}>
+        <div className={"agenda"+(this.state.editor && !this.state.selection.isEvent ? " edition":"")} style={{width: value.width, marginLeft: value.left}}>
           <Filter {...this.props.filters}
                   rooms={this.props.rooms}
                   onChange={this.onFilterChange.bind(this)} />
