@@ -34,7 +34,7 @@ module.exports = function(grunt) {
 			files: ['components/**/*.*'],
 
 			// When components are changed:
-			tasks: ['compileAssets']
+			tasks: ['compileReactAssets']
 		}
 	});
 

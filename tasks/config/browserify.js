@@ -22,11 +22,11 @@ module.exports = function(grunt) {
     },
     front: {
       src: ['./components/front/**/*.js','./components/front/*.js'],
-      dest: './assets/js/front/bundle.js'
+      dest: './.tmp/public/js/front/bundle.js'
     },
     admin: {
       src: ['./components/admin/**/*.js','./components/admin/*.js'],
-      dest: './assets/js/admin/bundle.js'
+      dest: './.tmp/public/js/admin/bundle.js'
     }
   });
 
