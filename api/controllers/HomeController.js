@@ -40,7 +40,13 @@ module.exports = {
       .then( user => {
         if (user) state.me = user
         state.isAdmin = (user && user.role.name == 'admin')
-        resTo(Routes(), req.wantsJSON, res, '/', url, {title:'Home'}, state);
+        res.react(state, {
+          view: 'layout',
+          routes: Routes(),
+          location: url,
+          basename: '/',
+          locals: {title:'Home'}
+        })
       })
   }
 

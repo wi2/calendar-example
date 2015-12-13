@@ -13,7 +13,13 @@ import {Home, List, Create, Update, Routes} from '../../components/admin/index'
 module.exports = {
   home: function(req, res) {
     var state = {identities: Object.keys(sails.models)};
-    resTo(Routes(), req.wantsJSON, res, '/admin', '/admin', {title:'Administration - Home'}, state);
+    res.react(state, {
+      view: 'layout',
+      routes: Routes(),
+      location: '/admin',
+      basename: '/admin',
+      locals: {title:'Administration - Home'}
+    })
   },
   new: function(req, res) {
     getFormDefinition( req.param('identity') )
@@ -24,7 +30,13 @@ module.exports = {
         formItem: result,
         item: null
       };
-      resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/new', {title:'Administration - create record'}, state);
+      res.react(state, {
+        view: 'layout',
+        routes: Routes(),
+        location: '/admin' + req.param('identity')+'/new',
+        basename: '/admin',
+        locals: {title:'Administration - create record'}
+      })
     })
   },
   update: function(req, res) {
@@ -41,7 +53,13 @@ module.exports = {
         formItem: result,
         item: item
       };
-      resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/'+req.param('id'), {title:'Administration - update record'}, state);
+      res.react(state, {
+        view: 'layout',
+        routes: Routes(),
+        location: '/admin' + req.param('identity')+'/'+req.param('id'),
+        basename: '/admin',
+        locals: {title:'Administration - update record'}
+      })
     });
   },
   delete: function(req, res) {
@@ -58,7 +76,13 @@ module.exports = {
         formItem: result,
         item: item
       };
-      resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity')+'/'+req.param('id')+'/delete', {title:'Administration - update record'}, state);
+      res.react(state, {
+        view: 'layout',
+        routes: Routes(),
+        location: '/admin' + req.param('identity')+'/'+req.param('id'),
+        basename: '/admin',
+        locals: {title:'Administration - delete record'}
+      })
     });
   },
   list: function(req, res) {
@@ -94,7 +118,13 @@ module.exports = {
           total: total,
           limit: limit
         };
-        resTo(Routes(), req.wantsJSON, res, '/admin', '/admin/' + req.param('identity'), {title:'Administration - List'}, state);
+        res.react(state, {
+          view: 'layout',
+          routes: Routes(),
+          location: '/admin' + req.param('identity'),
+          basename: '/admin',
+          locals: {title:'Administration - list records'}
+        })
       });
   }
 };
