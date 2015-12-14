@@ -59,8 +59,7 @@ export default class extends Component {
     })
     this.form = new MyForm({
       controlled: true,
-      onChange: this.onFormChange.bind(this),
-      validation: 'auto'
+      onChange: this.onFormChange.bind(this)
     })
   }
   onFormChange() {
