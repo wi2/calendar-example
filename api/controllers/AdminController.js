@@ -17,7 +17,6 @@ module.exports = {
       view: 'layout',
       routes: Routes(),
       location: '/admin',
-      basename: '/admin',
       locals: {title:'Administration - Home'}
     })
   },
@@ -38,6 +37,9 @@ module.exports = {
         locals: {title:'Administration - create record'}
       })
     })
+    .catch( error => {
+      console.log("ERROR: ", error)
+    });
   },
   update: function(req, res) {
     var item;
@@ -60,6 +62,9 @@ module.exports = {
         basename: '/admin',
         locals: {title:'Administration - update record'}
       })
+    })
+    .catch( error => {
+      console.log("ERROR: ", error)
     });
   },
   delete: function(req, res) {
@@ -83,6 +88,9 @@ module.exports = {
         basename: '/admin',
         locals: {title:'Administration - delete record'}
       })
+    })
+    .catch( error => {
+      console.log("ERROR: ", error)
     });
   },
   list: function(req, res) {
@@ -97,7 +105,6 @@ module.exports = {
         if(skip == null) skip = 0;
         total = count;
         current = skip ? Math.ceil(skip/limit)+1 : 1;
-
         return query
           .find(req.param('contain')||{})
           .limit(limit)
@@ -125,6 +132,9 @@ module.exports = {
           basename: '/admin',
           locals: {title:'Administration - list records'}
         })
+      })
+      .catch( error => {
+        console.log("ERROR: ", error)
       });
   }
 };
