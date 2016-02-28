@@ -1,9 +1,9 @@
 "use strict";
 
 import React, {Component} from 'react'
+import {browserHistory} from 'react-router'
 import AdminComponent from './admin'
 import AdForm from '../com/form'
-
 
 class FormItem extends AdminComponent {
   componentWillMount() {
@@ -90,7 +90,7 @@ class FormItem extends AdminComponent {
 export class Update extends FormItem {
   onSave(data) {
     this.saving(data, "/" + this.props.params.id, res => {
-      this.props.history.pushState(null, this.identity, {force: true});
+      browserHistory.push("/admin/" + this.identity);
     });
   }
 }
@@ -98,7 +98,7 @@ export class Update extends FormItem {
 export class Create extends FormItem {
   onSave(data) {
     this.saving(data, res => {
-      this.props.history.pushState(null, this.identity, {force: true});
+      browserHistory.push("/admin/" + this.identity);
     });
   }
 }

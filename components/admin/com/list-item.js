@@ -6,7 +6,7 @@ import Content from './list-item-content'
 export default class extends React.Component {
   render() {
     let item = this.props.item;
-    let url = "/"+this.props.urlParams.identity+"/"+this.props.urlParams.id;
+    let url = "/admin/"+this.props.urlParams.identity+"/"+this.props.urlParams.id;
     return (
       <tr key={item.id}>
         <td><Link to={url} params={this.props.urlParams}>Edit</Link></td>

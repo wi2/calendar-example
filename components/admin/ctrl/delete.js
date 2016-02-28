@@ -1,6 +1,7 @@
 "use strict";
 
 import React, {Component} from 'react'
+import {browserHistory} from 'react-router'
 import AdminComponent from './admin'
 
 export default class extends AdminComponent {
@@ -33,11 +34,11 @@ export default class extends AdminComponent {
   _onSaving() {
     let id = this.props.params ? this.props.params.id : this.props.id
     io.socket.delete("/" + this.identity + "/" + id, {}, ( res => {
-      this.props.history.pushState(null, this.identity, {force: true});
+      browserHistory.push("/admin/" + this.identity);
     }))
   }
   _onCancel() {
-    this.props.history.pushState(null, this.identity, {force: true});
+    browserHistory.push("/admin/" + this.identity);
   }
   render() {
     let item = this.state ? this.state.item : {}
