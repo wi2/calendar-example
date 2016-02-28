@@ -12,8 +12,8 @@
  */
 
 import React from 'react'
-import { renderToString } from 'react-dom/server'
-import { match, RoutingContext } from 'react-router'
+import {renderToString} from 'react-dom/server'
+import {match, RouterContext} from 'react-router'
 global.__ReactInitState__
 
 
@@ -42,7 +42,7 @@ module.exports = function sendReact (data, options) {
   // Otherwise try to guess an appropriate view, or if that doesn't
   // work, just send JSON.
   if (options.view) {
-    let {routes, location, basename, locals} = options;
+    let {routes, location, locals, basename} = options;
     match({ routes, location, basename }, (error, redirectLocation, renderProps) => {
       if (data) {
         global.__ReactInitState__ = data;
@@ -50,7 +50,7 @@ module.exports = function sendReact (data, options) {
       }
       res.view(options.view, {
         locals: locals||{title:'',description:''},
-        body: renderToString(<RoutingContext {...renderProps} />)
+        body: renderToString(<RouterContext {...renderProps} />)
       });
     })
   }
