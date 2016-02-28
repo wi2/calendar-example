@@ -11,7 +11,7 @@ export default class extends Component {
         <div className="container">
           <ul className="nav navbar-nav">
             <li><a href="/">Go to website</a></li>
-            <li><Link to="/">Admin</Link></li>
+            <li><Link to="/admin">Admin</Link></li>
             {identities && identities.map( identity => {
               return (
                 <li className="dropdown" key={identity}>
@@ -22,8 +22,8 @@ export default class extends Component {
                     <span className="caret"></span>
                   </a>
                   <ul className="dropdown-menu">
-                    <li><Link to={`/${identity}`}>List</Link></li>
-                    <li><Link to={`/${identity}/new`}>Create</Link></li>
+                    <li><Link to={`/admin/${identity}`}>List</Link></li>
+                    <li><Link to={`/admin/${identity}/new`}>Create</Link></li>
                   </ul>
                 </li>
               );
