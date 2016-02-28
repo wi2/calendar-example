@@ -1,17 +1,15 @@
 "use strict";
 
 import React from 'react'
-import Router, {IndexRoute, Route} from 'react-router';
-import { createHistory, useBasename } from 'history'
+import {Router, IndexRoute, Route, browserHistory} from 'react-router'
 
 import Layout from './layout'
 import Home from './ctrl/home'
 import Calendar from './ctrl/calendar'
 
 
-function GetRouter(basename='/', layout) {
-  const history = useBasename(createHistory)({basename});
-  return <Router history={history}>{Routes(layout)}</Router>;
+function GetRouter(layout) {
+  return <Router history={browserHistory} routes={Routes(layout)} />;
 }
 
 function Routes(layout=Layout) {
