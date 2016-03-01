@@ -40,6 +40,9 @@ module.exports = {
       .then( user => {
         if (user) state.me = user
         state.isAdmin = (user && user.role.name == 'admin')
+        return true
+      })
+      .finally( () => {
         res.react(state, {
           view: 'layout',
           routes: Routes(),
@@ -48,6 +51,9 @@ module.exports = {
           locals: {title:'Home'}
         })
       })
+      .catch( error => {
+        console.log("ERROR: ", error)
+      });
   }
 
 };
