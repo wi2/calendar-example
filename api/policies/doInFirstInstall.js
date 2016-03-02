@@ -1,19 +1,15 @@
 module.exports = function(req, res, next) {
-
-  User.count().then(count => {
+  User.count().exec((err, count) => {
     if (count === 0) {
-      Role.create({name: "admin"})
-      .then( role => {
-        return User.create({
+      Role.create({name: "admin"}).exec((err, role) => {
+        User.create({
           username: "admin",
           email: "michael.gaeta@af83.com",
           password: "passpass",
           role: role.id
         })
       })
-      .then( user => { next(); })
-    } else
-      next()
+    }
   })
-
+  next();
 };
