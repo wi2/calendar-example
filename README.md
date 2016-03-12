@@ -50,7 +50,7 @@ by this
 
 
 ### Dependencies
-- [sails 0.12 RC3](http://sailsjs.org)
+- [sails 0.12.1](http://sailsjs.org)
 - [react 0.14](https://github.com/facebook/react)
 - [react-router](https://github.com/rackt/react-router)
 - [react-motion](https://github.com/chenglou/react-motion)
