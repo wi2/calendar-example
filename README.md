@@ -58,10 +58,7 @@ by this
 - [newforms-bootstrap](https://github.com/insin/newforms-bootstrap)
 - [sails-hook-babel](https://github.com/artificialio/sails-hook-babel)
 - [sails-hook-passport](https://github.com/jaumard/sails-hook-passport)
-
-### Dev-dependencies
-- [browserify](https://github.com/substack/node-browserify)
-- Grunt
+- [webpack](https://github.com/webpack/webpack)
 
 
 ## TODO
@@ -73,6 +70,8 @@ by this
 - add picto for to know whose event i can update
 - externalise components (timepicker, datepicker, datetimepicker, et calendar) and admin
 - test
+- prepare deploy strategy
+- better first install
 
 
 
